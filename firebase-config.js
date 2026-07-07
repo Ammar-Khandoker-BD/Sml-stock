@@ -4,13 +4,13 @@
 // See README.md for full step-by-step instructions.
 // ============================================================
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-  projectId: "PASTE_YOUR_PROJECT_ID",
-  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
-};
+  apiKey: "AIzaSyAsNBlM-7M3MBLoOzmeyyOfi0pcnig58hA",
+  authDomain: "stepmedia-stock.firebaseapp.com",
+  projectId: "stepmedia-stock",
+  storageBucket: "stepmedia-stock.firebasestorage.app",
+  messagingSenderId: "888494897735",
+  appId: "1:888494897735:web:9fce12bae640c18295cf62",
+
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
