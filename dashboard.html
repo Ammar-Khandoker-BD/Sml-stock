@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board Stock — Step Media Ltd</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand"><img src="logo.png" alt=""><span>Step Media</span></div>
+    <div class="nav-item active" data-view="inventory">Inventory</div>
+    <div class="nav-item" data-view="history">Usage History</div>
+    <div class="nav-item admin-only" data-view="manage-items" style="display:none;">Manage Items</div>
+    <div class="nav-item admin-only" data-view="manage-access" style="display:none;">Manage Access</div>
+    <div class="sidebar-foot">
+      <div class="user-chip" id="userChip">—</div>
+      <span class="role-badge" id="roleBadge"></span>
+      <button class="logout-btn" id="logoutBtn" style="margin-top:10px;">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- INVENTORY VIEW (everyone) -->
+    <div id="view-inventory">
+      <div class="topbar">
+        <div>
+          <h1>Board Stock</h1>
+          <div class="sub">Live stock levels across all board types</div>
+        </div>
+        <div class="actions">
+          <button class="btn-sm primary" id="openAddModal">+ Stock In</button>
+          <button class="btn-sm" id="openUseModal">− Stock Out</button>
+        </div>
+      </div>
+
+      <div class="import-banner admin-only" id="importBanner" style="display:none;">
+        <div><strong>No items loaded yet</strong>Load the 154 board types from the master list, all starting at 0 stock.</div>
+        <button class="btn-sm primary" id="importBtn">Load item list</button>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card"><div class="label">Total Items</div><div class="value mono" id="statTotal">0</div></div>
+        <div class="stat-card"><div class="label">Total Stock (sheets)</div><div class="value mono" id="statStock">0</div></div>
+        <div class="stat-card warn"><div class="label">Low Stock</div><div class="value mono" id="statLow">0</div></div>
+      </div>
+
+      <div class="filters">
+        <input type="text" id="searchInput" placeholder="Search type, color, thickness...">
+        <select id="typeFilter"><option value="">All Types</option></select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Level</th></tr></thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+        <div class="empty-state" id="itemsEmpty" style="display:none;">
+          <div class="display">No items to show</div>
+          Try clearing your search or filters.
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW (everyone) -->
+    <div id="view-history" style="display:none;">
+      <div class="topbar">
+        <div><h1>Usage History</h1><div class="sub">Every stock in / stock out entry, most recent first</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>By</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+        <div class="empty-state" id="historyEmpty" style="display:none;">
+          <div class="display">No entries yet</div>
+          Stock in/out entries will appear here.
+        </div>
+      </div>
+    </div>
+
+    <!-- MANAGE ITEMS VIEW (admin only) -->
+    <div id="view-manage-items" style="display:none;">
+      <div class="topbar">
+        <div><h1>Manage Items</h1><div class="sub">Add, edit, or remove board types from the master list</div></div>
+        <div class="actions"><button class="btn-sm primary" id="openNewItemModal">+ New Item</button></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th></th></tr></thead>
+          <tbody id="manageItemsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MANAGE ACCESS VIEW (admin only) -->
+    <div id="view-manage-access" style="display:none;">
+      <div class="topbar">
+        <div><h1>Manage Access</h1><div class="sub">Control who can sign in as Admin or Staff</div></div>
+      </div>
+      <div class="locked-note">
+        Adding someone here only sets their <strong>role</strong>. You still need to create their
+        login (email + password) separately in Firebase Console → Authentication → Users.
+      </div>
+      <div class="access-form">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="accessEmail" placeholder="staff@example.com">
+        </div>
+        <select id="accessRole">
+          <option value="staff">Staff</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn-sm primary" id="grantAccessBtn">Save Access</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+          <tbody id="accessBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Stock In Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <button class="close-x" data-close="addModal">✕</button>
+    <h2>Stock In</h2>
+    <div class="sub">Add received quantity for an item</div>
+    <div class="field"><label>Item</label><select id="addItemSelect"></select></div>
+    <div class="modal-row">
+      <div class="field" style="flex:1;"><label>Quantity</label><input type="number" id="addQty" min="0" step="0.5" required></div>
+      <div class="field" style="flex:1;"><label>Date</label><input type="date" id="addDate" required></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm" data-close="addModal">Cancel</button>
+      <button class="btn-sm primary" id="confirmAdd">Add Stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stock Out Modal -->
+<div class="modal-overlay" id="useModal">
+  <div class="modal">
+    <button class="close-x" data-close="useModal">✕</button>
+    <h2>Stock Out</h2>
+    <div class="sub">Record quantity used from an item</div>
+    <div class="field"><label>Item</label><select id="useItemSelect"></select></div>
+    <div class="modal-row">
+      <div class="field" style="flex:1;"><label>Quantity</label><input type="number" id="useQty" min="0" step="0.5" required></div>
+      <div class="field" style="flex:1;"><label>Date</label><input type="date" id="useDate" required></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm" data-close="useModal">Cancel</button>
+      <button class="btn-sm primary" id="confirmUse">Record Use</button>
+    </div>
+  </div>
+</div>
+
+<!-- New / Edit Item Modal -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <button class="close-x" data-close="itemModal">✕</button>
+    <h2 id="itemModalTitle">New Item</h2>
+    <div class="sub">Item details</div>
+    <input type="hidden" id="itemModalId">
+    <div class="field"><label>Type</label><input type="text" id="itemType" placeholder="e.g. MDF"></div>
+    <div class="modal-row">
+      <div class="field" style="flex:1;"><label>Color</label><input type="text" id="itemColor" placeholder="optional"></div>
+      <div class="field" style="flex:1;"><label>Thickness</label><input type="text" id="itemThickness" placeholder="e.g. 18 mm"></div>
+    </div>
+    <div class="field"><label>Starting Stock</label><input type="number" id="itemStock" min="0" step="0.5" value="0"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" data-close="itemModal">Cancel</button>
+      <button class="btn-sm primary" id="confirmItem">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

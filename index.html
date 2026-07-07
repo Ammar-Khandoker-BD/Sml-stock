@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step Media Ltd — Board Stock</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-planks" id="planks"></div>
+
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="logo.png" alt="Step Media Ltd">
+    </div>
+    <div class="login-eyebrow">Board Stock System</div>
+    <h1>Sign in</h1>
+    <p class="login-sub">Track boards, sheets & materials across the store.</p>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn">Sign in</button>
+    </form>
+
+    <p class="login-foot">Accounts are created by the admin in Firebase Console.</p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const planks = document.getElementById('planks');
+for(let i=0;i<26;i++){
+  const d = document.createElement('div');
+  d.style.width = (40 + Math.random()*60) + '%';
+  d.style.marginLeft = (Math.random()*20)+'%';
+  planks.appendChild(d);
+}
+
+auth.onAuthStateChanged(user=>{
+  if(user){ window.location.href = 'dashboard.html'; }
+});
+
+document.getElementById('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const pass = document.getElementById('password').value;
+  const errBox = document.getElementById('errorMsg');
+  errBox.style.display = 'none';
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(()=>{ window.location.href = 'dashboard.html'; })
+    .catch(()=>{
+      errBox.textContent = 'Sign-in failed — check your email and password.';
+      errBox.style.display = 'block';
+    });
+});
+</script>
+</body>
+</html>
