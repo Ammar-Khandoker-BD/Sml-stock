@@ -63,9 +63,11 @@ document.getElementById('loginForm').addEventListener('submit', function(e){
 
   auth.signInWithEmailAndPassword(email, pass)
     .then(()=>{ window.location.href = 'dashboard.html'; })
-    .catch(()=>{
-      errBox.textContent = 'Sign-in failed — check your email and password.';
+    .catch(err=>{
+      // DEBUG MODE: show the real error so we can diagnose it
+      errBox.textContent = 'Error code: ' + err.code + ' — ' + err.message;
       errBox.style.display = 'block';
+      console.error('Firebase auth error:', err);
     });
 });
 </script>
