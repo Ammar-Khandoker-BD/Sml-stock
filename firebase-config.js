@@ -3,7 +3,7 @@
 // Connected to Firebase project: stepmedia-stock
 // ============================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyAsNBLM-7M3MBLoOzmeyyOfi0pcnig58hA",
+  apiKey: "AIzaSyAsNBlM-7M3MBLoOzmeyyOfi0pcnig58hA",
   authDomain: "stepmedia-stock.firebaseapp.com",
   projectId: "stepmedia-stock",
   storageBucket: "stepmedia-stock.firebasestorage.app",
