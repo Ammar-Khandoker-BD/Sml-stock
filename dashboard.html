@@ -9,10 +9,13 @@
 <body>
 
 <div class="shell">
-  <div class="sidebar">
+  <div class="sidebar no-print">
     <div class="brand"><img src="logo.png" alt=""><span>Step Media</span></div>
     <div class="nav-item active" data-view="inventory">Inventory</div>
+    <div class="nav-item" data-view="alerts">Alerts <span class="nav-badge" id="alertCount" style="display:none;">0</span></div>
+    <div class="nav-item" data-view="reports">Reports</div>
     <div class="nav-item" data-view="history">Usage History</div>
+    <div class="nav-item admin-only" data-view="suppliers" style="display:none;">Suppliers</div>
     <div class="nav-item admin-only" data-view="manage-items" style="display:none;">Manage Items</div>
     <div class="nav-item admin-only" data-view="manage-access" style="display:none;">Manage Access</div>
     <div class="sidebar-foot">
@@ -31,13 +34,15 @@
           <h1>Board Stock</h1>
           <div class="sub">Live stock levels across all board types</div>
         </div>
-        <div class="actions">
+        <div class="actions no-print">
+          <button class="btn-sm" id="printInventoryBtn">Print</button>
+          <button class="btn-sm" id="exportInventoryBtn">Export to Excel</button>
           <button class="btn-sm primary" id="openAddModal">+ Stock In</button>
           <button class="btn-sm" id="openUseModal">− Stock Out</button>
         </div>
       </div>
 
-      <div class="import-banner admin-only" id="importBanner" style="display:none;">
+      <div class="import-banner admin-only no-print" id="importBanner" style="display:none;">
         <div><strong>No items loaded yet</strong>Load the 154 board types from the master list, all starting at 0 stock.</div>
         <button class="btn-sm primary" id="importBtn">Load item list</button>
       </div>
@@ -46,16 +51,17 @@
         <div class="stat-card"><div class="label">Total Items</div><div class="value mono" id="statTotal">0</div></div>
         <div class="stat-card"><div class="label">Total Stock (sheets)</div><div class="value mono" id="statStock">0</div></div>
         <div class="stat-card warn"><div class="label">Low Stock</div><div class="value mono" id="statLow">0</div></div>
+        <div class="stat-card"><div class="label">Total Inventory Value</div><div class="value mono" id="statValue">Tk 0</div></div>
       </div>
 
-      <div class="filters">
+      <div class="filters no-print">
         <input type="text" id="searchInput" placeholder="Search type, color, thickness...">
         <select id="typeFilter"><option value="">All Types</option></select>
       </div>
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Level</th></tr></thead>
+          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Unit Price</th><th>Value</th><th>Level</th></tr></thead>
           <tbody id="itemsBody"></tbody>
         </table>
         <div class="empty-state" id="itemsEmpty" style="display:none;">
@@ -65,14 +71,54 @@
       </div>
     </div>
 
+    <!-- ALERTS VIEW (everyone) -->
+    <div id="view-alerts" style="display:none;">
+      <div class="topbar">
+        <div><h1>Reorder Alerts</h1><div class="sub">Items at or below their reorder level</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Reorder Level</th></tr></thead>
+          <tbody id="alertsBody"></tbody>
+        </table>
+        <div class="empty-state" id="alertsEmpty" style="display:none;">
+          <div class="display">All good — nothing needs reordering</div>
+          Items will show up here when stock falls to or below their reorder level.
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS VIEW (everyone) -->
+    <div id="view-reports" style="display:none;">
+      <div class="topbar">
+        <div><h1>Reports</h1><div class="sub">Stock breakdown and usage trends</div></div>
+        <div class="actions no-print"><button class="btn-sm" id="printReportsBtn">Print</button></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Stock by Type</h3>
+          <canvas id="chartByType" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Stock In vs Out — last 30 days</h3>
+          <canvas id="chartTrend" height="220"></canvas>
+        </div>
+        <div class="chart-card" style="grid-column:1 / -1;">
+          <h3>Inventory Value by Type</h3>
+          <canvas id="chartValue" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- HISTORY VIEW (everyone) -->
     <div id="view-history" style="display:none;">
       <div class="topbar">
         <div><h1>Usage History</h1><div class="sub">Every stock in / stock out entry, most recent first</div></div>
+        <div class="actions no-print"><button class="btn-sm" id="exportHistoryBtn">Export to Excel</button></div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>By</th></tr></thead>
+          <thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Supplier</th><th>By</th></tr></thead>
           <tbody id="historyBody"></tbody>
         </table>
         <div class="empty-state" id="historyEmpty" style="display:none;">
@@ -82,15 +128,40 @@
       </div>
     </div>
 
+    <!-- SUPPLIERS VIEW (admin only) -->
+    <div id="view-suppliers" style="display:none;">
+      <div class="topbar">
+        <div><h1>Suppliers</h1><div class="sub">Vendors you buy board stock from</div></div>
+        <div class="actions no-print"><button class="btn-sm primary" id="openNewSupplierModal">+ New Supplier</button></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Contact</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="suppliersBody"></tbody>
+        </table>
+        <div class="empty-state" id="suppliersEmpty" style="display:none;">
+          <div class="display">No suppliers yet</div>
+          Add your board/laminate vendors to track where stock comes from.
+        </div>
+      </div>
+    </div>
+
     <!-- MANAGE ITEMS VIEW (admin only) -->
     <div id="view-manage-items" style="display:none;">
       <div class="topbar">
         <div><h1>Manage Items</h1><div class="sub">Add, edit, or remove board types from the master list</div></div>
-        <div class="actions"><button class="btn-sm primary" id="openNewItemModal">+ New Item</button></div>
+        <div class="actions no-print">
+          <button class="btn-sm" id="exportItemsBtn">Export to Excel</button>
+          <button class="btn-sm" id="downloadTemplateBtn">Download Template</button>
+          <label class="btn-sm" for="bulkImportFile" style="cursor:pointer;">Import Excel</label>
+          <input type="file" id="bulkImportFile" accept=".xlsx,.xls,.csv" style="display:none;">
+          <button class="btn-sm primary" id="openNewItemModal">+ New Item</button>
+        </div>
       </div>
+      <div class="locked-note" id="bulkImportNote" style="display:none;"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th></th></tr></thead>
+          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Price</th><th>Reorder Lvl</th><th></th></tr></thead>
           <tbody id="manageItemsBody"></tbody>
         </table>
       </div>
@@ -138,6 +209,7 @@
       <div class="field" style="flex:1;"><label>Quantity</label><input type="number" id="addQty" min="0" step="0.5" required></div>
       <div class="field" style="flex:1;"><label>Date</label><input type="date" id="addDate" required></div>
     </div>
+    <div class="field"><label>Supplier (optional)</label><select id="addSupplierSelect"><option value="">— None —</option></select></div>
     <div class="modal-actions">
       <button class="btn-sm" data-close="addModal">Cancel</button>
       <button class="btn-sm primary" id="confirmAdd">Add Stock</button>
@@ -175,7 +247,11 @@
       <div class="field" style="flex:1;"><label>Color</label><input type="text" id="itemColor" placeholder="optional"></div>
       <div class="field" style="flex:1;"><label>Thickness</label><input type="text" id="itemThickness" placeholder="e.g. 18 mm"></div>
     </div>
-    <div class="field"><label>Starting Stock</label><input type="number" id="itemStock" min="0" step="0.5" value="0"></div>
+    <div class="modal-row">
+      <div class="field" style="flex:1;"><label>Starting Stock</label><input type="number" id="itemStock" min="0" step="0.5" value="0"></div>
+      <div class="field" style="flex:1;"><label>Unit Price (Tk)</label><input type="number" id="itemPrice" min="0" step="0.01" value="0"></div>
+    </div>
+    <div class="field"><label>Reorder Level</label><input type="number" id="itemReorder" min="0" step="0.5" value="5"></div>
     <div class="modal-actions">
       <button class="btn-sm" data-close="itemModal">Cancel</button>
       <button class="btn-sm primary" id="confirmItem">Save Item</button>
@@ -183,9 +259,28 @@
   </div>
 </div>
 
+<!-- New / Edit Supplier Modal -->
+<div class="modal-overlay" id="supplierModal">
+  <div class="modal">
+    <button class="close-x" data-close="supplierModal">✕</button>
+    <h2 id="supplierModalTitle">New Supplier</h2>
+    <div class="sub">Vendor details</div>
+    <input type="hidden" id="supplierModalId">
+    <div class="field"><label>Name</label><input type="text" id="supplierName" placeholder="e.g. Akij Board House"></div>
+    <div class="field"><label>Contact</label><input type="text" id="supplierContact" placeholder="Phone / email"></div>
+    <div class="field"><label>Notes</label><input type="text" id="supplierNotes" placeholder="optional"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" data-close="supplierModal">Cancel</button>
+      <button class="btn-sm primary" id="confirmSupplier">Save Supplier</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 </body>
