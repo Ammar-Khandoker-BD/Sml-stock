@@ -240,6 +240,31 @@ tbody tr:hover{background:#FBFAF7;}
   padding:14px 16px;font-size:13px;color:var(--ink-soft);margin-bottom:18px;
 }
 
+.nav-badge{
+  display:inline-block;background:var(--red);color:#fff;font-size:10px;font-weight:700;
+  padding:1px 6px;border-radius:10px;margin-left:4px;
+}
+
+.chart-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+}
+.chart-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow);
+}
+.chart-card h3{font-size:14px;margin:0 0 14px;font-family:'Space Grotesk';}
+@media (max-width:900px){
+  .chart-grid{grid-template-columns:1fr;}
+}
+
+@media print{
+  .no-print, .sidebar{display:none !important;}
+  .shell{display:block;}
+  .main{padding:0;max-width:100%;}
+  body{background:#fff;}
+  .table-wrap, .chart-card{box-shadow:none;border:1px solid #ccc;}
+}
+
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important;}
 }
