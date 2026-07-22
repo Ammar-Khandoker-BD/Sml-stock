@@ -3,285 +3,886 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Board Stock — Step Media Ltd</title>
-<link rel="stylesheet" href="style.css">
+<title>Step Media ERP — Board Stock Management</title>
+<style>
+:root{
+  --canvas:#FFFFFF; --soft:#F9F8F7; --surface2:#F0EFED; --border:#E6E5E3;
+  --text:#2C2C2B; --muted:#7D7A75;
+  --blue:#2783DE; --blue-soft:#E5F2FC;
+  --green:#46A171; --green-soft:#E8F1EC;
+  --orange:#D5803B; --orange-soft:#FBEBDE;
+  --red:#E56458; --red-soft:#FCE9E7;
+  --radius:8px; --radius-lg:12px;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.04);
+  --sidebar-w:248px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:var(--text);background:var(--soft)}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text)}
+
+/* ---------- Layout ---------- */
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--canvas);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:40}
+.main{flex:1;margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-width:0}
+.content{padding:24px 32px 64px;max-width:1120px;width:100%;margin:0 auto}
+
+/* ---------- Sidebar ---------- */
+.brand{display:flex;align-items:center;gap:10px;padding:20px 16px 16px}
+.brand-logo{width:34px;height:34px;border-radius:8px;background:var(--text);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;letter-spacing:.5px}
+.brand-name{font-weight:700;font-size:15px;line-height:1.2}
+.brand-sub{font-size:11.5px;color:var(--muted)}
+.nav{padding:8px;flex:1;overflow-y:auto}
+.nav-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:none;border-radius:var(--radius);color:var(--text);font-size:14px;font-weight:500;text-align:left;min-height:38px}
+.nav-item svg{width:17px;height:17px;flex:none;color:var(--muted)}
+.nav-item:hover{background:var(--soft)}
+.nav-item.active{background:var(--blue-soft);color:#1866B2}
+.nav-item.active svg{color:#1866B2}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:11px;font-weight:600;border-radius:99px;padding:1px 7px}
+.side-foot{border-top:1px solid var(--border);padding:12px 16px;font-size:12.5px;color:var(--muted)}
+.side-foot .role{display:inline-block;background:var(--orange-soft);color:#9A5A22;font-size:10.5px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:1px 6px;margin-top:4px}
+.side-foot button{margin-top:10px;width:100%;padding:7px;border:1px solid var(--border);background:var(--canvas);border-radius:var(--radius);font-size:13px}
+
+/* ---------- Topbar ---------- */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(249,248,247,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;gap:12px}
+.hamburger{display:none;border:1px solid var(--border);background:var(--canvas);border-radius:var(--radius);width:38px;height:38px;align-items:center;justify-content:center}
+.crumb{font-size:13.5px;color:var(--muted)}
+.crumb b{color:var(--text);font-weight:600}
+.topbar .spacer{flex:1}
+.clock{font-size:13px;color:var(--muted)}
+
+/* ---------- Page header ---------- */
+.page-head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:8px 0 20px}
+.page-head h1{font-size:26px;line-height:1.2;letter-spacing:-.01em}
+.page-head p{color:var(--muted);font-size:14px;margin-top:2px}
+.page-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:var(--radius);padding:8px 14px;font-size:13.5px;font-weight:600;border:1px solid var(--border);background:var(--canvas);color:var(--text);min-height:38px}
+.btn:hover{background:var(--soft)}
+.btn svg{width:15px;height:15px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:#1F6FBE}
+.btn-danger-soft{background:var(--red-soft);border-color:var(--red-soft);color:#B3392E}
+.btn-danger-soft:hover{background:#F8D9D6}
+.btn-green{background:var(--green);border-color:var(--green);color:#fff}
+.btn-green:hover{background:#3B8A60}
+.btn-sm{padding:5px 10px;font-size:12.5px;min-height:30px}
+
+/* ---------- Cards / KPI ---------- */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.card{background:var(--canvas);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.kpi .label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.kpi .value{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:6px;line-height:1.1}
+.kpi .delta{font-size:12.5px;color:var(--muted);margin-top:6px}
+.kpi.k-red .value{color:#C6493D}
+.kpi.k-green .value{color:#357E58}
+.kpi.k-blue .value{color:#1866B2}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.card .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+
+/* ---------- Tables ---------- */
+.table-card{background:var(--canvas);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--soft);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--soft)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.type-cell{font-weight:600}
+.muted{color:var(--muted)}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+
+/* badges */
+.badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:99px;padding:2px 9px}
+.badge.ok{background:var(--green-soft);color:#2F7350}
+.badge.low{background:var(--orange-soft);color:#9A5A22}
+.badge.out{background:var(--red-soft);color:#B3392E}
+.badge.admin{background:var(--orange-soft);color:#9A5A22}
+.badge.staff{background:var(--blue-soft);color:#1866B2}
+
+/* stock level bar */
+.level{width:90px;height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.level i{display:block;height:100%;border-radius:99px}
+
+/* ---------- Filter bar ---------- */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.search-wrap{position:relative;flex:1;min-width:220px}
+.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted)}
+.input,.select{border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:14px;background:var(--canvas);min-height:40px;width:100%}
+.search-wrap .input{padding-left:36px}
+.select{width:auto;min-width:150px}
+.input:focus,.select:focus,textarea:focus{outline:2px solid var(--blue);outline-offset:-1px;border-color:var(--blue)}
+
+/* ---------- Callout ---------- */
+.callout{display:flex;gap:12px;align-items:flex-start;background:var(--orange-soft);border:1px solid #F0D8C2;border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:24px;font-size:14px}
+.callout svg{width:18px;height:18px;color:var(--orange);flex:none;margin-top:2px}
+.callout b{font-weight:600}
+.note{background:var(--soft);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--muted);margin-bottom:16px}
+
+/* ---------- Views ---------- */
+.view{display:none}
+.view.active{display:block}
+
+/* ---------- Modal ---------- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(20,20,19,.4);display:none;align-items:flex-start;justify-content:center;z-index:60;padding:48px 16px;overflow-y:auto}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--canvas);border-radius:var(--radius-lg);box-shadow:0 8px 40px rgba(0,0,0,.18);width:100%;max-width:460px;padding:24px}
+.modal h3{font-size:17px;margin-bottom:2px}
+.modal .sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+
+/* ---------- Toast ---------- */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:80;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--text);color:#fff;font-size:13.5px;border-radius:var(--radius);padding:10px 16px;box-shadow:var(--shadow);animation:toastin .2s ease}
+@keyframes toastin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- Charts ---------- */
+.chart-box{width:100%;height:240px;position:relative}
+.chart-box canvas{position:absolute;inset:0;width:100%;height:100%}
+.legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* ---------- Responsive ---------- */
+.scrim{position:fixed;inset:0;background:rgba(20,20,19,.35);z-index:35;display:none}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);transition:transform .2s ease}
+  .sidebar.open{transform:none}
+  .scrim.open{display:block}
+  .main{margin-left:0}
+  .hamburger{display:inline-flex}
+  .content{padding:20px 16px 56px}
+  .topbar{padding:0 16px}
+  .grid-2{grid-template-columns:1fr}
+}
+@media(max-width:520px){.kpi-grid{grid-template-columns:1fr}.row-2{grid-template-columns:1fr}}
+@media print{.sidebar,.topbar,.page-actions,.filter-bar,.hamburger{display:none !important}.main{margin:0}body{background:#fff}}
+</style>
 </head>
 <body>
-
-<div class="shell">
-  <div class="sidebar no-print">
-    <div class="brand"><img src="logo.png" alt=""><span>Step Media</span></div>
-    <div class="nav-item active" data-view="inventory">Inventory</div>
-    <div class="nav-item" data-view="alerts">Alerts <span class="nav-badge" id="alertCount" style="display:none;">0</span></div>
-    <div class="nav-item" data-view="reports">Reports</div>
-    <div class="nav-item" data-view="history">Usage History</div>
-    <div class="nav-item admin-only" data-view="suppliers" style="display:none;">Suppliers</div>
-    <div class="nav-item admin-only" data-view="manage-items" style="display:none;">Manage Items</div>
-    <div class="nav-item admin-only" data-view="manage-access" style="display:none;">Manage Access</div>
-    <div class="sidebar-foot">
-      <div class="user-chip" id="userChip">—</div>
-      <span class="role-badge" id="roleBadge"></span>
-      <button class="logout-btn" id="logoutBtn" style="margin-top:10px;">Sign out</button>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">SM</div>
+      <div><div class="brand-name">Step Media</div><div class="brand-sub">Board Stock ERP</div></div>
     </div>
-  </div>
+    <nav class="nav" id="nav">
+      <div class="nav-label">Overview</div>
+      <button class="nav-item" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+      <button class="nav-item" data-view="inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Inventory</button>
+      <button class="nav-item" data-view="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v3.6L4 17h16l-2-4.4V9a6 6 0 0 0-6-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Alerts<span class="nav-badge" id="alertBadge">0</span></button>
+      <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
+      <div class="nav-label">Operations</div>
+      <button class="nav-item" data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Usage History</button>
+      <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Suppliers</button>
+      <div class="nav-label admin-only">Admin</div>
+      <button class="nav-item admin-only" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="M3 12h18"/></svg>Manage Items</button>
+      <button class="nav-item admin-only" data-view="access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Manage Access</button>
+    </nav>
+    <div class="side-foot">
+      <div id="footEmail">Signing in…</div>
+      <span class="role" id="footRole">…</span>
+      <button type="button" onclick="auth.signOut()">Sign out</button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
 
   <div class="main">
-
-    <!-- INVENTORY VIEW (everyone) -->
-    <div id="view-inventory">
-      <div class="topbar">
-        <div>
-          <h1>Board Stock</h1>
-          <div class="sub">Live stock levels across all board types</div>
-        </div>
-        <div class="actions no-print">
-          <button class="btn-sm" id="printInventoryBtn">Print</button>
-          <button class="btn-sm" id="exportInventoryBtn">Export to Excel</button>
-          <button class="btn-sm primary" id="openAddModal">+ Stock In</button>
-          <button class="btn-sm" id="openUseModal">− Stock Out</button>
-        </div>
-      </div>
-
-      <div class="import-banner admin-only no-print" id="importBanner" style="display:none;">
-        <div><strong>No items loaded yet</strong>Load the 154 board types from the master list, all starting at 0 stock.</div>
-        <button class="btn-sm primary" id="importBtn">Load item list</button>
-      </div>
-
-      <div class="stat-row">
-        <div class="stat-card"><div class="label">Total Items</div><div class="value mono" id="statTotal">0</div></div>
-        <div class="stat-card"><div class="label">Total Stock (sheets)</div><div class="value mono" id="statStock">0</div></div>
-        <div class="stat-card warn"><div class="label">Low Stock</div><div class="value mono" id="statLow">0</div></div>
-        <div class="stat-card"><div class="label">Total Inventory Value</div><div class="value mono" id="statValue">Tk 0</div></div>
-      </div>
-
-      <div class="filters no-print">
-        <input type="text" id="searchInput" placeholder="Search type, color, thickness...">
-        <select id="typeFilter"><option value="">All Types</option></select>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Unit Price</th><th>Value</th><th>Level</th></tr></thead>
-          <tbody id="itemsBody"></tbody>
-        </table>
-        <div class="empty-state" id="itemsEmpty" style="display:none;">
-          <div class="display">No items to show</div>
-          Try clearing your search or filters.
-        </div>
-      </div>
-    </div>
-
-    <!-- ALERTS VIEW (everyone) -->
-    <div id="view-alerts" style="display:none;">
-      <div class="topbar">
-        <div><h1>Reorder Alerts</h1><div class="sub">Items at or below their reorder level</div></div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Reorder Level</th></tr></thead>
-          <tbody id="alertsBody"></tbody>
-        </table>
-        <div class="empty-state" id="alertsEmpty" style="display:none;">
-          <div class="display">All good — nothing needs reordering</div>
-          Items will show up here when stock falls to or below their reorder level.
-        </div>
-      </div>
-    </div>
-
-    <!-- REPORTS VIEW (everyone) -->
-    <div id="view-reports" style="display:none;">
-      <div class="topbar">
-        <div><h1>Reports</h1><div class="sub">Stock breakdown and usage trends</div></div>
-        <div class="actions no-print"><button class="btn-sm" id="printReportsBtn">Print</button></div>
-      </div>
-      <div class="chart-grid">
-        <div class="chart-card">
-          <h3>Stock by Type</h3>
-          <canvas id="chartByType" height="220"></canvas>
-        </div>
-        <div class="chart-card">
-          <h3>Stock In vs Out — last 30 days</h3>
-          <canvas id="chartTrend" height="220"></canvas>
-        </div>
-        <div class="chart-card" style="grid-column:1 / -1;">
-          <h3>Inventory Value by Type</h3>
-          <canvas id="chartValue" height="180"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- HISTORY VIEW (everyone) -->
-    <div id="view-history" style="display:none;">
-      <div class="topbar">
-        <div><h1>Usage History</h1><div class="sub">Every stock in / stock out entry, most recent first</div></div>
-        <div class="actions no-print"><button class="btn-sm" id="exportHistoryBtn">Export to Excel</button></div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Supplier</th><th>By</th></tr></thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-        <div class="empty-state" id="historyEmpty" style="display:none;">
-          <div class="display">No entries yet</div>
-          Stock in/out entries will appear here.
-        </div>
-      </div>
-    </div>
-
-    <!-- SUPPLIERS VIEW (admin only) -->
-    <div id="view-suppliers" style="display:none;">
-      <div class="topbar">
-        <div><h1>Suppliers</h1><div class="sub">Vendors you buy board stock from</div></div>
-        <div class="actions no-print"><button class="btn-sm primary" id="openNewSupplierModal">+ New Supplier</button></div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Name</th><th>Contact</th><th>Notes</th><th></th></tr></thead>
-          <tbody id="suppliersBody"></tbody>
-        </table>
-        <div class="empty-state" id="suppliersEmpty" style="display:none;">
-          <div class="display">No suppliers yet</div>
-          Add your board/laminate vendors to track where stock comes from.
-        </div>
-      </div>
-    </div>
-
-    <!-- MANAGE ITEMS VIEW (admin only) -->
-    <div id="view-manage-items" style="display:none;">
-      <div class="topbar">
-        <div><h1>Manage Items</h1><div class="sub">Add, edit, or remove board types from the master list</div></div>
-        <div class="actions no-print">
-          <button class="btn-sm" id="exportItemsBtn">Export to Excel</button>
-          <button class="btn-sm" id="downloadTemplateBtn">Download Template</button>
-          <label class="btn-sm" for="bulkImportFile" style="cursor:pointer;">Import Excel</label>
-          <input type="file" id="bulkImportFile" accept=".xlsx,.xls,.csv" style="display:none;">
-          <button class="btn-sm primary" id="openNewItemModal">+ New Item</button>
-        </div>
-      </div>
-      <div class="locked-note" id="bulkImportNote" style="display:none;"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th>Stock</th><th>Price</th><th>Reorder Lvl</th><th></th></tr></thead>
-          <tbody id="manageItemsBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- MANAGE ACCESS VIEW (admin only) -->
-    <div id="view-manage-access" style="display:none;">
-      <div class="topbar">
-        <div><h1>Manage Access</h1><div class="sub">Control who can sign in as Admin or Staff</div></div>
-      </div>
-      <div class="locked-note">
-        Adding someone here only sets their <strong>role</strong>. You still need to create their
-        login (email + password) separately in Firebase Console → Authentication → Users.
-      </div>
-      <div class="access-form">
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="accessEmail" placeholder="staff@example.com">
-        </div>
-        <select id="accessRole">
-          <option value="staff">Staff</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button class="btn-sm primary" id="grantAccessBtn">Save Access</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
-          <tbody id="accessBody"></tbody>
-        </table>
-      </div>
-    </div>
-
+    <header class="topbar">
+      <button class="hamburger" id="hamburger" aria-label="Open menu"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="crumb">Step Media / <b id="crumbView">Dashboard</b></div>
+      <div class="spacer"></div>
+      <div class="clock" id="clock"></div>
+    </header>
+    <main class="content">
+      <section class="view" id="view-dashboard"></section>
+      <section class="view" id="view-inventory"></section>
+      <section class="view" id="view-alerts"></section>
+      <section class="view" id="view-reports"></section>
+      <section class="view" id="view-history"></section>
+      <section class="view" id="view-suppliers"></section>
+      <section class="view" id="view-items"></section>
+      <section class="view" id="view-access"></section>
+    </main>
   </div>
 </div>
 
-<!-- Stock In Modal -->
-<div class="modal-overlay" id="addModal">
-  <div class="modal">
-    <button class="close-x" data-close="addModal">✕</button>
-    <h2>Stock In</h2>
-    <div class="sub">Add received quantity for an item</div>
-    <div class="field"><label>Item</label><select id="addItemSelect"></select></div>
-    <div class="modal-row">
-      <div class="field" style="flex:1;"><label>Quantity</label><input type="number" id="addQty" min="0" step="0.5" required></div>
-      <div class="field" style="flex:1;"><label>Date</label><input type="date" id="addDate" required></div>
-    </div>
-    <div class="field"><label>Supplier (optional)</label><select id="addSupplierSelect"><option value="">— None —</option></select></div>
-    <div class="modal-actions">
-      <button class="btn-sm" data-close="addModal">Cancel</button>
-      <button class="btn-sm primary" id="confirmAdd">Add Stock</button>
-    </div>
-  </div>
-</div>
-
-<!-- Stock Out Modal -->
-<div class="modal-overlay" id="useModal">
-  <div class="modal">
-    <button class="close-x" data-close="useModal">✕</button>
-    <h2>Stock Out</h2>
-    <div class="sub">Record quantity used from an item</div>
-    <div class="field"><label>Item</label><select id="useItemSelect"></select></div>
-    <div class="modal-row">
-      <div class="field" style="flex:1;"><label>Quantity</label><input type="number" id="useQty" min="0" step="0.5" required></div>
-      <div class="field" style="flex:1;"><label>Date</label><input type="date" id="useDate" required></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-sm" data-close="useModal">Cancel</button>
-      <button class="btn-sm primary" id="confirmUse">Record Use</button>
-    </div>
-  </div>
-</div>
-
-<!-- New / Edit Item Modal -->
-<div class="modal-overlay" id="itemModal">
-  <div class="modal">
-    <button class="close-x" data-close="itemModal">✕</button>
-    <h2 id="itemModalTitle">New Item</h2>
-    <div class="sub">Item details</div>
-    <input type="hidden" id="itemModalId">
-    <div class="field"><label>Type</label><input type="text" id="itemType" placeholder="e.g. MDF"></div>
-    <div class="modal-row">
-      <div class="field" style="flex:1;"><label>Color</label><input type="text" id="itemColor" placeholder="optional"></div>
-      <div class="field" style="flex:1;"><label>Thickness</label><input type="text" id="itemThickness" placeholder="e.g. 18 mm"></div>
-    </div>
-    <div class="modal-row">
-      <div class="field" style="flex:1;"><label>Starting Stock</label><input type="number" id="itemStock" min="0" step="0.5" value="0"></div>
-      <div class="field" style="flex:1;"><label>Unit Price (Tk)</label><input type="number" id="itemPrice" min="0" step="0.01" value="0"></div>
-    </div>
-    <div class="field"><label>Reorder Level</label><input type="number" id="itemReorder" min="0" step="0.5" value="5"></div>
-    <div class="modal-actions">
-      <button class="btn-sm" data-close="itemModal">Cancel</button>
-      <button class="btn-sm primary" id="confirmItem">Save Item</button>
-    </div>
-  </div>
-</div>
-
-<!-- New / Edit Supplier Modal -->
-<div class="modal-overlay" id="supplierModal">
-  <div class="modal">
-    <button class="close-x" data-close="supplierModal">✕</button>
-    <h2 id="supplierModalTitle">New Supplier</h2>
-    <div class="sub">Vendor details</div>
-    <input type="hidden" id="supplierModalId">
-    <div class="field"><label>Name</label><input type="text" id="supplierName" placeholder="e.g. Akij Board House"></div>
-    <div class="field"><label>Contact</label><input type="text" id="supplierContact" placeholder="Phone / email"></div>
-    <div class="field"><label>Notes</label><input type="text" id="supplierNotes" placeholder="optional"></div>
-    <div class="modal-actions">
-      <button class="btn-sm" data-close="supplierModal">Cancel</button>
-      <button class="btn-sm primary" id="confirmSupplier">Save Supplier</button>
-    </div>
-  </div>
-</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal" id="modalBox"></div></div>
+<div class="toast-wrap" id="toastWrap"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="firebase-config.js"></script>
-<script src="app.js"></script>
+<script>
+"use strict";
+/* =====================================================
+   Step Media ERP — Board Stock Management
+   Connected to Firebase: Auth (login) + Firestore (live data).
+   Requires: firebase-config.js + index.html (login page).
+   Firestore collections: items, transactions, suppliers, roles
+===================================================== */
+
+/* ---------------- DATA LAYER (Firestore) ---------------- */
+const todayISO = d => d.toISOString().slice(0,10);
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate()-n); return todayISO(d); };
+const DEFAULT_REORDER = 5;
+let currentUserEmail = "";
+let currentRole = "staff";
+let DB = {items: [], suppliers: [], users: [], history: []};
+
+function loadAll(){
+  return Promise.all([
+    db.collection("items").orderBy("sl").get(),
+    db.collection("suppliers").orderBy("name").get(),
+    db.collection("transactions").orderBy("createdAt","desc").limit(500).get(),
+    db.collection("roles").get(),
+  ]).then(([itemsSnap, supSnap, txSnap, rolesSnap]) => {
+    DB.items = [];
+    itemsSnap.forEach(doc => {
+      const d = doc.data();
+      DB.items.push({
+        id: doc.id, sl: d.sl, type: d.type || "", color: d.color || "",
+        thickness: d.thickness || "—", stock: Number(d.stock) || 0,
+        price: Number(d.price) || 0,
+        reorder: (d.reorder_level === undefined || d.reorder_level === null) ? DEFAULT_REORDER : Number(d.reorder_level),
+      });
+    });
+    DB.suppliers = [];
+    supSnap.forEach(doc => {
+      const d = doc.data();
+      DB.suppliers.push({id: doc.id, name: d.name || "", contact: d.contact || "", phone: d.phone || "", note: d.notes || ""});
+    });
+    DB.history = [];
+    txSnap.forEach(doc => {
+      const d = doc.data();
+      DB.history.push({
+        id: doc.id, date: d.date || "", itemId: d.itemId, change: Number(d.change) || 0,
+        supplier: d.supplier || "", by: d.by || "", note: d.note || "",
+        sl: d.sl, txType: d.type, txColor: d.color, txThickness: d.thickness,
+      });
+    });
+    DB.users = [];
+    rolesSnap.forEach(doc => {
+      DB.users.push({id: doc.id, email: doc.id, role: (doc.data().role === "admin") ? "Admin" : "Staff"});
+    });
+  }).catch(err => { console.error("Load error:", err); toast("Could not load data: " + err.message); });
+}
+
+function txItemName(hh){
+  const it = DB.items.find(x => x.id === hh.itemId);
+  if(it) return itemName(it);
+  if(hh.txType) return hh.txType + (hh.txColor ? " — " + hh.txColor : "") + (hh.txThickness ? " — " + hh.txThickness : "");
+  return "(deleted item)";
+}
+
+/* ---------------- HELPERS ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const tk = n => "Tk " + Number(n||0).toLocaleString("en-US");
+const itemName = it => it.type + (it.color ? " — " + it.color : "") + (it.thickness && it.thickness !== "—" ? " — " + it.thickness : "");
+function statusOf(it){ if(it.stock <= 0) return "out"; if(it.stock <= it.reorder) return "low"; return "ok"; }
+function statusBadge(it){
+  const s = statusOf(it);
+  return s === "out" ? '<span class="badge out">OUT</span>' : s === "low" ? '<span class="badge low">LOW</span>' : '<span class="badge ok">OK</span>';
+}
+function levelBar(it){
+  const target = Math.max(it.reorder * 3, 1);
+  const pct = Math.max(0, Math.min(100, Math.round(it.stock / target * 100)));
+  const col = statusOf(it) === "ok" ? "var(--green)" : statusOf(it) === "low" ? "var(--orange)" : "var(--red)";
+  return `<div class="level"><i style="width:${pct}%;background:${col}"></i></div>`;
+}
+function toast(msg){
+  const el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  $("#toastWrap").appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+function lowItems(){ return DB.items.filter(it => it.stock <= it.reorder); }
+function totals(){
+  return {
+    items: DB.items.length,
+    sheets: DB.items.reduce((a,b) => a + b.stock, 0),
+    low: lowItems().length,
+    value: DB.items.reduce((a,b) => a + b.stock * b.price, 0),
+  };
+}
+function exportCSV(headers, rows, filename){
+  const body = rows.map(r => r.map(v => `"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([headers.join(",") + "\n" + body], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Exported " + filename);
+}
+
+/* ---------------- MODAL ---------------- */
+function openModal(html){ $("#modalBox").innerHTML = html; $("#modalBackdrop").classList.add("open"); }
+function closeModal(){ $("#modalBackdrop").classList.remove("open"); }
+$("#modalBackdrop").addEventListener("click", e => { if(e.target.id === "modalBackdrop") closeModal(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeModal(); });
+
+function itemOptions(sel){
+  return DB.items.map(it => `<option value="${it.id}" ${it.id==sel?"selected":""}>${esc(itemName(it))} (stock: ${it.stock})</option>`).join("");
+}
+function supplierOptions(){
+  return '<option value="">— None —</option>' + DB.suppliers.map(s => `<option>${esc(s.name)}</option>`).join("");
+}
+
+function openStockModal(dir){
+  const isIn = dir === "in";
+  openModal(`
+    <h3>${isIn ? "+ Stock In" : "− Stock Out"}</h3>
+    <div class="sub">${isIn ? "Record newly received sheets" : "Record sheets leaving the store"}</div>
+    <div class="field"><label for="smItem">Item</label><select id="smItem" class="select" style="width:100%">${itemOptions()}</select></div>
+    <div class="row-2">
+      <div class="field"><label for="smQty">Quantity (sheets)</label><input id="smQty" class="input" type="number" min="1" value="1"></div>
+      <div class="field"><label for="smDate">Date</label><input id="smDate" class="input" type="date" value="${daysAgo(0)}"></div>
+    </div>
+    ${isIn ? `<div class="field"><label for="smSup">Supplier</label><select id="smSup" class="select" style="width:100%">${supplierOptions()}</select></div>` : ""}
+    <div class="field"><label for="smNote">Note (optional)</label><input id="smNote" class="input" placeholder="${isIn ? "e.g. Purchase order #" : "e.g. Client order, project name"}"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn ${isIn ? "btn-green" : "btn-danger-soft"}" onclick="submitStock('${dir}')">${isIn ? "Add stock" : "Remove stock"}</button>
+    </div>`);
+}
+function submitStock(dir){
+  const id = $("#smItem").value;
+  const qty = Math.abs(Number($("#smQty").value || 0));
+  const it = DB.items.find(x => x.id === id);
+  if(!it || !qty){ toast("Enter a valid quantity"); return; }
+  if(dir === "out" && qty > it.stock){ toast("Not enough stock — only " + it.stock + " left"); return; }
+  const change = dir === "in" ? qty : -qty;
+  const date = $("#smDate").value || daysAgo(0);
+  const supplier = dir === "in" ? ($("#smSup") ? $("#smSup").value : "") : "";
+  const note = $("#smNote").value.trim();
+  const ref = db.collection("items").doc(it.id);
+  db.runTransaction(t => t.get(ref).then(doc => {
+    const current = Number(doc.data().stock) || 0;
+    if(dir === "out" && qty > current) throw new Error("Not enough stock — only " + current + " left");
+    t.update(ref, {stock: current + change});
+  })).then(() =>
+    db.collection("transactions").add({
+      itemId: it.id, sl: it.sl, type: it.type, color: it.color || "", thickness: it.thickness,
+      change, date, supplier, note, by: currentUserEmail,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    })
+  ).then(() => loadAll()).then(() => {
+    closeModal(); renderAll();
+    toast((dir === "in" ? "+" : "−") + qty + " " + itemName(it));
+  }).catch(err => toast(err.message));
+}
+
+function openItemModal(id){
+  const it = id ? DB.items.find(x => x.id === id) : {type:"",color:"",thickness:"",stock:0,price:0,reorder:5};
+  openModal(`
+    <h3>${id ? "Edit Item" : "New Item"}</h3>
+    <div class="sub">Board type in the master list</div>
+    <div class="field"><label for="imType">Type</label><input id="imType" class="input" value="${esc(it.type)}" placeholder="e.g. MDF"></div>
+    <div class="row-2">
+      <div class="field"><label for="imColor">Color</label><input id="imColor" class="input" value="${esc(it.color)}" placeholder="e.g. Red Oak"></div>
+      <div class="field"><label for="imThk">Thickness</label><input id="imThk" class="input" value="${esc(it.thickness)}" placeholder="e.g. 12 mm"></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="imStock">Stock (sheets)</label><input id="imStock" class="input" type="number" min="0" value="${it.stock}"></div>
+      <div class="field"><label for="imPrice">Unit price (Tk)</label><input id="imPrice" class="input" type="number" min="0" value="${it.price}"></div>
+    </div>
+    <div class="field"><label for="imReorder">Reorder level</label><input id="imReorder" class="input" type="number" min="0" value="${it.reorder}"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitItem('${id || ''}')">${id ? "Save changes" : "Add item"}</button>
+    </div>`);
+}
+function submitItem(id){
+  const type = $("#imType").value.trim();
+  if(!type){ toast("Type is required"); return; }
+  const data = {
+    type, color: $("#imColor").value.trim(), thickness: $("#imThk").value.trim() || "—",
+    stock: Math.max(0, Number($("#imStock").value||0)),
+    price: Math.max(0, Number($("#imPrice").value||0)),
+    reorder_level: Math.max(0, Number($("#imReorder").value||0)),
+  };
+  const op = id
+    ? db.collection("items").doc(id).update(data)
+    : (function(){
+        const nextSl = DB.items.length ? Math.max(...DB.items.map(i => Number(i.sl) || 0)) + 1 : 1;
+        return db.collection("items").doc(String(nextSl)).set(Object.assign({sl: nextSl, page: null}, data));
+      })();
+  op.then(() => loadAll()).then(() => {
+    closeModal(); renderAll(); toast(id ? "Item updated" : "Item added");
+  }).catch(err => toast(err.message));
+}
+function deleteItem(id){
+  const it = DB.items.find(x => x.id === id);
+  if(!confirm("Delete " + itemName(it) + "?")) return;
+  db.collection("items").doc(id).delete().then(() => loadAll()).then(() => {
+    renderAll(); toast("Item deleted");
+  }).catch(err => toast(err.message));
+}
+
+function openSupplierModal(id){
+  const s = id ? DB.suppliers.find(x => x.id === id) : {name:"",contact:"",phone:"",note:""};
+  openModal(`
+    <h3>${id ? "Edit Supplier" : "New Supplier"}</h3>
+    <div class="sub">Vendor you purchase boards from</div>
+    <div class="field"><label for="spName">Company name</label><input id="spName" class="input" value="${esc(s.name)}"></div>
+    <div class="row-2">
+      <div class="field"><label for="spContact">Contact person</label><input id="spContact" class="input" value="${esc(s.contact)}"></div>
+      <div class="field"><label for="spPhone">Phone</label><input id="spPhone" class="input" value="${esc(s.phone)}"></div>
+    </div>
+    <div class="field"><label for="spNote">Supplies</label><input id="spNote" class="input" value="${esc(s.note)}" placeholder="e.g. MDF, Melamine"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitSupplier('${id || ''}')">${id ? "Save" : "Add supplier"}</button>
+    </div>`);
+}
+function submitSupplier(id){
+  const name = $("#spName").value.trim();
+  if(!name){ toast("Name is required"); return; }
+  const data = {name, contact: $("#spContact").value.trim(), phone: $("#spPhone").value.trim(), notes: $("#spNote").value.trim()};
+  const op = id ? db.collection("suppliers").doc(id).update(data) : db.collection("suppliers").add(data);
+  op.then(() => loadAll()).then(() => { closeModal(); renderAll(); toast("Supplier saved"); }).catch(err => toast(err.message));
+}
+function deleteSupplier(id){
+  db.collection("suppliers").doc(id).delete().then(() => loadAll()).then(() => {
+    renderAll(); toast("Supplier removed");
+  }).catch(err => toast(err.message));
+}
+
+function addUser(){
+  const email = $("#acEmail").value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast("Enter a valid email"); return; }
+  const role = $("#acRole").value === "Admin" ? "admin" : "staff";
+  db.collection("roles").doc(email).set({role}).then(() => loadAll()).then(() => {
+    $("#acEmail") && ($("#acEmail").value = "");
+    renderAll(); toast("Access saved for " + email);
+  }).catch(err => toast(err.message));
+}
+function removeUser(id){
+  if(!confirm("Remove access for " + id + "?")) return;
+  db.collection("roles").doc(id).delete().then(() => loadAll()).then(() => {
+    renderAll(); toast("Access removed");
+  }).catch(err => toast(err.message));
+}
+
+/* ---------------- CHARTS (canvas, no libraries) ---------------- */
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  return {ctx, w: rect.width, h: rect.height};
+}
+const axisFmt = v => v >= 1000 ? (v % 1000 === 0 ? (v / 1000) + "k" : (v / 1000).toFixed(1) + "k") : String(v);
+function drawBarChart(canvas, labels, values, color){
+  const {ctx, w, h} = setupCanvas(canvas);
+  ctx.font = "11px -apple-system, Segoe UI, Arial";
+  const max = Math.max(...values, 1);
+  const step = Math.max(1, Math.ceil(max / 4));
+  const top = step * 4;
+  let padL = 24;
+  for(let i = 0; i <= 4; i++) padL = Math.max(padL, ctx.measureText(axisFmt(step * i)).width + 14);
+  const padR = 8, padT = 10, padB = 64;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  // gridlines + y labels
+  for(let i = 0; i <= 4; i++){
+    const y = padT + ch - (i / 4) * ch;
+    ctx.strokeStyle = "#F0EFED"; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+    ctx.fillStyle = "#7D7A75"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(axisFmt(step * i), padL - 8, y);
+  }
+  const n = labels.length;
+  const slot = cw / n;
+  const bw = Math.min(34, slot * 0.6);
+  labels.forEach((lab, i) => {
+    const x = padL + slot * i + slot / 2;
+    const bh = (values[i] / top) * ch;
+    ctx.fillStyle = color;
+    const bx = x - bw / 2, by = padT + ch - bh;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(bx, by, bw, bh, [4,4,0,0]); else ctx.rect(bx, by, bw, bh);
+    ctx.fill();
+    // rotated label
+    ctx.save();
+    ctx.translate(x, padT + ch + 8);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = "#7D7A75"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(lab.length > 14 ? lab.slice(0, 13) + "…" : lab, 0, 0);
+    ctx.restore();
+  });
+}
+function drawLineChart(canvas, labels, series){
+  const {ctx, w, h} = setupCanvas(canvas);
+  const padL = 36, padR = 10, padT = 10, padB = 30;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  const max = Math.max(1, ...series.flatMap(s => s.data));
+  const step = Math.max(1, Math.ceil(max / 4));
+  const top = step * 4;
+  ctx.font = "11px -apple-system, Segoe UI, Arial";
+  for(let i = 0; i <= 4; i++){
+    const y = padT + ch - (i / 4) * ch;
+    ctx.strokeStyle = "#F0EFED"; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+    ctx.fillStyle = "#7D7A75"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(String(step * i), padL - 8, y);
+  }
+  const n = labels.length;
+  const xAt = i => padL + (n === 1 ? cw / 2 : (i / (n - 1)) * cw);
+  const yAt = v => padT + ch - (v / top) * ch;
+  // x labels (sparse)
+  const every = Math.ceil(n / 6);
+  ctx.fillStyle = "#7D7A75"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  labels.forEach((lab, i) => { if(i % every === 0) ctx.fillText(lab, xAt(i), padT + ch + 8); });
+  series.forEach(s => {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.lineJoin = "round";
+    ctx.beginPath();
+    s.data.forEach((v, i) => { const x = xAt(i), y = yAt(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke();
+    s.data.forEach((v, i) => {
+      if(v > 0){ ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(xAt(i), yAt(v), 3, 0, Math.PI * 2); ctx.fill(); }
+    });
+  });
+}
+function inOutSeries(days){
+  const labels = [], sin = [], sout = [];
+  for(let i = days - 1; i >= 0; i--){
+    const d = daysAgo(i);
+    labels.push(d.slice(5).replace("-", "/"));
+    let a = 0, b = 0;
+    DB.history.forEach(hh => { if(hh.date === d){ if(hh.change > 0) a += hh.change; else b += -hh.change; } });
+    sin.push(a); sout.push(b);
+  }
+  return {labels, sin, sout};
+}
+function byType(fn){
+  const m = new Map();
+  DB.items.forEach(it => m.set(it.type, (m.get(it.type) || 0) + fn(it)));
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+/* ---------------- VIEW RENDERERS ---------------- */
+const VIEWS = {
+  dashboard: {title: "Dashboard", render: renderDashboard},
+  inventory: {title: "Inventory", render: renderInventory},
+  alerts:    {title: "Reorder Alerts", render: renderAlerts},
+  reports:   {title: "Reports", render: renderReports},
+  history:   {title: "Usage History", render: renderHistory},
+  suppliers: {title: "Suppliers", render: renderSuppliers},
+  items:     {title: "Manage Items", render: renderItems},
+  access:    {title: "Manage Access", render: renderAccess},
+};
+let currentView = "dashboard";
+let invSearch = "", invType = "";
+
+function inventoryRows(list, opts){
+  return list.map((it, i) => `<tr>
+    <td class="muted">${i + 1}</td>
+    <td class="type-cell">${esc(it.type)}</td>
+    <td>${it.color ? esc(it.color) : '<span class="muted">—</span>'}</td>
+    <td>${esc(it.thickness)}</td>
+    <td class="num" style="font-weight:600">${it.stock}</td>
+    ${opts && opts.reorderCol ? `<td class="num">${it.reorder}</td>` : `
+    <td class="num">${tk(it.price)}</td>
+    <td class="num">${tk(it.stock * it.price)}</td>`}
+    <td>${statusBadge(it)}</td>
+    <td>${levelBar(it)}</td>
+  </tr>`).join("");
+}
+
+function renderDashboard(el){
+  const t = totals();
+  const low = lowItems();
+  const recent = [...DB.history].sort((a, b) => b.date < a.date ? -1 : 1).slice(0, 6);
+  const topTypes = byType(it => it.stock).slice(0, 8);
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Dashboard</h1><p>Live overview of your board stock</p></div>
+    <div class="page-actions">
+      <button class="btn btn-green" onclick="openStockModal('in')">+ Stock In</button>
+      <button class="btn btn-danger-soft" onclick="openStockModal('out')">− Stock Out</button>
+    </div>
+  </div>
+  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length > 1 ? "s" : ""} at or below reorder level.</b> Review the Alerts tab and place purchase orders soon.</div></div>` : ""}
+  <div class="kpi-grid">
+    <div class="card kpi"><div class="label">Total Items</div><div class="value">${t.items}</div><div class="delta">board types tracked</div></div>
+    <div class="card kpi k-blue"><div class="label">Total Stock</div><div class="value">${t.sheets.toLocaleString()}</div><div class="delta">sheets on hand</div></div>
+    <div class="card kpi k-red"><div class="label">Low / Out of Stock</div><div class="value">${t.low}</div><div class="delta">need reordering</div></div>
+    <div class="card kpi k-green"><div class="label">Inventory Value</div><div class="value">${tk(t.value)}</div><div class="delta">at current unit prices</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Stock In vs Out</h3><div class="sub">Last 30 days · sheets moved</div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--red)"></i>Stock Out</span></div>
+      <div class="chart-box"><canvas id="dashLine"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Stock by Type</h3><div class="sub">Top ${topTypes.length} board types by sheets</div>
+      <div class="chart-box" style="height:266px"><canvas id="dashBar"></canvas></div>
+    </div>
+  </div>
+  <div class="table-card">
+    <div style="padding:16px 16px 0"><h3 style="font-size:15px">Recent Activity</h3><div class="sub">Latest stock movements</div></div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Date</th><th>Item</th><th class="num">Change</th><th>Supplier</th><th>By</th></tr></thead>
+      <tbody>${recent.map(hh => { const it = DB.items.find(x => x.id === hh.itemId); return `<tr>
+        <td class="muted">${hh.date}</td>
+        <td class="type-cell">${esc(txItemName(hh))}</td>
+        <td class="num ${hh.change > 0 ? "pos" : "neg"}">${hh.change > 0 ? "+" : ""}${hh.change}</td>
+        <td>${hh.supplier ? esc(hh.supplier) : '<span class="muted">—</span>'}</td>
+        <td class="muted">${esc(hh.by)}</td></tr>`; }).join("") || '<tr><td colspan="5" class="muted">No activity yet</td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+  requestAnimationFrame(() => {
+    const s = inOutSeries(30);
+    const lc = el.querySelector("#dashLine"), bc = el.querySelector("#dashBar");
+    if(lc) drawLineChart(lc, s.labels, [{data: s.sin, color: "#46A171"}, {data: s.sout, color: "#E56458"}]);
+    if(bc) drawBarChart(bc, topTypes.map(x => x[0]), topTypes.map(x => x[1]), "#5E9FE8");
+  });
+}
+
+function renderInventory(el){
+  const types = [...new Set(DB.items.map(it => it.type))];
+  const q = invSearch.toLowerCase();
+  const list = DB.items.filter(it =>
+    (!invType || it.type === invType) &&
+    (!q || (it.type + " " + it.color + " " + it.thickness).toLowerCase().includes(q)));
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Board Stock</h1><p>Live stock levels across all board types</p></div>
+    <div class="page-actions">
+      <button class="btn" onclick="window.print()">Print</button>
+      <button class="btn" onclick="exportInventory()">Export CSV</button>
+      <button class="btn btn-green" onclick="openStockModal('in')">+ Stock In</button>
+      <button class="btn btn-danger-soft" onclick="openStockModal('out')">− Stock Out</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input class="input" id="invSearch" placeholder="Search type, color, thickness…" value="${esc(invSearch)}"></div>
+    <select class="select" id="invType">
+      <option value="">All Types</option>
+      ${types.map(tp => `<option ${tp === invType ? "selected" : ""}>${esc(tp)}</option>`).join("")}
+    </select>
+  </div>
+  <div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th class="num">Stock</th><th class="num">Unit Price</th><th class="num">Value</th><th>Status</th><th>Level</th></tr></thead>
+    <tbody>${inventoryRows(list) || '<tr><td colspan="9" class="muted">No items match your search</td></tr>'}</tbody>
+  </table></div></div>`;
+  const si = el.querySelector("#invSearch");
+  si.addEventListener("input", e => { invSearch = e.target.value; renderInventory(el); el.querySelector("#invSearch").focus(); const v = el.querySelector("#invSearch"); v.setSelectionRange(v.value.length, v.value.length); });
+  el.querySelector("#invType").addEventListener("change", e => { invType = e.target.value; renderInventory(el); });
+}
+function exportInventory(){
+  exportCSV(["SL","Type","Color","Thickness","Stock","Unit Price (Tk)","Value (Tk)","Reorder Level","Status"],
+    DB.items.map((it, i) => [i + 1, it.type, it.color, it.thickness, it.stock, it.price, it.stock * it.price, it.reorder, statusOf(it).toUpperCase()]),
+    "board-stock.csv");
+}
+
+function renderAlerts(el){
+  const list = lowItems();
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Reorder Alerts</h1><p>Items at or below their reorder level</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportAlerts()">Export CSV</button><button class="btn btn-green" onclick="openStockModal('in')">+ Stock In</button></div>
+  </div>
+  ${list.length ? `<div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th class="num">Stock</th><th class="num">Reorder Level</th><th>Status</th><th>Level</th></tr></thead>
+    <tbody>${inventoryRows(list, {reorderCol: true})}</tbody>
+  </table></div></div>` : '<div class="card" style="text-align:center;color:var(--muted)">🎉 All good — nothing needs reordering right now.</div>'}`;
+}
+function exportAlerts(){
+  exportCSV(["Type","Color","Thickness","Stock","Reorder Level"],
+    lowItems().map(it => [it.type, it.color, it.thickness, it.stock, it.reorder]), "reorder-alerts.csv");
+}
+
+function renderReports(el){
+  const stockByType = byType(it => it.stock);
+  const valueByType = byType(it => it.stock * it.price).filter(x => x[1] > 0);
+  const t = totals();
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Reports</h1><p>Stock breakdown and usage trends</p></div>
+    <div class="page-actions"><button class="btn" onclick="window.print()">Print</button></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Stock by Type</h3><div class="sub">Sheets on hand per board type</div>
+      <div class="chart-box" style="height:280px"><canvas id="repBar"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Stock In vs Out</h3><div class="sub">Last 30 days</div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--red)"></i>Stock Out</span></div>
+      <div class="chart-box" style="height:252px"><canvas id="repLine"></canvas></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Inventory Value by Type</h3><div class="sub">Tk value at current unit prices</div>
+      <div class="chart-box" style="height:280px"><canvas id="repVal"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Summary</h3><div class="sub">Snapshot as of ${daysAgo(0)}</div>
+      <div class="table-scroll"><table>
+        <tbody>
+          <tr><td>Total board types</td><td class="num" style="font-weight:600">${t.items}</td></tr>
+          <tr><td>Total sheets on hand</td><td class="num" style="font-weight:600">${t.sheets.toLocaleString()}</td></tr>
+          <tr><td>Items low / out of stock</td><td class="num" style="font-weight:600;color:var(--red)">${t.low}</td></tr>
+          <tr><td>Total inventory value</td><td class="num" style="font-weight:600;color:var(--green)">${tk(t.value)}</td></tr>
+          <tr><td>Stock-in entries (30 days)</td><td class="num">${DB.history.filter(hh => hh.change > 0).length}</td></tr>
+          <tr><td>Stock-out entries (30 days)</td><td class="num">${DB.history.filter(hh => hh.change < 0).length}</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>`;
+  requestAnimationFrame(() => {
+    const s = inOutSeries(30);
+    drawBarChart(el.querySelector("#repBar"), stockByType.map(x => x[0]), stockByType.map(x => x[1]), "#5E9FE8");
+    drawLineChart(el.querySelector("#repLine"), s.labels, [{data: s.sin, color: "#46A171"}, {data: s.sout, color: "#E56458"}]);
+    drawBarChart(el.querySelector("#repVal"), valueByType.map(x => x[0]), valueByType.map(x => x[1]), "#EAC26B");
+  });
+}
+
+function renderHistory(el){
+  const list = [...DB.history].sort((a, b) => b.date < a.date ? -1 : 1);
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Usage History</h1><p>Every stock in / stock out entry, most recent first</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportHistory()">Export CSV</button></div>
+  </div>
+  <div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>Date</th><th>Item</th><th class="num">Change</th><th>Supplier</th><th>Note</th><th>By</th></tr></thead>
+    <tbody>${list.map(hh => { const it = DB.items.find(x => x.id === hh.itemId); return `<tr>
+      <td class="muted">${hh.date}</td>
+      <td class="type-cell">${esc(txItemName(hh))}</td>
+      <td class="num ${hh.change > 0 ? "pos" : "neg"}">${hh.change > 0 ? "+" : ""}${hh.change}</td>
+      <td>${hh.supplier ? esc(hh.supplier) : '<span class="muted">—</span>'}</td>
+      <td>${hh.note ? esc(hh.note) : '<span class="muted">—</span>'}</td>
+      <td class="muted">${esc(hh.by)}</td></tr>`; }).join("") || '<tr><td colspan="6" class="muted">No entries yet</td></tr>'}</tbody>
+  </table></div></div>`;
+}
+function exportHistory(){
+  exportCSV(["Date","Item","Change","Supplier","Note","By"],
+    [...DB.history].sort((a, b) => b.date < a.date ? -1 : 1).map(hh => { const it = DB.items.find(x => x.id === hh.itemId); return [hh.date, txItemName(hh), hh.change, hh.supplier, hh.note, hh.by]; }),
+    "usage-history.csv");
+}
+
+function renderSuppliers(el){
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Suppliers</h1><p>Vendors you purchase boards and materials from</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="openSupplierModal(0)">+ New Supplier</button></div>
+  </div>
+  <div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>SL</th><th>Company</th><th>Contact</th><th>Phone</th><th>Supplies</th><th></th></tr></thead>
+    <tbody>${DB.suppliers.map((s, i) => `<tr>
+      <td class="muted">${i + 1}</td>
+      <td class="type-cell">${esc(s.name)}</td>
+      <td>${esc(s.contact)}</td>
+      <td>${esc(s.phone)}</td>
+      <td class="muted">${esc(s.note)}</td>
+      <td style="text-align:right"><button class="btn btn-sm" onclick="openSupplierModal('${s.id}')">Edit</button>
+      <button class="btn btn-sm btn-danger-soft" onclick="deleteSupplier('${s.id}')">Delete</button></td></tr>`).join("") || '<tr><td colspan="6" class="muted">No suppliers yet</td></tr>'}</tbody>
+  </table></div></div>`;
+}
+
+function renderItems(el){
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Manage Items</h1><p>Add, edit, or remove board types from the master list</p></div>
+    <div class="page-actions">
+      <button class="btn" onclick="exportInventory()">Export CSV</button>
+      <button class="btn btn-primary" onclick="openItemModal(0)">+ New Item</button>
+    </div>
+  </div>
+  <div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>SL</th><th>Type</th><th>Color</th><th>Thickness</th><th class="num">Stock</th><th class="num">Price</th><th class="num">Reorder Lvl</th><th></th></tr></thead>
+    <tbody>${DB.items.map((it, i) => `<tr>
+      <td class="muted">${i + 1}</td>
+      <td class="type-cell">${esc(it.type)}</td>
+      <td>${it.color ? esc(it.color) : '<span class="muted">—</span>'}</td>
+      <td>${esc(it.thickness)}</td>
+      <td class="num">${it.stock}</td>
+      <td class="num">${tk(it.price)}</td>
+      <td class="num">${it.reorder}</td>
+      <td style="text-align:right"><button class="btn btn-sm" onclick="openItemModal('${it.id}')">Edit</button>
+      <button class="btn btn-sm btn-danger-soft" onclick="deleteItem('${it.id}')">Delete</button></td></tr>`).join("")}</tbody>
+  </table></div></div>`;
+}
+
+function renderAccess(el){
+  el.innerHTML = `
+  <div class="page-head">
+    <div><h1>Manage Access</h1><p>Control who can sign in as Admin or Staff</p></div>
+  </div>
+  <div class="note">This sets a user's role inside the app. To let them actually sign in, also create their account (email + password) in Firebase Console → Authentication → Users.</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="filter-bar" style="margin:0">
+      <div class="search-wrap" style="min-width:200px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
+        <input class="input" id="acEmail" type="email" placeholder="staff@example.com"></div>
+      <select class="select" id="acRole"><option>Staff</option><option>Admin</option></select>
+      <button class="btn btn-primary" onclick="addUser()">Save Access</button>
+    </div>
+  </div>
+  <div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+    <tbody>${DB.users.map(u => `<tr>
+      <td class="type-cell">${esc(u.email)}</td>
+      <td><span class="badge ${u.role === "Admin" ? "admin" : "staff"}">${u.role.toUpperCase()}</span></td>
+      <td style="text-align:right"><button class="btn btn-sm" onclick="removeUser('${u.id}')">Remove</button></td></tr>`).join("")}</tbody>
+  </table></div></div>`;
+}
+
+/* ---------------- ROUTER + INIT ---------------- */
+function show(view){
+  if(!VIEWS[view]) view = "dashboard";
+  if(currentRole !== "admin" && (view === "items" || view === "access")) view = "dashboard";
+  currentView = view;
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  const el = $("#view-" + view);
+  el.classList.add("active");
+  $("#crumbView").textContent = VIEWS[view].title;
+  VIEWS[view].render(el);
+  $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open");
+  if(location.hash !== "#" + view) history.replaceState(null, "", "#" + view);
+}
+function renderAll(){
+  $("#alertBadge").textContent = lowItems().length;
+  show(currentView);
+}
+document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
+$("#hamburger").addEventListener("click", () => { $("#sidebar").classList.add("open"); $("#scrim").classList.add("open"); });
+$("#scrim").addEventListener("click", () => { $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open"); });
+window.addEventListener("hashchange", () => show(location.hash.slice(1) || "dashboard"));
+window.addEventListener("resize", () => { if(currentView === "dashboard" || currentView === "reports") show(currentView); });
+function tick(){
+  $("#clock").textContent = new Date().toLocaleString("en-GB", {day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"});
+}
+setInterval(tick, 30000); tick();
+auth.onAuthStateChanged(user => {
+  if(!user){ window.location.href = "index.html"; return; }
+  currentUserEmail = user.email;
+  $("#footEmail").textContent = user.email;
+  db.collection("roles").doc(user.email).get().then(doc => {
+    currentRole = (doc.exists && doc.data().role === "admin") ? "admin" : "staff";
+    $("#footRole").textContent = currentRole.toUpperCase();
+    if(currentRole !== "admin"){ document.querySelectorAll(".admin-only").forEach(el => el.style.display = "none"); }
+    loadAll().then(() => {
+      $("#alertBadge").textContent = lowItems().length;
+      show(location.hash.slice(1) || "dashboard");
+    });
+  }).catch(err => toast("Role check failed: " + err.message));
+});
+</script>
 </body>
 </html>
