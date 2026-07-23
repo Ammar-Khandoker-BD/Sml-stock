@@ -3,73 +3,1548 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Step Media Ltd — Board Stock</title>
-<link rel="stylesheet" href="style.css">
+<title>SML Inventory ERP — Step Media Ltd</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F7F6F4; --panel:#FFFFFF; --border:#E4E1DD; --border2:#EEECE9;
+  --text:#161513; --muted:#6E6A63; --faint:#9C9890;
+  --accent:#C74634; --accent-dark:#A93A2A; --accent-soft:#FBEDEA;
+  --green:#3F7D5A; --green-soft:#E9F3EE;
+  --orange:#B7770D; --orange-soft:#FBF3E2;
+  --red:#C7402E; --red-soft:#FCEBE8;
+  --blue:#2F6FBF; --blue-soft:#EAF1FA;
+  --top:#211E1C; --top-text:#F5F3F0;
+  --radius:8px; --shadow:0 1px 2px rgba(22,21,19,.05),0 4px 14px rgba(22,21,19,.05);
+}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13.5px;color:var(--text)}
+
+/* ---------- LOGIN ---------- */
+#loginWrap{position:fixed;inset:0;background:linear-gradient(160deg,#211E1C 0%,#3A2F2B 55%,#59352B 100%);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.login-card{background:var(--panel);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.45);width:100%;max-width:400px;padding:36px 34px}
+.login-mark{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.login-mark .lm{width:44px;height:44px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;letter-spacing:.5px}
+.login-mark b{font-size:17px;display:block}
+.login-mark span{color:var(--muted);font-size:12.5px}
+.login-card h1{font-size:21px;margin-bottom:4px}
+.login-card .sub{color:var(--muted);font-size:13.5px;margin-bottom:20px}
+.lfield{margin-bottom:14px}
+.lfield label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.lfield input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#FCFBFA}
+.lfield input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(199,70,52,.12)}
+#loginErr{display:none;background:var(--red-soft);color:var(--red);border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:14px}
+.login-btn{width:100%;padding:11px;background:var(--accent);border:none;color:#fff;border-radius:8px;font-size:14.5px;font-weight:600}
+.login-btn:hover{background:var(--accent-dark)}
+.login-foot{margin-top:16px;text-align:center;color:var(--faint);font-size:12px}
+
+/* ---------- TOPBAR ---------- */
+.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--top);color:var(--top-text);display:flex;align-items:center;gap:14px;padding:0 16px;z-index:50}
+.tb-burger{display:none;background:none;border:none;color:var(--top-text);width:34px;height:34px;border-radius:7px;font-size:18px}
+.tb-burger:hover{background:rgba(255,255,255,.1)}
+.tb-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14.5px;white-space:nowrap}
+.tb-brand .bm{width:28px;height:28px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.tb-brand small{font-weight:400;color:#B9B4AC;font-size:12px}
+.tb-spacer{flex:1}
+.tb-clock{font-size:12.5px;color:#B9B4AC;white-space:nowrap}
+.tb-user{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);padding:5px 10px 5px 6px;border-radius:8px}
+.tb-user .av{width:26px;height:26px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700}
+.tb-user .nm{font-size:12.5px;font-weight:600;line-height:1.1}
+.tb-user .rl{font-size:10.5px;color:#B9B4AC;text-transform:uppercase;letter-spacing:.5px}
+.tb-out{background:none;border:1px solid rgba(255,255,255,.18);color:var(--top-text);padding:6px 12px;border-radius:7px;font-size:12.5px}
+.tb-out:hover{background:rgba(255,255,255,.1)}
+
+/* ---------- LAYOUT ---------- */
+.shell{display:flex;padding-top:52px;min-height:100vh}
+.sidebar{width:236px;flex:none;background:var(--panel);border-right:1px solid var(--border);padding:14px 10px 20px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+.nav-label{font-size:10.5px;font-weight:700;letter-spacing:.9px;color:var(--faint);text-transform:uppercase;padding:14px 10px 5px}
+.nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:none;border-radius:7px;color:var(--text);font-size:13.5px;font-weight:500;text-align:left;min-height:35px}
+.nav-item svg{width:16px;height:16px;flex:none;color:var(--faint)}
+.nav-item:hover{background:var(--bg)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent-dark);font-weight:600}
+.nav-item.active svg{color:var(--accent)}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10.5px;font-weight:700;border-radius:20px;padding:1px 7px}
+.main{flex:1;min-width:0;padding:22px 26px 60px;max-width:1340px}
+.scrim{display:none;position:fixed;inset:52px 0 0;background:rgba(22,21,19,.4);z-index:39}
+.scrim.open{display:block}
+
+/* ---------- PAGE ---------- */
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.page-head h1{font-size:21px;letter-spacing:-.2px}
+.page-head p{color:var(--muted);font-size:13px;margin-top:3px}
+.page-actions{display:flex;gap:8px;flex-wrap:wrap}
+.crumb{font-size:12px;color:var(--faint);margin-bottom:4px}
+.crumb b{color:var(--muted);font-weight:600}
+
+/* ---------- COMPONENTS ---------- */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:7px;border:1px solid var(--border);background:var(--panel);font-size:13px;font-weight:600;color:var(--text)}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-green{background:var(--green);border-color:var(--green);color:#fff}
+.btn-green:hover{filter:brightness(1.07)}
+.btn-danger-soft{background:var(--red-soft);border-color:#F2C9C2;color:var(--red)}
+.btn-danger-soft:hover{background:#F9DDD8}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.card h3{font-size:14.5px;margin-bottom:2px}
+.card .sub{color:var(--muted);font-size:12.5px;margin-bottom:12px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+.kpi{padding:16px 18px;border-top:3px solid var(--border)}
+.kpi .label{font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+.kpi .value{font-size:25px;font-weight:700;margin:6px 0 2px;letter-spacing:-.5px}
+.kpi .delta{font-size:12px;color:var(--faint)}
+.kpi.k-red{border-top-color:var(--red)}.kpi.k-red .value{color:var(--red)}
+.kpi.k-green{border-top-color:var(--green)}.kpi.k-green .value{color:var(--green)}
+.kpi.k-blue{border-top-color:var(--blue)}.kpi.k-blue .value{color:var(--blue)}
+.kpi.k-orange{border-top-color:var(--orange)}.kpi.k-orange .value{color:var(--orange)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.chart-box{position:relative;height:250px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.callout{display:flex;gap:10px;align-items:flex-start;background:var(--orange-soft);border:1px solid #EFD9AC;border-radius:var(--radius);padding:12px 14px;font-size:13px;margin-bottom:18px}
+.callout svg{width:17px;height:17px;flex:none;color:var(--orange);margin-top:1px}
+.note{background:var(--blue-soft);border:1px solid #C9DCF2;border-radius:var(--radius);padding:11px 14px;font-size:12.5px;color:#274F7F;margin-bottom:16px}
+
+.table-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#FAF9F7;text-align:left;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#FCFBFA}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.muted{color:var(--faint)}
+.type-cell{font-weight:600}
+.pos{color:var(--green);font-weight:600}.neg{color:var(--red);font-weight:600}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.5px;padding:2.5px 8px;border-radius:20px}
+.badge.ok{background:var(--green-soft);color:var(--green)}
+.badge.low{background:var(--orange-soft);color:var(--orange)}
+.badge.out{background:var(--red-soft);color:var(--red)}
+.badge.pending{background:var(--orange-soft);color:var(--orange)}
+.badge.approved{background:var(--blue-soft);color:var(--blue)}
+.badge.issued{background:var(--green-soft);color:var(--green)}
+.badge.rejected{background:var(--red-soft);color:var(--red)}
+.badge.running{background:var(--blue-soft);color:var(--blue)}
+.badge.delivered{background:var(--green-soft);color:var(--green)}
+.badge.closed{background:#EEECE9;color:var(--muted)}
+.badge.admin{background:var(--accent-soft);color:var(--accent-dark)}
+.badge.store{background:var(--blue-soft);color:var(--blue)}
+.badge.viewer{background:#EEECE9;color:var(--muted)}
+.badge.in{background:var(--green-soft);color:var(--green)}
+.badge.outt{background:var(--red-soft);color:var(--red)}
+.badge.ret{background:var(--blue-soft);color:var(--blue)}
+.badge.adj{background:var(--orange-soft);color:var(--orange)}
+.level{width:90px;height:6px;background:var(--border2);border-radius:6px;overflow:hidden}
+.level i{display:block;height:100%;border-radius:6px}
+
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.search-wrap{position:relative;flex:1;min-width:210px;max-width:420px}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
+.input{width:100%;padding:8.5px 12px;border:1px solid var(--border);border-radius:7px;background:var(--panel)}
+.search-wrap .input{padding-left:34px}
+.input:focus,.select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(199,70,52,.1)}
+.select{padding:8.5px 32px 8.5px 12px;border:1px solid var(--border);border-radius:7px;background:var(--panel);appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%236E6A63' fill='none' stroke-width='1.5'/></svg>");background-repeat:no-repeat;background-position:right 11px center}
+
+/* ---------- MODAL ---------- */
+#modalBackdrop{display:none;position:fixed;inset:0;background:rgba(22,21,19,.45);z-index:80;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto}
+#modalBackdrop.open{display:flex}
+#modalBox{background:var(--panel);border-radius:12px;box-shadow:0 24px 70px rgba(0,0,0,.3);width:100%;max-width:520px;padding:24px}
+#modalBox.wide{max-width:760px}
+#modalBox h3{font-size:16.5px;margin-bottom:3px}
+#modalBox .sub{color:var(--muted);font-size:12.5px;margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.field .input,.field .select,.field textarea{width:100%}
+.field textarea{padding:8.5px 12px;border:1px solid var(--border);border-radius:7px;resize:vertical;min-height:60px}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+.hint{font-size:11.5px;color:var(--faint);margin-top:4px}
+
+/* ---------- TOAST ---------- */
+#toastWrap{position:fixed;bottom:20px;right:20px;z-index:99;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--top);color:var(--top-text);padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 22px rgba(0,0,0,.25);animation:tin .18s ease}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- TABS ---------- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{border:none;background:none;padding:9px 14px;font-size:13.5px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--accent-dark);border-bottom-color:var(--accent)}
+
+/* ---------- SLIP ---------- */
+#slipPrint{display:none}
+
+/* ---------- VIEWS ---------- */
+.view{display:none}
+.view.active{display:block}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width:980px){
+  .sidebar{position:fixed;left:0;top:52px;bottom:0;z-index:40;transform:translateX(-100%);transition:transform .18s ease}
+  .sidebar.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.25)}
+  .tb-burger{display:block}
+  .grid-2{grid-template-columns:1fr}
+  .main{padding:16px 14px 60px}
+  .tb-clock{display:none}
+  .row-3{grid-template-columns:1fr}
+  .tb-user .nm,.tb-user .rl{display:none}
+  .tb-user .av{margin:0}
+}
+@media print{
+  body.slip-mode .topbar,body.slip-mode .sidebar,body.slip-mode .main,body.slip-mode #modalBackdrop,body.slip-mode #toastWrap{display:none!important}
+  body.slip-mode #slipPrint{display:block!important}
+  body:not(.slip-mode) .topbar,body:not(.slip-mode) .sidebar,body:not(.slip-mode) .page-actions,body:not(.slip-mode) .filter-bar,body:not(.slip-mode) #loginWrap{display:none!important}
+  body:not(.slip-mode) .shell{padding-top:0}
+  body:not(.slip-mode) .main{max-width:none;padding:0}
+  .card,.table-card{box-shadow:none}
+}
+</style>
 </head>
 <body>
 
-<div class="login-wrap">
-  <div class="login-planks" id="planks"></div>
-
+<!-- LOGIN -->
+<div id="loginWrap">
   <div class="login-card">
-    <div class="login-logo">
-      <img src="logo.png" alt="Step Media Ltd">
-    </div>
-    <div class="login-eyebrow">Board Stock System</div>
+    <div class="login-mark"><div class="lm">SM</div><div><b>SML Inventory ERP</b><span>Step Media Ltd</span></div></div>
     <h1>Sign in</h1>
-    <p class="login-sub">Track boards, sheets & materials across the store.</p>
-
-    <div class="error-msg" id="errorMsg"></div>
-
+    <div class="sub">Store &amp; materials management system</div>
+    <div id="loginErr"></div>
     <form id="loginForm">
-      <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" required autocomplete="username">
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input type="password" id="password" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn">Sign in</button>
+      <div class="lfield"><label for="lgUser">Email</label><input id="lgUser" type="email" autocomplete="username" required placeholder="name@sml.com"></div>
+      <div class="lfield"><label for="lgPass">Password</label><input id="lgPass" type="password" autocomplete="current-password" required></div>
+      <button type="submit" class="login-btn">Sign in</button>
     </form>
-
-    <p class="login-foot">Accounts are created by the admin in Firebase Console.</p>
+    <div class="login-foot">Sign in with your company account — accounts are managed by admin in Firebase</div>
   </div>
 </div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <button class="tb-burger" id="hamburger">☰</button>
+  <div class="tb-brand"><div class="bm">SM</div>SML Inventory ERP <small id="tbCompany">· Step Media Ltd</small></div>
+  <div class="tb-spacer"></div>
+  <div class="tb-clock" id="clock"></div>
+  <div class="tb-user"><div class="av" id="userAv">?</div><div><div class="nm" id="userName">—</div><div class="rl" id="userRole">—</div></div></div>
+  <button class="tb-out" onclick="logout()">Sign out</button>
+</header>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="nav-label">Overview</div>
+    <button class="nav-item" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+    <div class="nav-label">Inventory</div>
+    <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
+    <button class="nav-item" data-view="catalog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M7 12h14"/><path d="M11 19h10"/></svg>Categories &amp; Groups</button>
+    <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>Stock In</button>
+    <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M4 3h16"/></svg>Stock Out</button>
+    <button class="nav-item" data-view="returns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Returns</button>
+    <button class="nav-item" data-view="adjustments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>Adjustments</button>
+    <button class="nav-item" data-view="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v3.6L4 17h16l-2-4.4V9a6 6 0 0 0-6-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Stock Alerts<span class="nav-badge" id="alertBadge">0</span></button>
+    <div class="nav-label">Procurement</div>
+    <button class="nav-item" data-view="requisitions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6a1 1 0 0 1 1 1v2H8V4a1 1 0 0 1 1-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6"/><path d="M9 15h4"/></svg>Requisitions</button>
+    <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Suppliers</button>
+    <button class="nav-item" data-view="procurers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="3.5"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>Procurers</button>
+    <div class="nav-label">Production</div>
+    <button class="nav-item" data-view="jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Jobs &amp; Delivery</button>
+    <button class="nav-item" data-view="requisitors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4a3.5 3.5 0 0 1 0 7"/><path d="M17.5 14.5c2.2.8 3.5 2.9 3.5 5.5"/></svg>Requisitors</button>
+    <div class="nav-label">Insight</div>
+    <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
+    <div class="nav-label admin-only">Administration</div>
+    <button class="nav-item admin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
+    <button class="nav-item admin-only" data-view="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Audit Trail</button>
+    <button class="nav-item admin-only" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="view" id="view-dashboard"></div>
+    <div class="view" id="view-items"></div>
+    <div class="view" id="view-catalog"></div>
+    <div class="view" id="view-stockin"></div>
+    <div class="view" id="view-stockout"></div>
+    <div class="view" id="view-returns"></div>
+    <div class="view" id="view-adjustments"></div>
+    <div class="view" id="view-alerts"></div>
+    <div class="view" id="view-requisitions"></div>
+    <div class="view" id="view-suppliers"></div>
+    <div class="view" id="view-procurers"></div>
+    <div class="view" id="view-jobs"></div>
+    <div class="view" id="view-requisitors"></div>
+    <div class="view" id="view-reports"></div>
+    <div class="view" id="view-users"></div>
+    <div class="view" id="view-audit"></div>
+    <div class="view" id="view-settings"></div>
+  </main>
+</div>
+
+<div id="slipPrint"></div>
+<div id="modalBackdrop"><div id="modalBox"></div></div>
+<div id="toastWrap"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
 <script>
-const planks = document.getElementById('planks');
-for(let i=0;i<26;i++){
-  const d = document.createElement('div');
-  d.style.width = (40 + Math.random()*60) + '%';
-  d.style.marginLeft = (Math.random()*20)+'%';
-  planks.appendChild(d);
+/* Firebase project: stepmedia-stock */
+firebase.initializeApp({
+  apiKey: "AIzaSyAsNBlM-7M3MBLoOzmeyyOfi0pcnig58hA",
+  authDomain: "stepmedia-stock.firebaseapp.com",
+  projectId: "stepmedia-stock",
+  storageBucket: "stepmedia-stock.firebasestorage.app",
+  messagingSenderId: "888494897735",
+  appId: "1:888494897735:web:9fce12bae40c18295cf62"
+});
+const fauth = firebase.auth();
+const fdb = firebase.firestore();
+</script>
+<script>
+/* =====================================================
+   SML Inventory ERP — core engine (Firebase cloud)
+   ===================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const tk = n => "Tk " + Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
+const todayISO = () => new Date().toISOString().slice(0,10);
+const daysAgo = d => { const t = new Date(); t.setDate(t.getDate()-d); return t.toISOString().slice(0,10); };
+const fmtD = iso => { if(!iso) return "\u2014"; const d = new Date(iso+"T00:00:00"); return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"}); };
+const nowTime = () => new Date().toTimeString().slice(0,8);
+
+let DB = null, currentUser = null;
+
+const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
+let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null;
+
+function save(){ if(!DB) return; clearTimeout(saveTimer); saveTimer = setTimeout(doSave, 350); }
+function metaOf(db){ const m = Object.assign({}, db); delete m.txns; delete m.audit; delete m.users; m.client = CLIENT_ID; m.rev = Date.now(); return m; }
+function doSave(){
+  if(!DB) return;
+  const ops = [[fdb.collection("erp").doc("main"), metaOf(DB)]];
+  DB.txns.forEach(t => { if(!SAVED_TXN.has(t.id)){ ops.push([fdb.collection("erp_txns").doc(t.id), t]); SAVED_TXN.add(t.id); } });
+  DB.audit.forEach(a => {
+    if(!a.id) a.id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    if(!a.ts) a.ts = Date.now();
+    if(!SAVED_AUDIT.has(a.id)){ ops.push([fdb.collection("erp_audit").doc(a.id), a]); SAVED_AUDIT.add(a.id); }
+  });
+  const commits = [];
+  for(let i = 0; i < ops.length; i += 400){
+    const b = fdb.batch();
+    ops.slice(i, i+400).forEach(o => b.set(o[0], o[1]));
+    commits.push(b.commit());
+  }
+  return Promise.all(commits).catch(e => { console.error(e); toast("Save failed — check internet connection"); });
+}
+function sortTxns(){ DB.txns.sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date))); }
+async function loadData(){
+  const snap = await fdb.collection("erp").doc("main").get();
+  if(snap.exists){
+    DB = snap.data();
+    const [txSnap, auSnap] = await Promise.all([
+      fdb.collection("erp_txns").get(),
+      fdb.collection("erp_audit").orderBy("ts","desc").limit(500).get()
+    ]);
+    DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
+    DB.audit = auSnap.docs.map(d => d.data());
+    SAVED_TXN = new Set(DB.txns.map(t => t.id));
+    SAVED_AUDIT = new Set(DB.audit.map(a => a.id));
+  } else {
+    DB = seedData();
+    SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+    await doSave();
+  }
+}
+async function wipeColl(name){
+  const s = await fdb.collection(name).get();
+  const refs = s.docs.map(d => d.ref);
+  for(let i = 0; i < refs.length; i += 400){
+    const b = fdb.batch();
+    refs.slice(i, i+400).forEach(r => b.delete(r));
+    await b.commit();
+  }
+}
+let LISTENING = false;
+function attachListeners(){
+  if(LISTENING) return; LISTENING = true;
+  fdb.collection("erp").doc("main").onSnapshot(snap => {
+    if(!currentUser || !snap.exists || snap.metadata.hasPendingWrites) return;
+    const d = snap.data();
+    if(d.client === CLIENT_ID) return;
+    const txns = DB ? DB.txns : [], aud = DB ? DB.audit : [];
+    DB = d; DB.txns = txns; DB.audit = aud;
+    $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
+    renderAll();
+  });
+  fdb.collection("erp_txns").onSnapshot(snap => {
+    if(!currentUser || snap.metadata.hasPendingWrites) return;
+    let changed = false;
+    snap.docChanges().forEach(ch => {
+      if(ch.type === "added" && !SAVED_TXN.has(ch.doc.id)){ DB.txns.push(ch.doc.data()); SAVED_TXN.add(ch.doc.id); changed = true; }
+      if(ch.type === "removed" && SAVED_TXN.has(ch.doc.id)){ DB.txns = DB.txns.filter(t => t.id !== ch.doc.id); SAVED_TXN.delete(ch.doc.id); changed = true; }
+    });
+    if(changed){ sortTxns(); renderAll(); }
+  });
 }
 
-auth.onAuthStateChanged(user=>{
-  if(user){ window.location.href = 'dashboard.html'; }
-});
+/* ---------- id helpers ---------- */
+function nextSeq(key, prefix){ DB.seq[key] = (DB.seq[key]||0)+1; return prefix + String(DB.seq[key]).padStart(4,"0"); }
+const byId = (arr, id) => arr.find(x => x.id === id);
+const catOf = it => byId(DB.categories, it.catId);
+const grpOf = it => byId(DB.groups, it.groupId);
+const itemById = id => byId(DB.items, id);
+function itemName(it){ return it ? it.desc : "(deleted item)"; }
+function itemCode(it){ if(!it) return "\u2014"; const c = catOf(it), g = grpOf(it); return (c?c.code:"00")+"-"+(g?g.code:"00")+"-"+String(it.sl).padStart(3,"0"); }
 
-document.getElementById('loginForm').addEventListener('submit', function(e){
+/* ---------- audit ---------- */
+function audit(action){
+  DB.audit.unshift({ id: "a" + Date.now().toString(36) + Math.random().toString(36).slice(2,6), ts: Date.now(), date: todayISO(), time: nowTime(), user: currentUser ? currentUser.username : "system", action });
+  if(DB.audit.length > 1000) DB.audit.length = 1000;
+}
+
+/* ---------- permissions ---------- */
+const isAdmin = () => currentUser && currentUser.access === "Admin";
+function canWrite(){ if(currentUser && currentUser.access !== "Viewer") return true; toast("View-only account \u2014 you cannot make changes"); return false; }
+
+/* ---------- seed data ---------- */
+function seedData(){
+  const cats = [
+    {id:"c1",code:"01",name:"Board & Sheet"}, {id:"c2",code:"02",name:"Hardware & Fittings"},
+    {id:"c3",code:"03",name:"Adhesive & Chemical"}, {id:"c4",code:"04",name:"Paint & Polish"},
+    {id:"c5",code:"05",name:"Electrical"}
+  ];
+  const grps = [
+    {id:"g1",code:"01",catId:"c1",name:"Melamine Board"}, {id:"g2",code:"02",catId:"c1",name:"PVC Board"},
+    {id:"g3",code:"03",catId:"c1",name:"MDF Plain"},
+    {id:"g4",code:"01",catId:"c2",name:"Screws & Fasteners"}, {id:"g5",code:"02",catId:"c2",name:"Hinges & Channels"},
+    {id:"g6",code:"01",catId:"c3",name:"Glue & Adhesive"}, {id:"g7",code:"02",catId:"c3",name:"Sealant"},
+    {id:"g8",code:"01",catId:"c4",name:"Spray Paint"}, {id:"g9",code:"02",catId:"c4",name:"Polish Material"},
+    {id:"g10",code:"01",catId:"c5",name:"LED & Wiring"}
+  ];
+  const items = [
+    {sl:1,catId:"c1",groupId:"g1",desc:"Melamine Board White 8x4 (18mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-1",alarm:10,price:3200,open:24},
+    {sl:2,catId:"c1",groupId:"g1",desc:"Melamine Board Teak 8x4 (18mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-1",alarm:8,price:3400,open:18},
+    {sl:3,catId:"c1",groupId:"g2",desc:"PVC Board White 8x4 (12mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-2",alarm:10,price:2600,open:30},
+    {sl:4,catId:"c1",groupId:"g2",desc:"PVC Board Grey 8x4 (10mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-2",alarm:6,price:2300,open:12},
+    {sl:5,catId:"c1",groupId:"g3",desc:"MDF Plain 8x4 (6mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-3",alarm:12,price:1450,open:40},
+    {sl:6,catId:"c2",groupId:"g4",desc:"Wood Screw 1.5 inch (Box of 144)",uomIn:"Box",mult:144,uomOut:"Pcs",loc:"Bin B-1",alarm:300,price:520,open:1200},
+    {sl:7,catId:"c2",groupId:"g4",desc:"Machine Screw 2 inch (Box of 100)",uomIn:"Box",mult:100,uomOut:"Pcs",loc:"Bin B-1",alarm:200,price:640,open:700},
+    {sl:8,catId:"c2",groupId:"g5",desc:"Soft-Close Hinge (Pair)",uomIn:"Carton",mult:50,uomOut:"Pair",loc:"Bin B-3",alarm:60,price:5200,open:210},
+    {sl:9,catId:"c2",groupId:"g5",desc:"Drawer Channel 18 inch",uomIn:"Carton",mult:20,uomOut:"Set",loc:"Bin B-4",alarm:30,price:3800,open:85},
+    {sl:10,catId:"c3",groupId:"g6",desc:"Super Glue 50g",uomIn:"Carton",mult:24,uomOut:"Pcs",loc:"Shelf C-1",alarm:48,price:1900,open:150},
+    {sl:11,catId:"c3",groupId:"g6",desc:"Wood Glue 1kg",uomIn:"Carton",mult:12,uomOut:"Pcs",loc:"Shelf C-1",alarm:24,price:2600,open:70},
+    {sl:12,catId:"c3",groupId:"g7",desc:"Silicone Sealant Clear",uomIn:"Carton",mult:24,uomOut:"Pcs",loc:"Shelf C-2",alarm:36,price:4100,open:96},
+    {sl:13,catId:"c4",groupId:"g8",desc:"Spray Paint Black 400ml",uomIn:"Carton",mult:12,uomOut:"Can",loc:"Shelf D-1",alarm:24,price:2200,open:60},
+    {sl:14,catId:"c4",groupId:"g8",desc:"Spray Paint Silver 400ml",uomIn:"Carton",mult:12,uomOut:"Can",loc:"Shelf D-1",alarm:24,price:2350,open:48},
+    {sl:15,catId:"c4",groupId:"g9",desc:"Sanding Sealer 4L",uomIn:"Can",mult:1,uomOut:"Can",loc:"Shelf D-2",alarm:6,price:1850,open:15},
+    {sl:16,catId:"c5",groupId:"g10",desc:"LED Strip 5m Warm White",uomIn:"Roll",mult:1,uomOut:"Roll",loc:"Shelf E-1",alarm:10,price:850,open:35},
+    {sl:17,catId:"c5",groupId:"g10",desc:"Flexible Wire 1.5mm (90m Coil)",uomIn:"Coil",mult:1,uomOut:"Coil",loc:"Shelf E-1",alarm:5,price:2900,open:14},
+    {sl:18,catId:"c5",groupId:"g10",desc:"LED Driver 12V 5A",uomIn:"Box",mult:10,uomOut:"Pcs",loc:"Shelf E-2",alarm:12,price:4500,open:30}
+  ].map((x,i)=>({ id:"i"+(i+1), sl:x.sl, catId:x.catId, groupId:x.groupId, desc:x.desc, uomIn:x.uomIn, mult:x.mult, uomOut:x.uomOut, loc:x.loc, alarm:x.alarm, price:x.price, stock:x.open }));
+  const suppliers = [
+    {id:"s1",name:"Akij Board House",contact:"Mr. Faruk",phone:"01711-000001",address:"Tejgaon, Dhaka"},
+    {id:"s2",name:"Partex Star Group",contact:"Mr. Selim",phone:"01811-000002",address:"Gulshan, Dhaka"},
+    {id:"s3",name:"RFL Hardware Point",contact:"Mr. Jashim",phone:"01911-000003",address:"Nawabpur, Dhaka"},
+    {id:"s4",name:"Berger Paints Dealer",contact:"Mr. Alamgir",phone:"01611-000004",address:"Mirpur, Dhaka"}
+  ];
+  const procurers = [
+    {id:"p1",empId:"EMP-011",name:"Rafiq Islam",phone:"01712-111111"},
+    {id:"p2",empId:"EMP-023",name:"Sabbir Hossain",phone:"01813-222222"}
+  ];
+  const requisitors = [
+    {id:"r1",name:"Kamal Uddin",dept:"Production"},
+    {id:"r2",name:"Sohel Rana",dept:"Site Installation"},
+    {id:"r3",name:"Nusrat Jahan",dept:"Design Studio"},
+    {id:"r4",name:"Habib Mia",dept:"Office Maintenance"}
+  ];
+  const jobs = [
+    {id:"j1",no:"JB-2026-001",client:"City Bank",desc:"Banani Branch Interior & Signage",status:"Running",deliveries:[]},
+    {id:"j2",no:"JB-2026-002",client:"Aarong",desc:"Dhanmondi Showroom Display Units",status:"Running",deliveries:[{date:daysAgo(6),note:"Phase 1 \u2014 12 display units",by:"admin"}]},
+    {id:"j3",no:"JB-2026-003",client:"Unimart",desc:"Gulshan Outlet Shelving",status:"Delivered",deliveries:[{date:daysAgo(12),note:"Full delivery",by:"admin"}]},
+    {id:"j4",no:"JB-2026-004",client:"Square Pharma",desc:"HQ Reception Renovation",status:"Running",deliveries:[]}
+  ];
+  const users = [
+    {id:"u1",name:"Ammar Khandokar",username:"admin",pass:"1234",access:"Admin"},
+    {id:"u2",name:"Sazu Ahmed",username:"sazu",pass:"1234",access:"Store"},
+    {id:"u3",name:"Guest Viewer",username:"viewer",pass:"1234",access:"Viewer"}
+  ];
+  let rs = 42; const rnd = () => { rs = (rs*1103515245+12345) % 2147483648; return rs/2147483648; };
+  const txns = []; const seq = {si:0,so:0,rt:0,ad:0,req:0,job:4,user:3};
+  const jobIds = ["j1","j2","j3","j4"], reqIds = ["r1","r2","r3","r4"], supIds = ["s1","s2","s3","s4"];
+  for(let d = 29; d >= 0; d--){
+    const nOut = 1 + Math.floor(rnd()*3);
+    for(let k = 0; k < nOut; k++){
+      const it = items[Math.floor(rnd()*items.length)];
+      const q = Math.max(1, Math.floor(rnd()*(it.mult>1?18:4)));
+      seq.so++;
+      txns.push({id:"SO-"+String(seq.so).padStart(4,"0"),type:"OUT",date:daysAgo(d),itemId:it.id,qty:-q,jobId:jobIds[Math.floor(rnd()*4)],requisitorId:reqIds[Math.floor(rnd()*4)],note:"",by:rnd()>.5?"admin":"sazu"});
+      it.stock -= q;
+    }
+    if(rnd() > .62){
+      const it = items[Math.floor(rnd()*items.length)];
+      const qin = Math.max(1, Math.floor(rnd()*(it.mult>1?4:20)));
+      seq.si++;
+      txns.push({id:"SI-"+String(seq.si).padStart(4,"0"),type:"IN",date:daysAgo(d),itemId:it.id,qtyIn:qin,qty:qin*it.mult,supplierId:supIds[Math.floor(rnd()*4)],procurerId:rnd()>.5?"p1":"p2",note:"",by:"admin"});
+      it.stock += qin*it.mult;
+    }
+  }
+  seq.rt = 2;
+  txns.push({id:"RT-0001",type:"RET",date:daysAgo(9),itemId:"i8",qty:6,jobId:"j3",requisitorId:"r2",note:"Extra hinges returned after delivery",by:"sazu"});
+  items[7].stock += 6;
+  txns.push({id:"RT-0002",type:"RET",date:daysAgo(3),itemId:"i13",qty:4,jobId:"j2",requisitorId:"r1",note:"Unused cans returned",by:"sazu"});
+  items[12].stock += 4;
+  seq.ad = 1;
+  txns.push({id:"AD-0001",type:"ADJ",date:daysAgo(7),itemId:"i10",qty:-3,reason:"Damaged in store \u2014 physical count",by:"admin"});
+  items[9].stock -= 3;
+  items.forEach(it => { if(it.stock < 0) it.stock = 0; });
+  txns.sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  const requisitions = [
+    {id:"q1",no:"REQ-0001",jobId:"j1",requisitorId:"r1",date:daysAgo(2),status:"Pending",lines:[{itemId:"i1",qty:6},{itemId:"i6",qty:200},{itemId:"i11",qty:8}]},
+    {id:"q2",no:"REQ-0002",jobId:"j4",requisitorId:"r2",date:daysAgo(1),status:"Approved",lines:[{itemId:"i3",qty:8},{itemId:"i12",qty:12}]},
+    {id:"q3",no:"REQ-0003",jobId:"j2",requisitorId:"r3",date:daysAgo(5),status:"Issued",lines:[{itemId:"i16",qty:5},{itemId:"i18",qty:6}]}
+  ];
+  seq.req = 3;
+  return {
+    settings:{ company:"Step Media Ltd", address:"Tejgaon Industrial Area, Dhaka", alarmDefault:5 },
+    seq, categories:cats, groups:grps, items, suppliers, procurers, requisitors, jobs, users,
+    txns, requisitions,
+    audit:[{date:todayISO(),time:nowTime(),user:"system",action:"System initialized with demo data"}]
+  };
+}
+
+/* ---------- auth (Firebase) ---------- */
+function enterApp(u){
+  currentUser = u;
+  $("#loginWrap").style.display = "none";
+  $("#userName").textContent = u.name;
+  $("#userRole").textContent = u.access;
+  $("#userAv").textContent = u.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
+  document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin() ? "" : "none");
+  renderAll();
+  show(location.hash.slice(1) || "dashboard");
+}
+function logout(){
+  const done = () => { location.hash = ""; location.reload(); };
+  if(currentUser){
+    audit("Logged out");
+    const p = doSave(); currentUser = null;
+    Promise.resolve(p).then(() => fauth.signOut()).then(done, done);
+  } else fauth.signOut().then(done, done);
+}
+$("#loginForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const email = document.getElementById('email').value.trim();
-  const pass = document.getElementById('password').value;
-  const errBox = document.getElementById('errorMsg');
-  errBox.style.display = 'none';
-
-  auth.signInWithEmailAndPassword(email, pass)
-    .then(()=>{ window.location.href = 'dashboard.html'; })
-    .catch(err=>{
-      // DEBUG MODE: show the real error so we can diagnose it
-      errBox.textContent = 'Error code: ' + err.code + ' — ' + err.message;
-      errBox.style.display = 'block';
-      console.error('Firebase auth error:', err);
-    });
+  const em = $("#lgUser").value.trim(), pw = $("#lgPass").value;
+  const el = $("#loginErr"), btn = document.querySelector("#loginForm button");
+  el.style.display = "none";
+  btn.disabled = true; btn.textContent = "Signing in\u2026";
+  try{ await fauth.signInWithEmailAndPassword(em, pw); }
+  catch(err){
+    el.style.display = "block"; el.textContent = "Wrong email or password. Try again.";
+    btn.disabled = false; btn.textContent = "Sign in";
+  }
 });
+
+/* ---------- toast & modal ---------- */
+function toast(msg){
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  $("#toastWrap").appendChild(t); setTimeout(() => t.remove(), 3200);
+}
+function openModal(html, wide){
+  const box = $("#modalBox"); box.className = wide ? "wide" : ""; box.innerHTML = html;
+  $("#modalBackdrop").classList.add("open");
+}
+function closeModal(){ $("#modalBackdrop").classList.remove("open"); }
+$("#modalBackdrop").addEventListener("click", e => { if(e.target.id === "modalBackdrop") closeModal(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeModal(); });
+
+/* ---------- charts (canvas, no library) ---------- */
+function setupCanvas(c){
+  const r = c.parentElement.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  c.width = r.width*dpr; c.height = r.height*dpr;
+  c.style.width = r.width+"px"; c.style.height = r.height+"px";
+  const ctx = c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { ctx, W:r.width, H:r.height };
+}
+function axisFmt(v){
+  if(Math.abs(v) >= 1000000) return (v/1000000).toFixed(1).replace(/\.0$/,"")+"M";
+  if(Math.abs(v) >= 1000) return (v/1000).toFixed(1).replace(/\.0$/,"")+"k";
+  return String(Math.round(v));
+}
+function drawLineChart(c, labels, series){
+  const {ctx,W,H} = setupCanvas(c);
+  let max = 0; series.forEach(s => s.data.forEach(v => { if(v>max) max=v; })); max = max||1; max *= 1.15;
+  ctx.font = "11px sans-serif";
+  let padL = 18; for(let i=0;i<=4;i++){ const w = ctx.measureText(axisFmt(max*i/4)).width+14; if(w>padL) padL=w; }
+  const padR=10,padT=12,padB=24, iw=W-padL-padR, ih=H-padT-padB;
+  ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(let i=0;i<=4;i++){
+    const y = padT+ih-(ih*i/4);
+    ctx.strokeStyle="#EEECE9"; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    ctx.fillStyle="#9C9890"; ctx.fillText(axisFmt(max*i/4), padL-6, y);
+  }
+  ctx.textAlign="center"; ctx.textBaseline="top";
+  const step = Math.max(1, Math.ceil(labels.length/8));
+  labels.forEach((lb,i)=>{ if(i%step===0){ const x = padL+iw*(labels.length===1?.5:i/(labels.length-1)); ctx.fillText(lb, x, H-padB+7); }});
+  series.forEach(s => {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.beginPath();
+    s.data.forEach((v,i)=>{ const x = padL+iw*(s.data.length===1?.5:i/(s.data.length-1)), y = padT+ih-(v/max)*ih; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+    ctx.fillStyle = s.color;
+    s.data.forEach((v,i)=>{ if(v>0){ const x = padL+iw*(s.data.length===1?.5:i/(s.data.length-1)), y = padT+ih-(v/max)*ih; ctx.beginPath(); ctx.arc(x,y,2.4,0,7); ctx.fill(); }});
+  });
+}
+function drawBarChart(c, labels, values, color){
+  const {ctx,W,H} = setupCanvas(c);
+  let max = Math.max.apply(null, values.concat([1]))*1.15;
+  ctx.font = "11px sans-serif";
+  let padL = 18; for(let i=0;i<=4;i++){ const w = ctx.measureText(axisFmt(max*i/4)).width+14; if(w>padL) padL=w; }
+  const padR=10,padT=12,padB=40, iw=W-padL-padR, ih=H-padT-padB;
+  ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(let i=0;i<=4;i++){
+    const y = padT+ih-(ih*i/4);
+    ctx.strokeStyle="#EEECE9"; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    ctx.fillStyle="#9C9890"; ctx.fillText(axisFmt(max*i/4), padL-6, y);
+  }
+  const bw = Math.min(46, iw/values.length*.55);
+  values.forEach((v,i)=>{
+    const x = padL+iw*(i+.5)/values.length;
+    ctx.fillStyle = color;
+    const bh = (v/max)*ih;
+    ctx.beginPath(); ctx.roundRect(x-bw/2, padT+ih-bh, bw, bh, [4,4,0,0]); ctx.fill();
+    ctx.fillStyle="#6E6A63"; ctx.textAlign="center"; ctx.textBaseline="top";
+    const words = String(labels[i]).split(" ");
+    ctx.fillText(words.slice(0,2).join(" ").slice(0,14), x, padT+ih+7);
+    if(words.length>2) ctx.fillText(words.slice(2).join(" ").slice(0,14), x, padT+ih+19);
+  });
+}
+/* =====================================================
+   Views, CRUD & router
+   ===================================================== */
+let CURRENT_VIEW = "dashboard";
+const lowItems = () => DB.items.filter(it => it.stock <= it.alarm);
+const stockValue = () => DB.items.reduce((s,it) => s + it.stock*(it.price/(it.mult||1)), 0);
+function statusBadge(it){
+  if(it.stock <= 0) return '<span class="badge out">OUT OF STOCK</span>';
+  if(it.stock <= it.alarm) return '<span class="badge low">LOW</span>';
+  return '<span class="badge ok">IN STOCK</span>';
+}
+function levelBar(it){
+  const full = Math.max(it.alarm*3, 1), p = Math.max(0, Math.min(100, it.stock/full*100));
+  const col = it.stock<=0 ? "var(--red)" : it.stock<=it.alarm ? "var(--orange)" : "var(--green)";
+  return `<div class="level"><i style="width:${p}%;background:${col}"></i></div>`;
+}
+function opts(arr, sel, lab){
+  return arr.map(x => `<option value="${x.id}" ${x.id===sel?"selected":""}>${esc(lab(x))}</option>`).join("");
+}
+function typeBadge(t){
+  return { IN:'<span class="badge in">IN</span>', OUT:'<span class="badge outt">OUT</span>', RET:'<span class="badge ret">RETURN</span>', ADJ:'<span class="badge adj">ADJUST</span>' }[t] || t;
+}
+function exportCSV(name, head, rows){
+  const csv = [head].concat(rows).map(r => r.map(c => `"${String(c ?? "").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff"+csv], {type:"text/csv"}));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  toast("Exported " + name);
+}
+
+/* ---------- dashboard ---------- */
+function renderDashboard(){
+  const low = lowItems(), pend = DB.requisitions.filter(q => q.status==="Pending").length;
+  const running = DB.jobs.filter(j => j.status==="Running").length;
+  const el = $("#view-dashboard");
+  el.innerHTML = `
+  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Store overview \u2014 ${esc(DB.settings.company)}</p></div>
+    <div class="page-actions"><button class="btn btn-green" onclick="siModal()">\u2193 Stock In</button><button class="btn btn-primary" onclick="soModal()">\u2191 Stock Out</button></div></div>
+  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s":""} at or below alarm level.</b> <a href="#alerts" style="color:var(--orange)">Review stock alerts \u2192</a></div></div>` : ""}
+  <div class="kpi-grid">
+    <div class="card kpi"><div class="label">Total Items</div><div class="value">${DB.items.length}</div><div class="delta">${DB.categories.length} categories \u00b7 ${DB.groups.length} groups</div></div>
+    <div class="card kpi k-blue"><div class="label">Stock Value</div><div class="value">${tk(stockValue())}</div><div class="delta">estimated at purchase price</div></div>
+    <div class="card kpi ${low.length?"k-red":"k-green"}"><div class="label">Low Stock</div><div class="value">${low.length}</div><div class="delta">items need reorder</div></div>
+    <div class="card kpi k-orange"><div class="label">Pending Requisitions</div><div class="value">${pend}</div><div class="delta">waiting for approval</div></div>
+    <div class="card kpi k-green"><div class="label">Running Jobs</div><div class="value">${running}</div><div class="delta">of ${DB.jobs.length} total jobs</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3>Stock Movement \u2014 last 14 days</h3><div class="sub">Daily transaction quantity</div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
+      <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
+    <div class="card"><h3>Stock Value by Category</h3><div class="sub">Current holding value</div>
+      <div class="chart-box"><canvas id="dashBar"></canvas></div></div>
+  </div>
+  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3></div>
+    <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Type</th><th>Item</th><th class="num">Qty</th><th>Ref</th><th>By</th></tr></thead><tbody>
+    ${DB.txns.slice(0,8).map(t => { const it = itemById(t.itemId), j = t.jobId ? byId(DB.jobs,t.jobId) : null, s = t.supplierId ? byId(DB.suppliers,t.supplierId) : null;
+      return `<tr><td class="muted">${t.id}</td><td>${fmtD(t.date)}</td><td>${typeBadge(t.type)}</td><td class="type-cell">${esc(itemName(it))}</td><td class="num ${t.qty>0?"pos":"neg"}">${t.qty>0?"+":""}${t.qty} ${it?esc(it.uomOut):""}</td><td class="muted">${j?esc(j.no):s?esc(s.name):t.reason?esc(t.reason):"\u2014"}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("")}
+    </tbody></table></div></div>`;
+  const labels = [], ins = [], outs = [];
+  for(let d = 13; d >= 0; d--){
+    const day = daysAgo(d); labels.push(fmtD(day));
+    ins.push(DB.txns.filter(t => t.date===day && t.type==="IN").reduce((s,t)=>s+t.qty,0));
+    outs.push(DB.txns.filter(t => t.date===day && t.type==="OUT").reduce((s,t)=>s-t.qty,0));
+  }
+  drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
+  const cl = DB.categories.map(c => c.name), cv = DB.categories.map(c => Math.round(DB.items.filter(it=>it.catId===c.id).reduce((s,it)=>s+it.stock*(it.price/(it.mult||1)),0)));
+  drawBarChart($("#dashBar"), cl, cv, "#C74634");
+}
+
+/* ---------- items ---------- */
+let ITEM_F = {q:"",cat:"",grp:"",st:""};
+function renderItems(){
+  const f = ITEM_F;
+  let rows = DB.items.filter(it => {
+    if(f.cat && it.catId!==f.cat) return false;
+    if(f.grp && it.groupId!==f.grp) return false;
+    if(f.st==="low" && !(it.stock<=it.alarm && it.stock>0)) return false;
+    if(f.st==="out" && it.stock>0) return false;
+    if(f.st==="ok" && it.stock<=it.alarm) return false;
+    if(f.q && !(it.desc.toLowerCase().includes(f.q) || itemCode(it).includes(f.q))) return false;
+    return true;
+  });
+  const grpsOf = f.cat ? DB.groups.filter(g=>g.catId===f.cat) : DB.groups;
+  $("#view-items").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Item Master</h1><p>${rows.length} of ${DB.items.length} items</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportItems()">\u2913 Export CSV</button><button class="btn btn-primary" onclick="itemModal()">+ Add Item</button></div></div>
+  <div class="filter-bar">
+    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search item or code\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value.toLowerCase();renderItems();document.querySelector('#view-items .input').focus()"></div>
+    <select class="select" onchange="ITEM_F.cat=this.value;ITEM_F.grp='';renderItems()"><option value="">All Categories</option>${opts(DB.categories,f.cat,c=>c.code+" \u00b7 "+c.name)}</select>
+    <select class="select" onchange="ITEM_F.grp=this.value;renderItems()"><option value="">All Groups</option>${opts(grpsOf,f.grp,g=>g.name)}</select>
+    <select class="select" onchange="ITEM_F.st=this.value;renderItems()"><option value="">All Status</option><option value="ok" ${f.st==="ok"?"selected":""}>In Stock</option><option value="low" ${f.st==="low"?"selected":""}>Low</option><option value="out" ${f.st==="out"?"selected":""}>Out of Stock</option></select>
+  </div>
+  <div class="table-card"><div class="table-scroll"><table>
+    <thead><tr><th>Code</th><th>Description</th><th>Category / Group</th><th>UOM</th><th>Location</th><th class="num">Stock</th><th>Level</th><th>Status</th><th class="num">Unit Price</th><th></th></tr></thead><tbody>
+    ${rows.map(it => `<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc((catOf(it)||{}).name||"")} / ${esc((grpOf(it)||{}).name||"")}</td><td class="muted">${esc(it.uomIn)}${it.mult>1?" \u00d7"+it.mult+" \u2192 "+esc(it.uomOut):""}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${it.stock}</b> ${esc(it.uomOut)}</td><td>${levelBar(it)}</td><td>${statusBadge(it)}</td><td class="num">${tk(it.price)} / ${esc(it.uomIn)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="itemModal('${it.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteItem('${it.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No items found</td></tr>`}
+    </tbody></table></div></div>`;
+}
+function exportItems(){
+  exportCSV("items.csv", ["Code","Description","Category","Group","UOM In","Multiply","UOM Out","Location","Stock","Alarm","Unit Price"],
+    DB.items.map(it => [itemCode(it), it.desc, (catOf(it)||{}).name, (grpOf(it)||{}).name, it.uomIn, it.mult, it.uomOut, it.loc, it.stock, it.alarm, it.price]));
+}
+function itemModal(id){
+  if(!canWrite()) return;
+  const it = id ? itemById(id) : null;
+  openModal(`<h3>${it?"Edit Item":"Add New Item"}</h3><div class="sub">${it?itemCode(it):"Item will get the next code in its group"}</div>
+  <div class="field"><label>Description *</label><input class="input" id="fDesc" value="${it?esc(it.desc):""}"></div>
+  <div class="row-2">
+    <div class="field"><label>Category *</label><select class="select" id="fCat" onchange="fillGrpSel()">${opts(DB.categories, it?it.catId:DB.categories[0].id, c=>c.name)}</select></div>
+    <div class="field"><label>Group *</label><select class="select" id="fGrp"></select></div>
+  </div>
+  <div class="row-3">
+    <div class="field"><label>UOM In (purchase)</label><input class="input" id="fUomIn" value="${it?esc(it.uomIn):"Pcs"}"></div>
+    <div class="field"><label>Multiply By</label><input class="input" id="fMult" type="number" min="1" value="${it?it.mult:1}"></div>
+    <div class="field"><label>UOM Out (issue)</label><input class="input" id="fUomOut" value="${it?esc(it.uomOut):"Pcs"}"></div>
+  </div>
+  <div class="row-3">
+    <div class="field"><label>Location</label><input class="input" id="fLoc" value="${it?esc(it.loc||""):""}" placeholder="Rack A-1"></div>
+    <div class="field"><label>Alarm Qty</label><input class="input" id="fAlarm" type="number" min="0" value="${it?it.alarm:DB.settings.alarmDefault}"></div>
+    <div class="field"><label>Price / UOM In</label><input class="input" id="fPrice" type="number" min="0" value="${it?it.price:""}"></div>
+  </div>
+  ${it?"":`<div class="field"><label>Opening Stock (UOM Out)</label><input class="input" id="fOpen" type="number" min="0" value="0"></div>`}
+  <div class="hint">Example: buy in <b>Box</b>, multiply <b>144</b>, issue in <b>Pcs</b>.</div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitItem('${id||""}')">${it?"Save Changes":"Add Item"}</button></div>`);
+  window.fillGrpSel = () => {
+    const cid = $("#fCat").value;
+    $("#fGrp").innerHTML = opts(DB.groups.filter(g=>g.catId===cid), it && it.catId===cid ? it.groupId : (DB.groups.find(g=>g.catId===cid)||{}).id, g=>g.name);
+  };
+  fillGrpSel();
+}
+function submitItem(id){
+  const desc = $("#fDesc").value.trim(); if(!desc) return toast("Please write a description");
+  const catId = $("#fCat").value, groupId = $("#fGrp").value;
+  if(!groupId) return toast("Please select a group");
+  const data = { desc, catId, groupId, uomIn:$("#fUomIn").value.trim()||"Pcs", mult:Math.max(1,Number($("#fMult").value)||1), uomOut:$("#fUomOut").value.trim()||"Pcs", loc:$("#fLoc").value.trim(), alarm:Math.max(0,Number($("#fAlarm").value)||0), price:Math.max(0,Number($("#fPrice").value)||0) };
+  if(id){ Object.assign(itemById(id), data); audit("Edited item: "+desc); }
+  else{
+    const sl = Math.max(0, ...DB.items.map(i=>i.sl)) + 1;
+    DB.items.push(Object.assign({ id:"i"+Date.now(), sl, stock:Math.max(0,Number(($("#fOpen")||{}).value)||0) }, data));
+    audit("Added item: "+desc);
+  }
+  save(); closeModal(); renderAll(); toast(id?"Item updated":"Item added");
+}
+function deleteItem(id){
+  if(!canWrite()) return;
+  const it = itemById(id);
+  if(!confirm(`Delete "${it.desc}"? Transaction history will keep its records.`)) return;
+  DB.items = DB.items.filter(x => x.id!==id);
+  audit("Deleted item: "+it.desc); save(); renderAll(); toast("Item deleted");
+}
+
+/* ---------- catalog (categories & groups) ---------- */
+function renderCatalog(){
+  $("#view-catalog").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Categories & Groups</b></div><h1>Categories &amp; Groups</h1><p>Item classification \u2014 category \u2192 group \u2192 item</p></div>
+    <div class="page-actions"><button class="btn" onclick="grpModal()">+ Add Group</button><button class="btn btn-primary" onclick="catModal()">+ Add Category</button></div></div>
+  <div class="grid-2">
+    <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Categories</h3></div><div class="table-scroll"><table><thead><tr><th>Code</th><th>Name</th><th class="num">Groups</th><th class="num">Items</th><th></th></tr></thead><tbody>
+    ${DB.categories.map(c => `<tr><td class="muted">${esc(c.code)}</td><td class="type-cell">${esc(c.name)}</td><td class="num">${DB.groups.filter(g=>g.catId===c.id).length}</td><td class="num">${DB.items.filter(i=>i.catId===c.id).length}</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="catModal('${c.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteCat('${c.id}')">Delete</button></td></tr>`).join("")}
+    </tbody></table></div></div>
+    <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Groups</h3></div><div class="table-scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th class="num">Items</th><th></th></tr></thead><tbody>
+    ${DB.groups.map(g => `<tr><td class="muted">${esc(g.code)}</td><td class="type-cell">${esc(g.name)}</td><td class="muted">${esc((byId(DB.categories,g.catId)||{}).name||"")}</td><td class="num">${DB.items.filter(i=>i.groupId===g.id).length}</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="grpModal('${g.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteGrp('${g.id}')">Delete</button></td></tr>`).join("")}
+    </tbody></table></div></div>
+  </div>`;
+}
+function catModal(id){
+  if(!canWrite()) return;
+  const c = id ? byId(DB.categories,id) : null;
+  openModal(`<h3>${c?"Edit":"Add"} Category</h3><div class="sub"></div>
+  <div class="field"><label>Name *</label><input class="input" id="fName" value="${c?esc(c.name):""}"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitCat('${id||""}')">Save</button></div>`);
+}
+function submitCat(id){
+  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
+  if(id){ byId(DB.categories,id).name = name; audit("Edited category: "+name); }
+  else{ const code = String(DB.categories.length+1).padStart(2,"0"); DB.categories.push({id:"c"+Date.now(), code, name}); audit("Added category: "+name); }
+  save(); closeModal(); renderAll(); toast("Category saved");
+}
+function deleteCat(id){
+  if(!canWrite()) return;
+  if(DB.items.some(i=>i.catId===id) || DB.groups.some(g=>g.catId===id)) return toast("Category is in use \u2014 move its groups/items first");
+  const c = byId(DB.categories,id);
+  if(!confirm(`Delete category "${c.name}"?`)) return;
+  DB.categories = DB.categories.filter(x=>x.id!==id); audit("Deleted category: "+c.name); save(); renderAll();
+}
+function grpModal(id){
+  if(!canWrite()) return;
+  const g = id ? byId(DB.groups,id) : null;
+  openModal(`<h3>${g?"Edit":"Add"} Group</h3><div class="sub"></div>
+  <div class="field"><label>Category *</label><select class="select" id="fGCat">${opts(DB.categories, g?g.catId:DB.categories[0].id, c=>c.name)}</select></div>
+  <div class="field"><label>Name *</label><input class="input" id="fName" value="${g?esc(g.name):""}"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitGrp('${id||""}')">Save</button></div>`);
+}
+function submitGrp(id){
+  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
+  const catId = $("#fGCat").value;
+  if(id){ const g = byId(DB.groups,id); g.name = name; g.catId = catId; audit("Edited group: "+name); }
+  else{ const code = String(DB.groups.filter(g=>g.catId===catId).length+1).padStart(2,"0"); DB.groups.push({id:"g"+Date.now(), code, catId, name}); audit("Added group: "+name); }
+  save(); closeModal(); renderAll(); toast("Group saved");
+}
+function deleteGrp(id){
+  if(!canWrite()) return;
+  if(DB.items.some(i=>i.groupId===id)) return toast("Group has items \u2014 move them first");
+  const g = byId(DB.groups,id);
+  if(!confirm(`Delete group "${g.name}"?`)) return;
+  DB.groups = DB.groups.filter(x=>x.id!==id); audit("Deleted group: "+g.name); save(); renderAll();
+}
+
+/* ---------- transactions listings ---------- */
+function txTable(types, cols){
+  const rows = DB.txns.filter(t => types.includes(t.type));
+  return `<div class="table-card"><div class="table-scroll"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="num"':""}>${c.h}</th>`).join("")}</tr></thead><tbody>
+  ${rows.map(t => `<tr>${cols.map(c=>c.f(t)).join("")}</tr>`).join("") || `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--faint);padding:30px">No records yet</td></tr>`}
+  </tbody></table></div></div>`;
+}
+const cId  = {h:"ID", f:t=>`<td class="muted">${t.id}</td>`};
+const cDate= {h:"Date", f:t=>`<td>${fmtD(t.date)}</td>`};
+const cItem= {h:"Item", f:t=>{const it=itemById(t.itemId);return `<td class="type-cell">${esc(itemName(it))}<div style="font-size:11px;color:var(--faint)">${itemCode(it)}</div></td>`}};
+const cBy  = {h:"By", f:t=>`<td class="muted">${esc(t.by||"")}</td>`};
+const cNote= {h:"Note", f:t=>`<td class="muted">${esc(t.note||t.reason||"\u2014")}</td>`};
+const cJob = {h:"Job", f:t=>{const j=t.jobId?byId(DB.jobs,t.jobId):null;return `<td>${j?esc(j.no)+`<div style="font-size:11px;color:var(--faint)">${esc(j.client)}</div>`:"\u2014"}</td>`}};
+const cReqr= {h:"Requisitor", f:t=>{const r=t.requisitorId?byId(DB.requisitors,t.requisitorId):null;return `<td>${r?esc(r.name)+`<div style="font-size:11px;color:var(--faint)">${esc(r.dept)}</div>`:"\u2014"}</td>`}};
+
+function renderStockIn(){
+  $("#view-stockin").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Stock In</b></div><h1>Stock In</h1><p>Material receiving from suppliers</p></div>
+    <div class="page-actions"><button class="btn btn-green" onclick="siModal()">\u2193 New Stock In</button></div></div>
+  ${txTable(["IN"], [cId, cDate, cItem,
+    {h:"Received", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num">${t.qtyIn||t.qty} ${it?esc(it.uomIn):""}</td>`}},
+    {h:"Added to Stock", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num pos">+${t.qty} ${it?esc(it.uomOut):""}</td>`}},
+    {h:"Supplier", f:t=>`<td>${esc((byId(DB.suppliers,t.supplierId)||{}).name||"\u2014")}</td>`},
+    {h:"Procurer", f:t=>`<td class="muted">${esc((byId(DB.procurers,t.procurerId)||{}).name||"\u2014")}</td>`},
+    cNote, cBy])}`;
+}
+function siModal(){
+  if(!canWrite()) return;
+  openModal(`<h3>New Stock In</h3><div class="sub">Receive material into the store</div>
+  <div class="field"><label>Item *</label><select class="select" id="fItem" onchange="siHint()">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select></div>
+  <div class="row-2">
+    <div class="field"><label>Quantity (purchase unit) *</label><input class="input" id="fQty" type="number" min="1" value="1" oninput="siHint()"><div class="hint" id="siHintEl"></div></div>
+    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
+  </div>
+  <div class="row-2">
+    <div class="field"><label>Supplier</label><select class="select" id="fSup"><option value="">\u2014</option>${opts(DB.suppliers,null,s=>s.name)}</select></div>
+    <div class="field"><label>Procurer</label><select class="select" id="fProc"><option value="">\u2014</option>${opts(DB.procurers,null,p=>p.name)}</select></div>
+  </div>
+  <div class="field"><label>Note</label><input class="input" id="fNote" placeholder="Challan no, remarks\u2026"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-green" onclick="submitSI()">Receive Stock</button></div>`);
+  window.siHint = () => {
+    const it = itemById($("#fItem").value), q = Number($("#fQty").value)||0;
+    $("#siHintEl").innerHTML = it ? `${q} ${esc(it.uomIn)} = <b>${q*it.mult} ${esc(it.uomOut)}</b> added to stock` : "";
+  };
+  siHint();
+}
+function submitSI(){
+  const it = itemById($("#fItem").value), qIn = Number($("#fQty").value);
+  if(!it) return toast("Please select an item");
+  if(!qIn || qIn<=0) return toast("Quantity must be at least 1");
+  const qty = qIn*it.mult;
+  it.stock += qty;
+  DB.txns.unshift({ id:nextSeq("si","SI-"), type:"IN", date:$("#fDate").value||todayISO(), itemId:it.id, qtyIn:qIn, qty, supplierId:$("#fSup").value||null, procurerId:$("#fProc").value||null, note:$("#fNote").value.trim(), by:currentUser.username });
+  audit(`Stock In: ${qty} ${it.uomOut} \u2014 ${it.desc}`);
+  save(); closeModal(); renderAll(); toast(`Received ${qty} ${it.uomOut} of ${it.desc}`);
+}
+
+function renderStockOut(){
+  $("#view-stockout").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Stock Out</b></div><h1>Stock Out</h1><p>Material issue against jobs</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="soModal()">\u2191 New Stock Out</button></div></div>
+  ${txTable(["OUT"], [cId, cDate, cItem,
+    {h:"Issued", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num neg">${t.qty} ${it?esc(it.uomOut):""}</td>`}},
+    cJob, cReqr, cNote, cBy,
+    {h:"", f:t=>`<td><button class="btn btn-sm" onclick="printSlip('${t.id}')">\ud83d\udda8 Slip</button></td>`}])}`;
+}
+function soModal(){
+  if(!canWrite()) return;
+  openModal(`<h3>New Stock Out</h3><div class="sub">Issue material to a job / department</div>
+  <div class="field"><label>Item *</label><select class="select" id="fItem" onchange="soHint()">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc+" ("+i.stock+" "+i.uomOut+")")}</select></div>
+  <div class="row-2">
+    <div class="field"><label>Quantity *</label><input class="input" id="fQty" type="number" min="1" value="1"><div class="hint" id="soHintEl"></div></div>
+    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
+  </div>
+  <div class="row-2">
+    <div class="field"><label>Job *</label><select class="select" id="fJob">${opts(DB.jobs.filter(j=>j.status!=="Closed"),null,j=>j.no+" \u00b7 "+j.client)}</select></div>
+    <div class="field"><label>Requisitor *</label><select class="select" id="fReqr">${opts(DB.requisitors,null,r=>r.name+" ("+r.dept+")")}</select></div>
+  </div>
+  <div class="field"><label>Note</label><input class="input" id="fNote" placeholder="Purpose, slip remarks\u2026"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitSO()">Issue Stock</button></div>`);
+  window.soHint = () => {
+    const it = itemById($("#fItem").value);
+    $("#soHintEl").innerHTML = it ? `Available: <b>${it.stock} ${esc(it.uomOut)}</b>` : "";
+  };
+  soHint();
+}
+function submitSO(){
+  const it = itemById($("#fItem").value), q = Number($("#fQty").value);
+  if(!it) return toast("Please select an item");
+  if(!q || q<=0) return toast("Quantity must be at least 1");
+  if(q > it.stock) return toast(`Not enough stock \u2014 only ${it.stock} ${it.uomOut} available`);
+  it.stock -= q;
+  DB.txns.unshift({ id:nextSeq("so","SO-"), type:"OUT", date:$("#fDate").value||todayISO(), itemId:it.id, qty:-q, jobId:$("#fJob").value||null, requisitorId:$("#fReqr").value||null, note:$("#fNote").value.trim(), by:currentUser.username });
+  audit(`Stock Out: ${q} ${it.uomOut} \u2014 ${it.desc}`);
+  save(); closeModal(); renderAll(); toast(`Issued ${q} ${it.uomOut} of ${it.desc}`);
+}
+function printSlip(txId){
+  const t = DB.txns.find(x=>x.id===txId); if(!t) return;
+  const it = itemById(t.itemId), j = t.jobId?byId(DB.jobs,t.jobId):null, r = t.requisitorId?byId(DB.requisitors,t.requisitorId):null;
+  $("#slipPrint").innerHTML = `
+  <div style="max-width:640px;margin:0 auto;font-family:Arial,sans-serif;color:#111">
+    <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px">
+      <div style="font-size:20px;font-weight:800">${esc(DB.settings.company)}</div>
+      <div style="font-size:12px">${esc(DB.settings.address)}</div>
+      <div style="font-size:15px;font-weight:700;margin-top:8px;letter-spacing:1px">STOCK OUT SLIP</div>
+    </div>
+    <table style="width:100%;font-size:13px;margin-top:14px;border-collapse:collapse">
+      <tr><td style="padding:5px 0"><b>Slip No:</b> ${t.id}</td><td style="text-align:right"><b>Date:</b> ${fmtD(t.date)}</td></tr>
+      <tr><td style="padding:5px 0"><b>Job:</b> ${j?esc(j.no+" \u2014 "+j.client):"\u2014"}</td><td style="text-align:right"><b>Dept:</b> ${r?esc(r.dept):"\u2014"}</td></tr>
+      <tr><td style="padding:5px 0" colspan="2"><b>Requisitor:</b> ${r?esc(r.name):"\u2014"}</td></tr>
+    </table>
+    <table style="width:100%;font-size:13px;margin-top:10px;border-collapse:collapse" border="1" cellpadding="7">
+      <tr style="background:#eee"><th align="left">Code</th><th align="left">Item Description</th><th align="right">Qty</th><th align="left">Unit</th></tr>
+      <tr><td>${itemCode(it)}</td><td>${esc(itemName(it))}</td><td align="right">${Math.abs(t.qty)}</td><td>${it?esc(it.uomOut):""}</td></tr>
+    </table>
+    ${t.note?`<div style="font-size:12px;margin-top:8px"><b>Note:</b> ${esc(t.note)}</div>`:""}
+    <table style="width:100%;margin-top:70px;font-size:12px"><tr>
+      <td style="text-align:center;border-top:1px solid #111;width:30%">Store Keeper</td><td></td>
+      <td style="text-align:center;border-top:1px solid #111;width:30%">Received By</td><td></td>
+      <td style="text-align:center;border-top:1px solid #111;width:30%">Authorized</td>
+    </tr></table>
+  </div>`;
+  document.body.classList.add("slip-mode");
+  window.print();
+}
+window.addEventListener("afterprint", () => document.body.classList.remove("slip-mode"));
+
+function renderReturns(){
+  $("#view-returns").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Returns</b></div><h1>Item Returns</h1><p>Material returned to store from jobs</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="rtModal()">\u21a9 New Return</button></div></div>
+  ${txTable(["RET"], [cId, cDate, cItem,
+    {h:"Returned", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num pos">+${t.qty} ${it?esc(it.uomOut):""}</td>`}},
+    cJob, cReqr, cNote, cBy])}`;
+}
+function rtModal(){
+  if(!canWrite()) return;
+  openModal(`<h3>New Item Return</h3><div class="sub">Return unused material back to store</div>
+  <div class="field"><label>Item *</label><select class="select" id="fItem">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select></div>
+  <div class="row-2">
+    <div class="field"><label>Quantity *</label><input class="input" id="fQty" type="number" min="1" value="1"></div>
+    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
+  </div>
+  <div class="row-2">
+    <div class="field"><label>From Job</label><select class="select" id="fJob"><option value="">\u2014</option>${opts(DB.jobs,null,j=>j.no+" \u00b7 "+j.client)}</select></div>
+    <div class="field"><label>Returned By</label><select class="select" id="fReqr"><option value="">\u2014</option>${opts(DB.requisitors,null,r=>r.name+" ("+r.dept+")")}</select></div>
+  </div>
+  <div class="field"><label>Note</label><input class="input" id="fNote" placeholder="Reason for return\u2026"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitRT()">Save Return</button></div>`);
+}
+function submitRT(){
+  const it = itemById($("#fItem").value), q = Number($("#fQty").value);
+  if(!it) return toast("Please select an item");
+  if(!q || q<=0) return toast("Quantity must be at least 1");
+  it.stock += q;
+  DB.txns.unshift({ id:nextSeq("rt","RT-"), type:"RET", date:$("#fDate").value||todayISO(), itemId:it.id, qty:q, jobId:$("#fJob").value||null, requisitorId:$("#fReqr").value||null, note:$("#fNote").value.trim(), by:currentUser.username });
+  audit(`Return: ${q} ${it.uomOut} \u2014 ${it.desc}`);
+  save(); closeModal(); renderAll(); toast("Return saved");
+}
+
+function renderAdjustments(){
+  $("#view-adjustments").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Adjustments</b></div><h1>Qty Adjustments</h1><p>Physical count corrections, damage &amp; wastage</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="adModal()">\u2696 New Adjustment</button></div></div>
+  ${txTable(["ADJ"], [cId, cDate, cItem,
+    {h:"Change", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num ${t.qty>0?"pos":"neg"}">${t.qty>0?"+":""}${t.qty} ${it?esc(it.uomOut):""}</td>`}},
+    {h:"Reason", f:t=>`<td>${esc(t.reason||"\u2014")}</td>`}, cBy])}`;
+}
+function adModal(){
+  if(!canWrite()) return;
+  openModal(`<h3>Qty Adjustment</h3><div class="sub">Set the actual counted stock \u2014 the difference is recorded</div>
+  <div class="field"><label>Item *</label><select class="select" id="fItem" onchange="adHint()">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select></div>
+  <div class="row-2">
+    <div class="field"><label>Actual Counted Qty *</label><input class="input" id="fQty" type="number" min="0" oninput="adHint()"><div class="hint" id="adHintEl"></div></div>
+    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
+  </div>
+  <div class="field"><label>Reason *</label><input class="input" id="fReason" placeholder="Damage / count correction / wastage\u2026"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitAD()">Apply</button></div>`);
+  window.adHint = () => {
+    const it = itemById($("#fItem").value), q = $("#fQty").value==="" ? null : Number($("#fQty").value);
+    $("#adHintEl").innerHTML = it ? `System stock: <b>${it.stock} ${esc(it.uomOut)}</b>${q!==null?` \u2192 change: <b>${q-it.stock>0?"+":""}${q-it.stock}</b>`:""}` : "";
+  };
+  adHint();
+}
+function submitAD(){
+  const it = itemById($("#fItem").value);
+  if(!it) return toast("Please select an item");
+  if($("#fQty").value==="") return toast("Please enter the counted quantity");
+  const q = Math.max(0, Number($("#fQty").value)), reason = $("#fReason").value.trim();
+  if(!reason) return toast("Please write a reason");
+  const delta = q - it.stock;
+  if(delta === 0) return toast("No difference \u2014 nothing to adjust");
+  it.stock = q;
+  DB.txns.unshift({ id:nextSeq("ad","AD-"), type:"ADJ", date:$("#fDate").value||todayISO(), itemId:it.id, qty:delta, reason, by:currentUser.username });
+  audit(`Adjustment: ${delta>0?"+":""}${delta} ${it.uomOut} \u2014 ${it.desc} (${reason})`);
+  save(); closeModal(); renderAll(); toast("Adjustment applied");
+}
+
+/* ---------- alerts ---------- */
+function renderAlerts(){
+  const low = lowItems();
+  $("#view-alerts").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Stock Alerts</b></div><h1>Stock Alerts</h1><p>${low.length} item${low.length===1?"":"s"} at or below alarm level</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportCSV('stock-alerts.csv',['Code','Item','Stock','Alarm','Shortage'],lowItems().map(it=>[itemCode(it),it.desc,it.stock,it.alarm,Math.max(0,it.alarm-it.stock)]))">\u2913 Export CSV</button></div></div>
+  ${low.length===0 ? `<div class="card" style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:34px">\u2705</div><h3 style="margin:10px 0 4px">All good!</h3>No items are below their alarm level.</div>` : `
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Code</th><th>Item</th><th>Location</th><th class="num">Stock</th><th class="num">Alarm Level</th><th class="num">Shortage</th><th>Status</th><th></th></tr></thead><tbody>
+  ${low.sort((a,b)=>(a.stock-a.alarm)-(b.stock-b.alarm)).map(it=>`<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${it.stock}</b> ${esc(it.uomOut)}</td><td class="num">${it.alarm}</td><td class="num neg">${Math.max(0,it.alarm-it.stock)}</td><td>${statusBadge(it)}</td><td><button class="btn btn-sm btn-green" onclick="siModal()">\u2193 Stock In</button></td></tr>`).join("")}
+  </tbody></table></div></div>`}`;
+}
+
+/* ---------- requisitions ---------- */
+let REQ_LINES = [];
+function renderRequisitions(){
+  $("#view-requisitions").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Procurement / <b>Requisitions</b></div><h1>Requisitions</h1><p>Material requests \u2192 approve \u2192 issue from store</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="reqModal()">+ New Requisition</button></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Req No</th><th>Date</th><th>Job</th><th>Requisitor</th><th class="num">Lines</th><th>Status</th><th></th></tr></thead><tbody>
+  ${DB.requisitions.slice().sort((a,b)=>b.no.localeCompare(a.no)).map(q => { const j = byId(DB.jobs,q.jobId), r = byId(DB.requisitors,q.requisitorId);
+    return `<tr><td class="type-cell">${esc(q.no)}</td><td>${fmtD(q.date)}</td><td>${j?esc(j.no)+`<div style="font-size:11px;color:var(--faint)">${esc(j.client)}</div>`:"\u2014"}</td><td>${r?esc(r.name)+`<div style="font-size:11px;color:var(--faint)">${esc(r.dept)}</div>`:"\u2014"}</td><td class="num">${q.lines.length}</td><td><span class="badge ${q.status.toLowerCase()}">${q.status.toUpperCase()}</span></td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="viewReq('${q.id}')">Open</button></td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No requisitions yet</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function reqLinesHtml(){
+  return `<table style="margin-bottom:8px"><thead><tr><th>Item</th><th class="num">Qty</th><th></th></tr></thead><tbody>
+  ${REQ_LINES.map((l,i) => { const it = itemById(l.itemId); return `<tr><td>${esc(itemName(it))}</td><td class="num">${l.qty} ${it?esc(it.uomOut):""}</td><td><button class="btn btn-sm btn-danger-soft" onclick="REQ_LINES.splice(${i},1);refreshReqLines()">\u00d7</button></td></tr>`; }).join("") || `<tr><td colspan="3" style="color:var(--faint);text-align:center">No items added yet</td></tr>`}
+  </tbody></table>`;
+}
+function reqModal(){
+  if(!canWrite()) return;
+  REQ_LINES = [];
+  openModal(`<h3>New Requisition</h3><div class="sub">Request materials for a job</div>
+  <div class="row-2">
+    <div class="field"><label>Job *</label><select class="select" id="fJob">${opts(DB.jobs.filter(j=>j.status!=="Closed"),null,j=>j.no+" \u00b7 "+j.client)}</select></div>
+    <div class="field"><label>Requisitor *</label><select class="select" id="fReqr">${opts(DB.requisitors,null,r=>r.name+" ("+r.dept+")")}</select></div>
+  </div>
+  <div class="field"><label>Add Items</label>
+    <div style="display:flex;gap:8px"><select class="select" id="fLineItem" style="flex:1">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select><input class="input" id="fLineQty" type="number" min="1" value="1" style="width:90px"><button class="btn" onclick="addReqLine()">Add</button></div>
+  </div>
+  <div id="reqLines">${reqLinesHtml()}</div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitReq()">Create Requisition</button></div>`, true);
+  window.refreshReqLines = () => { $("#reqLines").innerHTML = reqLinesHtml(); };
+  window.addReqLine = () => {
+    const itemId = $("#fLineItem").value, qty = Number($("#fLineQty").value);
+    if(!qty || qty<=0) return toast("Qty must be at least 1");
+    const ex = REQ_LINES.find(l=>l.itemId===itemId);
+    if(ex) ex.qty += qty; else REQ_LINES.push({itemId, qty});
+    refreshReqLines();
+  };
+}
+function submitReq(){
+  if(REQ_LINES.length===0) return toast("Add at least one item");
+  const q = { id:"q"+Date.now(), no:nextSeq("req","REQ-"), jobId:$("#fJob").value, requisitorId:$("#fReqr").value, date:todayISO(), status:"Pending", lines:REQ_LINES.slice() };
+  DB.requisitions.push(q);
+  audit("Created requisition "+q.no);
+  save(); closeModal(); renderAll(); toast(q.no+" created");
+}
+function viewReq(id){
+  const q = byId(DB.requisitions,id); if(!q) return;
+  const j = byId(DB.jobs,q.jobId), r = byId(DB.requisitors,q.requisitorId);
+  const lines = q.lines.map(l => { const it = itemById(l.itemId);
+    const short = it && q.status!=="Issued" && l.qty > it.stock;
+    return `<tr><td>${esc(itemName(it))}<div style="font-size:11px;color:var(--faint)">${itemCode(it)}</div></td><td class="num">${l.qty} ${it?esc(it.uomOut):""}</td><td class="num">${it?it.stock:"\u2014"}</td><td>${short?'<span class="badge out">SHORT</span>':'<span class="badge ok">OK</span>'}</td></tr>`; }).join("");
+  const canAct = currentUser.access !== "Viewer";
+  openModal(`<h3>${esc(q.no)} <span class="badge ${q.status.toLowerCase()}" style="vertical-align:2px">${q.status.toUpperCase()}</span></h3>
+  <div class="sub">${fmtD(q.date)} \u00b7 ${j?esc(j.no+" \u2014 "+j.client):""} \u00b7 ${r?esc(r.name+" ("+r.dept+")"):""}</div>
+  <table><thead><tr><th>Item</th><th class="num">Requested</th><th class="num">In Stock</th><th>Check</th></tr></thead><tbody>${lines}</tbody></table>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal()">Close</button>
+    ${canAct && q.status==="Pending" ? `<button class="btn btn-danger-soft" onclick="setReqStatus('${q.id}','Rejected')">Reject</button><button class="btn btn-primary" onclick="setReqStatus('${q.id}','Approved')">Approve</button>` : ""}
+    ${canAct && q.status==="Approved" ? `<button class="btn btn-green" onclick="issueReq('${q.id}')">Issue All from Store</button>` : ""}
+  </div>`, true);
+}
+function setReqStatus(id, st){
+  const q = byId(DB.requisitions,id); q.status = st;
+  audit(q.no+" "+st.toLowerCase()); save(); closeModal(); renderAll(); toast(q.no+" "+st.toLowerCase());
+}
+function issueReq(id){
+  const q = byId(DB.requisitions,id);
+  for(const l of q.lines){ const it = itemById(l.itemId);
+    if(!it) return toast("An item in this requisition was deleted");
+    if(l.qty > it.stock) return toast(`Not enough stock for ${it.desc} \u2014 only ${it.stock} ${it.uomOut} available`);
+  }
+  q.lines.forEach(l => { const it = itemById(l.itemId);
+    it.stock -= l.qty;
+    DB.txns.unshift({ id:nextSeq("so","SO-"), type:"OUT", date:todayISO(), itemId:it.id, qty:-l.qty, jobId:q.jobId, requisitorId:q.requisitorId, note:"Against "+q.no, by:currentUser.username });
+  });
+  q.status = "Issued";
+  audit("Issued "+q.no+" ("+q.lines.length+" items)");
+  save(); closeModal(); renderAll(); toast(q.no+" issued \u2014 stock updated");
+}
+
+/* ---------- parties ---------- */
+function renderSuppliers(){
+  $("#view-suppliers").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Procurement / <b>Suppliers</b></div><h1>Suppliers</h1><p>${DB.suppliers.length} suppliers</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="supModal()">+ Add Supplier</button></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Address</th><th class="num">Stock Ins</th><th></th></tr></thead><tbody>
+  ${DB.suppliers.map(s => `<tr><td class="type-cell">${esc(s.name)}</td><td>${esc(s.contact||"\u2014")}</td><td class="muted">${esc(s.phone||"\u2014")}</td><td class="muted">${esc(s.address||"\u2014")}</td><td class="num">${DB.txns.filter(t=>t.supplierId===s.id).length}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="supModal('${s.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delSup('${s.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--faint);padding:30px">No suppliers yet</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function supModal(id){
+  if(!canWrite()) return;
+  const s = id ? byId(DB.suppliers,id) : null;
+  openModal(`<h3>${s?"Edit":"Add"} Supplier</h3><div class="sub"></div>
+  <div class="field"><label>Name *</label><input class="input" id="fName" value="${s?esc(s.name):""}"></div>
+  <div class="row-2">
+    <div class="field"><label>Contact Person</label><input class="input" id="fContact" value="${s?esc(s.contact||""):""}"></div>
+    <div class="field"><label>Phone</label><input class="input" id="fPhone" value="${s?esc(s.phone||""):""}"></div>
+  </div>
+  <div class="field"><label>Address</label><input class="input" id="fAddr" value="${s?esc(s.address||""):""}"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitSup('${id||""}')">Save</button></div>`);
+}
+function submitSup(id){
+  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
+  const data = { name, contact:$("#fContact").value.trim(), phone:$("#fPhone").value.trim(), address:$("#fAddr").value.trim() };
+  if(id){ Object.assign(byId(DB.suppliers,id), data); audit("Edited supplier: "+name); }
+  else{ DB.suppliers.push(Object.assign({id:"s"+Date.now()}, data)); audit("Added supplier: "+name); }
+  save(); closeModal(); renderAll(); toast("Supplier saved");
+}
+function delSup(id){
+  if(!canWrite()) return;
+  const s = byId(DB.suppliers,id);
+  if(!confirm(`Delete supplier "${s.name}"?`)) return;
+  DB.suppliers = DB.suppliers.filter(x=>x.id!==id); audit("Deleted supplier: "+s.name); save(); renderAll();
+}
+function renderProcurers(){
+  $("#view-procurers").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Procurement / <b>Procurers</b></div><h1>Procurers</h1><p>Employees who purchase materials</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="procModal()">+ Add Procurer</button></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Phone</th><th class="num">Purchases</th><th></th></tr></thead><tbody>
+  ${DB.procurers.map(p => `<tr><td class="muted">${esc(p.empId||"\u2014")}</td><td class="type-cell">${esc(p.name)}</td><td class="muted">${esc(p.phone||"\u2014")}</td><td class="num">${DB.txns.filter(t=>t.procurerId===p.id).length}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="procModal('${p.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delProc('${p.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center;color:var(--faint);padding:30px">No procurers yet</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function procModal(id){
+  if(!canWrite()) return;
+  const p = id ? byId(DB.procurers,id) : null;
+  openModal(`<h3>${p?"Edit":"Add"} Procurer</h3><div class="sub"></div>
+  <div class="row-2">
+    <div class="field"><label>Employee ID</label><input class="input" id="fEmp" value="${p?esc(p.empId||""):""}"></div>
+    <div class="field"><label>Phone</label><input class="input" id="fPhone" value="${p?esc(p.phone||""):""}"></div>
+  </div>
+  <div class="field"><label>Name *</label><input class="input" id="fName" value="${p?esc(p.name):""}"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitProc('${id||""}')">Save</button></div>`);
+}
+function submitProc(id){
+  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
+  const data = { name, empId:$("#fEmp").value.trim(), phone:$("#fPhone").value.trim() };
+  if(id){ Object.assign(byId(DB.procurers,id), data); audit("Edited procurer: "+name); }
+  else{ DB.procurers.push(Object.assign({id:"p"+Date.now()}, data)); audit("Added procurer: "+name); }
+  save(); closeModal(); renderAll(); toast("Procurer saved");
+}
+function delProc(id){
+  if(!canWrite()) return;
+  const p = byId(DB.procurers,id);
+  if(!confirm(`Delete procurer "${p.name}"?`)) return;
+  DB.procurers = DB.procurers.filter(x=>x.id!==id); audit("Deleted procurer: "+p.name); save(); renderAll();
+}
+function renderRequisitors(){
+  $("#view-requisitors").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Production / <b>Requisitors</b></div><h1>Requisitors</h1><p>People who request &amp; receive materials</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="reqrModal()">+ Add Requisitor</button></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Name</th><th>Department</th><th class="num">Stock Outs</th><th></th></tr></thead><tbody>
+  ${DB.requisitors.map(r => `<tr><td class="type-cell">${esc(r.name)}</td><td>${esc(r.dept||"\u2014")}</td><td class="num">${DB.txns.filter(t=>t.requisitorId===r.id && t.type==="OUT").length}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="reqrModal('${r.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delReqr('${r.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No requisitors yet</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function reqrModal(id){
+  if(!canWrite()) return;
+  const r = id ? byId(DB.requisitors,id) : null;
+  openModal(`<h3>${r?"Edit":"Add"} Requisitor</h3><div class="sub"></div>
+  <div class="field"><label>Name *</label><input class="input" id="fName" value="${r?esc(r.name):""}"></div>
+  <div class="field"><label>Department *</label><input class="input" id="fDept" value="${r?esc(r.dept||""):""}" placeholder="Production / Site / Design\u2026"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitReqr('${id||""}')">Save</button></div>`);
+}
+function submitReqr(id){
+  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
+  const data = { name, dept:$("#fDept").value.trim() };
+  if(id){ Object.assign(byId(DB.requisitors,id), data); audit("Edited requisitor: "+name); }
+  else{ DB.requisitors.push(Object.assign({id:"r"+Date.now()}, data)); audit("Added requisitor: "+name); }
+  save(); closeModal(); renderAll(); toast("Requisitor saved");
+}
+function delReqr(id){
+  if(!canWrite()) return;
+  const r = byId(DB.requisitors,id);
+  if(!confirm(`Delete requisitor "${r.name}"?`)) return;
+  DB.requisitors = DB.requisitors.filter(x=>x.id!==id); audit("Deleted requisitor: "+r.name); save(); renderAll();
+}
+
+/* ---------- jobs ---------- */
+function renderJobs(){
+  $("#view-jobs").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Production / <b>Jobs & Delivery</b></div><h1>Jobs &amp; Delivery</h1><p>Client jobs, material consumption &amp; deliveries</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="jobModal()">+ Add Job</button></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Job No</th><th>Client</th><th>Description</th><th class="num">Materials Used</th><th class="num">Deliveries</th><th>Status</th><th></th></tr></thead><tbody>
+  ${DB.jobs.slice().sort((a,b)=>b.no.localeCompare(a.no)).map(j => `<tr><td class="type-cell">${esc(j.no)}</td><td>${esc(j.client)}</td><td class="muted">${esc(j.desc)}</td><td class="num">${DB.txns.filter(t=>t.jobId===j.id && t.type==="OUT").length}</td><td class="num">${(j.deliveries||[]).length}</td><td><span class="badge ${j.status.toLowerCase()}">${j.status.toUpperCase()}</span></td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="jobDetails('${j.id}')">Details</button> <button class="btn btn-sm" onclick="jobModal('${j.id}')">Edit</button></td></tr>`).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No jobs yet</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function jobModal(id){
+  if(!canWrite()) return;
+  const j = id ? byId(DB.jobs,id) : null;
+  openModal(`<h3>${j?"Edit Job "+esc(j.no):"Add New Job"}</h3><div class="sub"></div>
+  <div class="field"><label>Client *</label><input class="input" id="fClient" value="${j?esc(j.client):""}"></div>
+  <div class="field"><label>Description *</label><input class="input" id="fDesc" value="${j?esc(j.desc):""}"></div>
+  ${j?`<div class="field"><label>Status</label><select class="select" id="fStatus">${["Running","Delivered","Closed"].map(s=>`<option ${j.status===s?"selected":""}>${s}</option>`).join("")}</select></div>`:""}
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitJob('${id||""}')">Save</button></div>`);
+}
+function submitJob(id){
+  const client = $("#fClient").value.trim(), desc = $("#fDesc").value.trim();
+  if(!client || !desc) return toast("Client and description are required");
+  if(id){ const j = byId(DB.jobs,id); Object.assign(j, {client, desc, status:$("#fStatus").value}); audit("Edited job "+j.no); }
+  else{
+    DB.seq.job = (DB.seq.job||0)+1;
+    const no = "JB-"+new Date().getFullYear()+"-"+String(DB.seq.job).padStart(3,"0");
+    DB.jobs.push({id:"j"+Date.now(), no, client, desc, status:"Running", deliveries:[]});
+    audit("Added job "+no);
+  }
+  save(); closeModal(); renderAll(); toast("Job saved");
+}
+function jobDetails(id){
+  const j = byId(DB.jobs,id); if(!j) return;
+  const used = {};
+  DB.txns.filter(t=>t.jobId===id).forEach(t => {
+    used[t.itemId] = used[t.itemId] || {out:0, ret:0};
+    if(t.type==="OUT") used[t.itemId].out += -t.qty;
+    if(t.type==="RET") used[t.itemId].ret += t.qty;
+  });
+  const rows = Object.keys(used).map(iid => { const it = itemById(iid), u = used[iid];
+    const net = u.out-u.ret, val = it ? net*(it.price/(it.mult||1)) : 0;
+    return `<tr><td>${esc(itemName(it))}</td><td class="num">${u.out}</td><td class="num">${u.ret}</td><td class="num"><b>${net}</b> ${it?esc(it.uomOut):""}</td><td class="num">${tk(val)}</td></tr>`; }).join("");
+  const totalVal = Object.keys(used).reduce((s,iid)=>{ const it=itemById(iid); return s + (it ? (used[iid].out-used[iid].ret)*(it.price/(it.mult||1)) : 0); },0);
+  openModal(`<h3>${esc(j.no)} \u2014 ${esc(j.client)} <span class="badge ${j.status.toLowerCase()}" style="vertical-align:2px">${j.status.toUpperCase()}</span></h3>
+  <div class="sub">${esc(j.desc)}</div>
+  <h3 style="font-size:13px;margin:10px 0 6px">Material Consumption \u2014 total ${tk(totalVal)}</h3>
+  <table><thead><tr><th>Item</th><th class="num">Out</th><th class="num">Returned</th><th class="num">Net Used</th><th class="num">Value</th></tr></thead><tbody>${rows || `<tr><td colspan="5" style="color:var(--faint);text-align:center">No materials issued yet</td></tr>`}</tbody></table>
+  <h3 style="font-size:13px;margin:14px 0 6px">Deliveries</h3>
+  ${(j.deliveries||[]).map(d=>`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--border2)"><b>${fmtD(d.date)}</b> \u2014 ${esc(d.note)} <span style="color:var(--faint)">(${esc(d.by)})</span></div>`).join("") || `<div style="color:var(--faint);font-size:13px">No deliveries recorded</div>`}
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Close</button>${currentUser.access!=="Viewer"?`<button class="btn btn-green" onclick="delivModal('${j.id}')">+ Record Delivery</button>`:""}</div>`, true);
+}
+function delivModal(jobId){
+  openModal(`<h3>Record Delivery</h3><div class="sub">${esc(byId(DB.jobs,jobId).no)}</div>
+  <div class="row-2">
+    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
+    <div class="field"><label>Mark job as</label><select class="select" id="fStatus"><option value="">Keep current status</option><option>Delivered</option><option>Closed</option></select></div>
+  </div>
+  <div class="field"><label>Delivery Note *</label><input class="input" id="fNote" placeholder="What was delivered\u2026"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-green" onclick="submitDeliv('${jobId}')">Save Delivery</button></div>`);
+}
+function submitDeliv(jobId){
+  const note = $("#fNote").value.trim(); if(!note) return toast("Please write a delivery note");
+  const j = byId(DB.jobs,jobId);
+  j.deliveries = j.deliveries || [];
+  j.deliveries.push({ date:$("#fDate").value||todayISO(), note, by:currentUser.username });
+  if($("#fStatus").value) j.status = $("#fStatus").value;
+  audit("Delivery recorded for "+j.no);
+  save(); closeModal(); renderAll(); toast("Delivery recorded");
+}
+
+/* ---------- reports ---------- */
+let REP = { type:"txns", from:daysAgo(29), to:todayISO() }, REP_OUT = null;
+const REP_TYPES = [
+  ["txns","All Transactions (date range)"],
+  ["stockcat","Stock by Category"],
+  ["jobwise","Job-wise Consumption"],
+  ["reqrwise","Requisitor-wise Issue"],
+  ["supwise","Supplier-wise Receiving"],
+  ["lowstock","Low Stock / Alarm Report"]
+];
+function runReport(){
+  const from = REP.from, to = REP.to;
+  const inRange = t => t.date >= from && t.date <= to;
+  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + ` (${fmtD(from)} \u2013 ${fmtD(to)})`;
+  let head = [], rows = [];
+  if(REP.type==="txns"){
+    head = ["ID","Date","Type","Item","Qty","Job/Supplier","Requisitor","By"];
+    rows = DB.txns.filter(inRange).map(t => { const it = itemById(t.itemId), j = t.jobId?byId(DB.jobs,t.jobId):null, s = t.supplierId?byId(DB.suppliers,t.supplierId):null, r = t.requisitorId?byId(DB.requisitors,t.requisitorId):null;
+      return [t.id, t.date, t.type, itemName(it), t.qty+" "+(it?it.uomOut:""), j?j.no:s?s.name:(t.reason||""), r?r.name:"", t.by||""]; });
+  } else if(REP.type==="stockcat"){
+    title = "Stock by Category (current)"; head = ["Category","Items","Total Units","Stock Value (Tk)"];
+    rows = DB.categories.map(c => { const its = DB.items.filter(i=>i.catId===c.id);
+      return [c.code+" \u00b7 "+c.name, its.length, its.reduce((s,i)=>s+i.stock,0), Math.round(its.reduce((s,i)=>s+i.stock*(i.price/(i.mult||1)),0))]; });
+  } else if(REP.type==="jobwise"){
+    head = ["Job","Client","Item","Net Used","Value (Tk)"];
+    DB.jobs.forEach(j => { const used = {};
+      DB.txns.filter(t=>t.jobId===j.id && inRange(t)).forEach(t => {
+        if(t.type==="OUT") used[t.itemId] = (used[t.itemId]||0) - t.qty;
+        if(t.type==="RET") used[t.itemId] = (used[t.itemId]||0) - t.qty;
+      });
+      Object.keys(used).forEach(iid => { const it = itemById(iid); if(used[iid]>0) rows.push([j.no, j.client, itemName(it), used[iid]+" "+(it?it.uomOut:""), Math.round(used[iid]*(it?(it.price/(it.mult||1)):0))]); });
+    });
+  } else if(REP.type==="reqrwise"){
+    head = ["Requisitor","Department","Item","Issued","Value (Tk)"];
+    DB.requisitors.forEach(r => { const used = {};
+      DB.txns.filter(t=>t.requisitorId===r.id && t.type==="OUT" && inRange(t)).forEach(t => { used[t.itemId] = (used[t.itemId]||0) - t.qty; });
+      Object.keys(used).forEach(iid => { const it = itemById(iid); rows.push([r.name, r.dept, itemName(it), used[iid]+" "+(it?it.uomOut:""), Math.round(used[iid]*(it?(it.price/(it.mult||1)):0))]); });
+    });
+  } else if(REP.type==="supwise"){
+    head = ["Supplier","Item","Received","Value (Tk)"];
+    DB.suppliers.forEach(s => { const got = {};
+      DB.txns.filter(t=>t.supplierId===s.id && t.type==="IN" && inRange(t)).forEach(t => { got[t.itemId] = (got[t.itemId]||0) + t.qty; });
+      Object.keys(got).forEach(iid => { const it = itemById(iid); rows.push([s.name, itemName(it), got[iid]+" "+(it?it.uomOut:""), Math.round(got[iid]*(it?(it.price/(it.mult||1)):0))]); });
+    });
+  } else if(REP.type==="lowstock"){
+    title = "Low Stock / Alarm Report (current)"; head = ["Code","Item","Location","Stock","Alarm","Shortage"];
+    rows = lowItems().map(it => [itemCode(it), it.desc, it.loc||"", it.stock+" "+it.uomOut, it.alarm, Math.max(0,it.alarm-it.stock)]);
+  }
+  REP_OUT = { title, head, rows };
+  renderReports();
+}
+function renderReports(){
+  $("#view-reports").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Insight / <b>Reports</b></div><h1>Reports</h1><p>Run, print or export any report</p></div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="filter-bar" style="margin-bottom:0">
+      <select class="select" onchange="REP.type=this.value;runReport()">${REP_TYPES.map(x=>`<option value="${x[0]}" ${REP.type===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select>
+      <input class="input" type="date" style="width:auto" value="${REP.from}" onchange="REP.from=this.value;runReport()">
+      <span style="color:var(--faint)">to</span>
+      <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
+      <button class="btn btn-primary" onclick="runReport()">Run Report</button>
+      ${REP_OUT?`<button class="btn" onclick="exportCSV('report.csv',REP_OUT.head,REP_OUT.rows)">\u2913 CSV</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
+    </div>
+  </div>
+  ${REP_OUT?`<div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">${esc(REP_OUT.title)}</h3><div class="sub">${REP_OUT.rows.length} rows</div></div>
+  <div class="table-scroll"><table><thead><tr>${REP_OUT.head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
+  ${REP_OUT.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${REP_OUT.head.length}" style="text-align:center;color:var(--faint);padding:30px">No data in this range</td></tr>`}
+  </tbody></table></div></div>`:`<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Select a report and press <b>Run Report</b></div>`}`;
+}
+
+/* ---------- users (Firebase roles) ---------- */
+let ROLES = [];
+function accessOf(role){ role = String(role||"").toLowerCase(); return role==="admin" ? "Admin" : (role==="staff"||role==="store") ? "Store" : "Viewer"; }
+function renderUsers(){
+  $("#view-users").innerHTML = `<div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Loading\u2026</p></div></div>`;
+  fdb.collection("roles").get().then(s => {
+    if(CURRENT_VIEW !== "users") return;
+    ROLES = s.docs.map(d => Object.assign({ email: d.id }, d.data()));
+    $("#view-users").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Admin: full access \u00b7 Store: daily operations \u00b7 Viewer: read-only</p></div>
+    <div class="page-actions"><button class="btn btn-primary" onclick="userModal()">+ Add User</button></div></div>
+  <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>New user = 2 steps:</b> 1) Firebase Console \u2192 Authentication \u2192 Add user (email + password) &nbsp;2) Ekhane same email add kore role din.</div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Access</th><th></th></tr></thead><tbody>
+  ${ROLES.map(r => { const acc = accessOf(r.role); return `<tr><td class="type-cell">${esc(r.email)}${r.email===currentUser.id?' <span style="color:var(--faint);font-size:11px">(you)</span>':""}</td><td>${esc(r.name||"\u2014")}</td><td><span class="badge ${acc.toLowerCase()}">${acc.toUpperCase()}</span></td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="userModal('${esc(r.email)}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delUser('${esc(r.email)}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No users yet \u2014 add your team</td></tr>`}
+  </tbody></table></div></div>`;
+  }).catch(() => { if(CURRENT_VIEW==="users") toast("Could not load users"); });
+}
+function userModal(email){
+  const r = email ? ROLES.find(x => x.email === email) : null;
+  openModal(`<h3>${r ? "Edit" : "Add"} User</h3><div class="sub">${r ? esc(r.email) : "Step 1: create this login in Firebase Console \u2192 Authentication first"}</div>
+  ${r ? "" : `<div class="field"><label>Email *</label><input class="input" id="fEmail" placeholder="name@sml.com"></div>`}
+  <div class="field"><label>Full Name</label><input class="input" id="fName" value="${r?esc(r.name||""):""}"></div>
+  <div class="field"><label>Access Type</label><select class="select" id="fAccess">${["Admin","Store","Viewer"].map(a=>`<option ${r&&accessOf(r.role)===a?"selected":""}>${a}</option>`).join("")}</select></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitUser('${r?esc(r.email):""}')">Save</button></div>`);
+}
+function submitUser(email){
+  const em = (email || $("#fEmail").value.trim()).toLowerCase();
+  if(!em || em.indexOf("@") === -1) return toast("Valid email is required");
+  const acc = $("#fAccess").value;
+  if(em === currentUser.id && acc !== "Admin") return toast("You cannot remove your own Admin access");
+  const role = acc === "Admin" ? "admin" : acc === "Store" ? "staff" : "viewer";
+  fdb.collection("roles").doc(em).set({ role, name: $("#fName").value.trim() }, { merge: true }).then(() => {
+    audit((email ? "Edited" : "Added") + " user: " + em); save();
+    closeModal(); toast("User saved"); renderUsers();
+  }).catch(() => toast("Could not save user \u2014 check permission"));
+}
+function delUser(email){
+  if(email === currentUser.id) return toast("You cannot delete your own account");
+  if(!confirm(`Remove access for "${email}"?\nAlso delete the login from Firebase Console \u2192 Authentication.`)) return;
+  fdb.collection("roles").doc(email).delete().then(() => {
+    audit("Removed user: " + email); save(); toast("User removed"); renderUsers();
+  }).catch(() => toast("Could not remove user"));
+}
+
+/* ---------- audit trail ---------- */
+let AUDIT_Q = "";
+function renderAudit(){
+  const rows = DB.audit.filter(a => !AUDIT_Q || a.action.toLowerCase().includes(AUDIT_Q) || a.user.toLowerCase().includes(AUDIT_Q)).slice(0,300);
+  $("#view-audit").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Administration / <b>Audit Trail</b></div><h1>Audit Trail</h1><p>Who did what, and when</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportCSV('audit-trail.csv',['Date','Time','User','Action'],DB.audit.map(a=>[a.date,a.time,a.user,a.action]))">\u2913 Export CSV</button></div></div>
+  <div class="filter-bar"><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search action or user\u2026" value="${esc(AUDIT_Q)}" oninput="AUDIT_Q=this.value.toLowerCase();renderAudit();document.querySelector('#view-audit .input').focus()"></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Time</th><th>User</th><th>Action</th></tr></thead><tbody>
+  ${rows.map(a=>`<tr><td>${fmtD(a.date)}</td><td class="muted">${esc(a.time)}</td><td class="type-cell">${esc(a.user)}</td><td>${esc(a.action)}</td></tr>`).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No log entries</td></tr>`}
+  </tbody></table></div></div>`;
+}
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $("#view-settings").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Administration / <b>Settings</b></div><h1>Settings</h1><p>Company info &amp; data management</p></div></div>
+  <div class="grid-2">
+    <div class="card"><h3>Company</h3><div class="sub">Shown on slips and reports</div>
+      <div class="field"><label>Company Name</label><input class="input" id="stCompany" value="${esc(DB.settings.company)}"></div>
+      <div class="field"><label>Address</label><input class="input" id="stAddress" value="${esc(DB.settings.address)}"></div>
+      <div class="field"><label>Default Alarm Qty (new items)</label><input class="input" id="stAlarm" type="number" min="0" value="${DB.settings.alarmDefault}"></div>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
+    <div class="card"><h3>Data Backup</h3><div class="sub">All data is saved in Firebase cloud \u2014 still, regular backups are a good habit</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-green" onclick="backupData()">\u2913 Download Backup (JSON)</button>
+        <label class="btn" style="cursor:pointer">\u2912 Restore Backup<input type="file" accept=".json" style="display:none" onchange="restoreData(this)"></label>
+        <button class="btn" onclick="resetData()">Reset to Demo Data</button>
+        <button class="btn btn-danger-soft" onclick="clearData()">Clear All Data (fresh start)</button>
+      </div>
+      <div class="hint" style="margin-top:12px">Backup file contains everything: items, transactions, jobs, requisitions, audit log. Logins &amp; roles are managed in Firebase Console.</div></div>
+  </div>`;
+}
+function saveSettings(){
+  DB.settings.company = $("#stCompany").value.trim() || "Step Media Ltd";
+  DB.settings.address = $("#stAddress").value.trim();
+  DB.settings.alarmDefault = Math.max(0, Number($("#stAlarm").value)||5);
+  audit("Updated settings"); save();
+  $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
+  toast("Settings saved");
+}
+function backupData(){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)], {type:"application/json"}));
+  a.download = "sml-inventory-backup-"+todayISO()+".json"; a.click(); URL.revokeObjectURL(a.href);
+  audit("Downloaded backup"); save(); toast("Backup downloaded");
+}
+function restoreData(inp){
+  const f = inp.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = async () => {
+    try{
+      const d = JSON.parse(rd.result);
+      if(!d.items || !d.txns || !d.settings) throw new Error("bad file");
+      if(!confirm("Restore this backup? Current cloud data will be replaced for everyone.")) return;
+      toast("Restoring\u2026 please wait");
+      await wipeColl("erp_txns"); await wipeColl("erp_audit");
+      DB = d; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
+      SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+      audit("Restored from backup");
+      await doSave(); renderAll(); toast("Backup restored");
+    }catch(e){ console.error(e); toast("Invalid backup file"); }
+  };
+  rd.readAsText(f);
+}
+async function resetData(){
+  if(!confirm("Reset ALL data back to demo data? This cannot be undone and affects everyone.")) return;
+  toast("Resetting\u2026 please wait");
+  await wipeColl("erp_txns"); await wipeColl("erp_audit");
+  DB = seedData();
+  SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+  await doSave(); renderAll(); toast("Demo data restored");
+}
+async function clearData(){
+  if(!confirm("Delete ALL items, transactions, jobs \u2014 everything? Start completely fresh? This affects everyone.")) return;
+  toast("Clearing\u2026 please wait");
+  await wipeColl("erp_txns"); await wipeColl("erp_audit");
+  const st = DB.settings;
+  DB = { settings: st, seq:{si:0,so:0,rt:0,ad:0,req:0,job:0}, categories:[], groups:[], items:[], suppliers:[], procurers:[], requisitors:[], jobs:[], requisitions:[], txns:[], audit:[] };
+  SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+  audit("Cleared all data \u2014 fresh start");
+  await doSave(); renderAll(); toast("All clear \u2014 fresh start!");
+}
+
+/* ---------- router & init ---------- */
+const VIEWS = {
+  dashboard:renderDashboard, items:renderItems, catalog:renderCatalog, stockin:renderStockIn,
+  stockout:renderStockOut, returns:renderReturns, adjustments:renderAdjustments, alerts:renderAlerts,
+  requisitions:renderRequisitions, suppliers:renderSuppliers, procurers:renderProcurers,
+  jobs:renderJobs, requisitors:renderRequisitors, reports:renderReports,
+  users:renderUsers, audit:renderAudit, settings:renderSettings
+};
+function show(view){
+  if(!VIEWS[view]) view = "dashboard";
+  if(!isAdmin() && ["users","audit","settings"].includes(view)) view = "dashboard";
+  CURRENT_VIEW = view;
+  if(location.hash.slice(1) !== view){ try{ history.replaceState(null,"","#"+view); }catch(e){} }
+  document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
+  $("#view-"+view).classList.add("active");
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view===view));
+  $("#alertBadge").textContent = lowItems().length;
+  VIEWS[view]();
+  $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open");
+  window.scrollTo(0,0);
+}
+function renderAll(){
+  $("#alertBadge").textContent = lowItems().length;
+  if(currentUser && VIEWS[CURRENT_VIEW]) VIEWS[CURRENT_VIEW]();
+}
+document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
+window.addEventListener("hashchange", () => { if(currentUser) show(location.hash.slice(1) || "dashboard"); });
+$("#hamburger").addEventListener("click", () => { $("#sidebar").classList.toggle("open"); $("#scrim").classList.toggle("open"); });
+$("#scrim").addEventListener("click", () => { $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open"); });
+let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if(currentUser && CURRENT_VIEW==="dashboard") renderDashboard(); }, 200); });
+function tick(){
+  $("#clock").textContent = new Date().toLocaleString("en-GB",{weekday:"short",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+setInterval(tick, 30000); tick();
+
+$("#lgUser").focus();
+fauth.onAuthStateChanged(async fu => {
+  if(!fu){ $("#loginWrap").style.display = ""; currentUser = null; return; }
+  try{
+    const rs = await fdb.collection("roles").doc(fu.email).get();
+    const rd = rs.exists ? rs.data() : {};
+    const role = String(rd.role || "").toLowerCase();
+    const access = role === "admin" ? "Admin" : (role === "staff" || role === "store") ? "Store" : "Viewer";
+    await loadData();
+    enterApp({ id: fu.email, email: fu.email, name: rd.name || fu.email.split("@")[0], username: fu.email.split("@")[0], access });
+    attachListeners();
+    if(!rs.exists) toast("No role assigned \u2014 view-only. Ask admin to add you in Users.");
+    audit("Logged in"); save();
+  }catch(err){
+    console.error(err);
+    const el = $("#loginErr"); el.style.display = "block";
+    el.textContent = "Could not load data. Check internet and try again.";
+    fauth.signOut();
+  }
+  const btn = document.querySelector("#loginForm button");
+  if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
+});
+
 </script>
 </body>
 </html>
