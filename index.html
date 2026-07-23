@@ -705,7 +705,7 @@ function renderItems(){
   const grpsOf = f.cat ? DB.groups.filter(g=>g.catId===f.cat) : DB.groups;
   $("#view-items").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Item Master</h1><p>${rows.length} of ${DB.items.length} items</p></div>
-    <div class="page-actions"><button class="btn" onclick="exportItems()">\u2913 Export CSV</button><button class="btn btn-primary" onclick="itemModal()">+ Add Item</button></div></div>
+    <div class="page-actions"><label class="btn" style="cursor:pointer">\u2912 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importItems(this)"></label><button class="btn" onclick="exportItems()">\u2913 Export CSV</button><button class="btn btn-primary" onclick="itemModal()">+ Add Item</button></div></div>
   <div class="filter-bar">
     <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search item or code\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value.toLowerCase();renderItems();document.querySelector('#view-items .input').focus()"></div>
     <select class="select" onchange="ITEM_F.cat=this.value;ITEM_F.grp='';renderItems()"><option value="">All Categories</option>${opts(DB.categories,f.cat,c=>c.code+" \u00b7 "+c.name)}</select>
@@ -717,6 +717,69 @@ function renderItems(){
     ${rows.map(it => `<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc((catOf(it)||{}).name||"")} / ${esc((grpOf(it)||{}).name||"")}</td><td class="muted">${esc(it.uomIn)}${it.mult>1?" \u00d7"+it.mult+" \u2192 "+esc(it.uomOut):""}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${it.stock}</b> ${esc(it.uomOut)}</td><td>${levelBar(it)}</td><td>${statusBadge(it)}</td><td class="num">${tk(it.price)} / ${esc(it.uomIn)}</td>
       <td style="white-space:nowrap"><button class="btn btn-sm" onclick="itemModal('${it.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteItem('${it.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No items found</td></tr>`}
     </tbody></table></div></div>`;
+}
+function importItems(inp){
+  if(!canWrite()) return;
+  const f = inp.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const rows = parseCSV(String(rd.result));
+      if(rows.length < 2) return toast("CSV file is empty");
+      const head = rows[0].map(h => String(h).trim().toLowerCase());
+      const col = n => head.findIndex(h => h.indexOf(n) !== -1);
+      const ci = { cat: col("categor"), grp: col("group"), desc: col("desc"), uomIn: col("uom in"), mult: col("multiply"), uomOut: col("uom out"), loc: col("location"), alarm: col("alarm"), price: col("price"), stock: col("stock") };
+      if(ci.desc === -1) return toast("CSV must have a Description column");
+      const num = (r, idx, dflt) => { if(idx === -1) return dflt; const v = Number(String(r[idx]||"").replace(/[^0-9.\-]/g,"")); return isNaN(v) ? dflt : v; };
+      let added = 0, skipped = 0;
+      rows.slice(1).forEach((r, k) => {
+        const desc = String(r[ci.desc]||"").trim();
+        if(!desc) return;
+        if(DB.items.some(i => i.desc.toLowerCase() === desc.toLowerCase())){ skipped++; return; }
+        const catName = (ci.cat !== -1 ? String(r[ci.cat]||"").trim() : "") || "General";
+        let cat = DB.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        if(!cat){ cat = { id: "c" + Date.now() + "_" + k, code: String(DB.categories.length + 1).padStart(2,"0"), name: catName }; DB.categories.push(cat); }
+        const grpName = (ci.grp !== -1 ? String(r[ci.grp]||"").trim() : "") || "General";
+        let grp = DB.groups.find(g => g.catId === cat.id && g.name.toLowerCase() === grpName.toLowerCase());
+        if(!grp){ grp = { id: "g" + Date.now() + "_" + k, code: String(DB.groups.filter(x => x.catId === cat.id).length + 1).padStart(2,"0"), catId: cat.id, name: grpName }; DB.groups.push(grp); }
+        const uomIn = (ci.uomIn !== -1 ? String(r[ci.uomIn]||"").trim() : "") || "Pcs";
+        DB.items.push({
+          id: "i" + Date.now() + "_" + k,
+          sl: DB.items.reduce((m,i) => Math.max(m, i.sl||0), 0) + 1,
+          catId: cat.id, groupId: grp.id, desc,
+          uomIn,
+          mult: Math.max(1, num(r, ci.mult, 1)),
+          uomOut: (ci.uomOut !== -1 ? String(r[ci.uomOut]||"").trim() : "") || uomIn,
+          loc: ci.loc !== -1 ? String(r[ci.loc]||"").trim() : "",
+          alarm: num(r, ci.alarm, DB.settings.alarmDefault),
+          price: num(r, ci.price, 0),
+          stock: num(r, ci.stock, 0)
+        });
+        added++;
+      });
+      if(added){ audit("Imported " + added + " items from CSV"); save(); renderAll(); }
+      toast(added + " items imported" + (skipped ? " \u00b7 " + skipped + " duplicate skipped" : ""));
+    }catch(e){ console.error(e); toast("Could not read CSV file"); }
+    inp.value = "";
+  };
+  rd.readAsText(f);
+}
+function parseCSV(text){
+  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let row = [], cell = "", q = false;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(q){
+      if(ch === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    }
+    else if(ch === '"') q = true;
+    else if(ch === ','){ row.push(cell); cell = ""; }
+    else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && text[i+1] === '\n') i++; row.push(cell); cell = ""; if(row.some(c => String(c).trim() !== "")) rows.push(row); row = []; }
+    else cell += ch;
+  }
+  row.push(cell); if(row.some(c => String(c).trim() !== "")) rows.push(row);
+  return rows;
 }
 function exportItems(){
   exportCSV("items.csv", ["Code","Description","Category","Group","UOM In","Multiply","UOM Out","Location","Stock","Alarm","Unit Price"],
