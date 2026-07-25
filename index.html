@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SML Inventory ERP — Step Media Ltd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -23,22 +26,37 @@ button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:13.5px;color:var(--text)}
 
 /* ---------- LOGIN ---------- */
-#loginWrap{position:fixed;inset:0;background:linear-gradient(160deg,#211E1C 0%,#3A2F2B 55%,#59352B 100%);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
-.login-card{background:var(--panel);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.45);width:100%;max-width:400px;padding:36px 34px}
-.login-mark{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-.login-mark .lm{width:44px;height:44px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;letter-spacing:.5px}
-.login-mark b{font-size:17px;display:block}
-.login-mark span{color:var(--muted);font-size:12.5px}
-.login-card h1{font-size:21px;margin-bottom:4px}
-.login-card .sub{color:var(--muted);font-size:13.5px;margin-bottom:20px}
+#loginWrap{position:fixed;inset:0;background:radial-gradient(1200px 800px at 75% -10%,#3B1F1A 0%,transparent 55%),radial-gradient(900px 700px at -10% 110%,#14253A 0%,transparent 55%),#0C0B10;display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;overflow:hidden}
+.lg-bg{position:absolute;inset:0;pointer-events:none}
+.lg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,#000 0%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,#000 0%,transparent 70%)}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;animation:orbFloat 11s ease-in-out infinite}
+.orb.o1{width:420px;height:420px;background:#C74634;top:-140px;right:-80px}
+.orb.o2{width:360px;height:360px;background:#2F6FBF;bottom:-140px;left:-100px;animation-delay:-4s}
+.orb.o3{width:220px;height:220px;background:#B7770D;top:55%;right:18%;opacity:.28;animation-delay:-8s}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-34px) scale(1.06)}}
+.login-card{position:relative;background:rgba(22,20,26,.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);width:100%;max-width:410px;padding:38px 36px;color:#F2EFEA;animation:cardIn .5s cubic-bezier(.2,.8,.25,1)}
+.login-card::before{content:"";position:absolute;inset:-1px;border-radius:21px;padding:1px;background:linear-gradient(135deg,rgba(199,70,52,.65),rgba(255,255,255,.08) 38%,rgba(47,111,191,.5));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+.login-mark{display:flex;align-items:center;gap:13px;margin-bottom:26px}
+.login-mark .lm{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#E05A45,#A93A2A);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;letter-spacing:.5px;box-shadow:0 0 24px rgba(199,70,52,.55),inset 0 1px 0 rgba(255,255,255,.25)}
+.login-mark b{font-size:17px;display:block;color:#fff}
+.login-mark .lg-erp{background:linear-gradient(90deg,#FF8A73,#E05A45);-webkit-background-clip:text;background-clip:text;color:transparent}
+.login-mark span{color:#A49E96;font-size:12.5px}
+.login-card h1{font-size:23px;margin-bottom:4px;color:#fff;letter-spacing:-.3px}
+.login-card .sub{color:#A49E96;font-size:13.5px;margin-bottom:22px}
 .lfield{margin-bottom:14px}
-.lfield label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-.lfield input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#FCFBFA}
-.lfield input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(199,70,52,.12)}
-#loginErr{display:none;background:var(--red-soft);color:var(--red);border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:14px}
-.login-btn{width:100%;padding:11px;background:var(--accent);border:none;color:#fff;border-radius:8px;font-size:14.5px;font-weight:600}
-.login-btn:hover{background:var(--accent-dark)}
-.login-foot{margin-top:16px;text-align:center;color:var(--faint);font-size:12px}
+.lfield label{display:block;font-size:11px;font-weight:700;color:#8E8880;margin-bottom:6px;text-transform:uppercase;letter-spacing:1.1px}
+.lfield input{width:100%;padding:11.5px 13px;border:1px solid rgba(255,255,255,.13);border-radius:10px;background:rgba(255,255,255,.05);color:#fff;transition:border-color .18s,box-shadow .18s,background .18s}
+.lfield input::placeholder{color:#6E6A63}
+.lfield input:focus{outline:none;border-color:#E05A45;background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(224,90,69,.22),0 0 22px rgba(224,90,69,.18)}
+#loginErr{display:none;background:rgba(199,64,46,.16);border:1px solid rgba(224,90,69,.4);color:#FFB3A6;border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:14px}
+.login-btn{width:100%;padding:12.5px;background:linear-gradient(135deg,#E05A45,#B03A29);border:none;color:#fff;border-radius:11px;font-size:14.5px;font-weight:700;letter-spacing:.2px;box-shadow:0 10px 28px rgba(199,70,52,.4),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .15s,box-shadow .15s,filter .15s;margin-top:4px}
+.login-btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 14px 34px rgba(199,70,52,.5),inset 0 1px 0 rgba(255,255,255,.22)}
+.login-btn .arr{display:inline-block;transition:transform .18s}
+.login-btn:hover .arr{transform:translateX(3px)}
+.login-foot{margin-top:18px;text-align:center;color:#8E8880;font-size:12px;display:flex;align-items:center;justify-content:center;gap:7px}
+.login-foot .dot{width:7px;height:7px;border-radius:50%;background:#3F7D5A;box-shadow:0 0 10px rgba(63,125,90,.9);display:inline-block;animation:pulseDot 2s infinite}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* ---------- TOPBAR ---------- */
 .topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--top);color:var(--top-text);display:flex;align-items:center;gap:14px;padding:0 16px;z-index:50}
@@ -201,30 +219,78 @@ td.muted{color:var(--faint)}
   body:not(.slip-mode) .main{max-width:none;padding:0}
   .card,.table-card{box-shadow:none}
 }
+
+/* ---------- THEME UPGRADE (premium) ---------- */
+:root{--radius:11px;--shadow:0 1px 2px rgba(22,21,19,.04),0 8px 24px rgba(22,21,19,.06)}
+body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.page-head h1,#modalBox h3,.login-card h1{font-family:"Space Grotesk","Inter",-apple-system,sans-serif}
+.kpi .value{font-family:"Space Grotesk","Inter",-apple-system,sans-serif;letter-spacing:-.6px}
+.topbar{background:linear-gradient(90deg,#191612 0%,#211E1C 55%,#2B211C 100%);border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 2px 18px rgba(0,0,0,.18)}
+.tb-brand .bm{background:linear-gradient(135deg,#E05A45,#A93A2A);box-shadow:0 0 14px rgba(199,70,52,.45)}
+.tb-user .av{background:linear-gradient(135deg,#E05A45,#A93A2A)}
+.sidebar{background:#FCFBFA}
+.nav-item{transition:background .14s,color .14s}
+.nav-item.active{background:linear-gradient(90deg,var(--accent-soft),rgba(251,237,234,.35));box-shadow:inset 3px 0 0 var(--accent)}
+.card,.table-card{transition:box-shadow .18s,transform .18s;border-color:var(--border2)}
+.kpi{border-top:none;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--border),var(--border2))}
+.kpi.k-red::before{background:linear-gradient(90deg,#E05A45,#F0937F)}
+.kpi.k-green::before{background:linear-gradient(90deg,#3F7D5A,#7FB89A)}
+.kpi.k-blue::before{background:linear-gradient(90deg,#2F6FBF,#7FA8DC)}
+.kpi.k-orange::before{background:linear-gradient(90deg,#B7770D,#DCA84F)}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(22,21,19,.09)}
+.btn{transition:background .14s,transform .12s,box-shadow .14s;border-radius:9px}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:linear-gradient(135deg,#D8503B,#B03A29);border-color:transparent;box-shadow:0 4px 14px rgba(199,70,52,.3)}
+.btn-primary:hover{background:linear-gradient(135deg,#E05A45,#B03A29);box-shadow:0 6px 18px rgba(199,70,52,.38)}
+th{background:#F5F3F0}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:#FAF6F3}
+.input,.select{transition:border-color .15s,box-shadow .15s;border-radius:9px}
+#modalBackdrop{backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);background:rgba(18,16,14,.5)}
+#modalBox{border-radius:16px;animation:mIn .22s cubic-bezier(.2,.8,.25,1)}
+@keyframes mIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.toast{background:rgba(26,23,21,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08);border-radius:10px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#D8D4CE;border-radius:8px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:#C4BFB8}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- LOGO & CREDIT ---------- */
+.lm.lm-logo{width:72px;height:46px;background:#fff;padding:6px 8px;box-shadow:0 0 24px rgba(255,255,255,.28),inset 0 1px 0 rgba(255,255,255,.3)}
+.lm-logo img{width:100%;height:100%;object-fit:contain;border-radius:8px;display:block}
+.login-dev{margin-top:9px;text-align:center;color:#6E6A63;font-size:11.5px;letter-spacing:.3px}
+.login-dev b{color:#A49E96;font-weight:600}
+.tb-brand .bm.bm-logo{width:42px;height:28px;background:#fff;padding:3px 5px;box-shadow:0 0 12px rgba(255,255,255,.3)}
+.bm-logo img{width:100%;height:100%;object-fit:contain;display:block}
+.side-dev{margin-top:20px;padding:12px 10px 4px;border-top:1px solid var(--border2);font-size:11px;color:var(--faint);text-align:center;line-height:1.6}
+.side-dev b{color:var(--muted);font-weight:600}
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div id="loginWrap">
+  <div class="lg-bg"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><div class="lg-grid"></div></div>
   <div class="login-card">
-    <div class="login-mark"><div class="lm">SM</div><div><b>SML Inventory ERP</b><span>Step Media Ltd</span></div></div>
-    <h1>Sign in</h1>
-    <div class="sub">Store &amp; materials management system</div>
+    <div class="login-mark"><div class="lm lm-logo"><img src="data:image/png;base64,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RCTd7bLRLhuOykvHNcdx2ViuXTouG8ulo1z6nDz1/SODNX78+HFWh81mW758eUVFRW1t7UcffZSamsodysvL4xXW2tra0NBQVFSkG4PTp083NDQwdA4ePJiRkcFTm5iY+Oabbx4+fPj9999nQ8IjXLp0qQ6OLVu2WCwWXe+TJk0qLS39y1/+smzZMo51eJp/+ctfSilvCA6em0OHDnHjjKeFCxe+++67GzZs0DvDvS0pKdm+ffu2bduGDh2qv3TJkiWhqvjwww/1RTJ06ND169fv379/+/btWVlZXMVkMq1evVqfSyllT0/PzJkzdVhHRUU9+uijixcvzsnJCQ0+xo4dW19fz++qrq5OT0/XTV1oB0pLSyMiIvhdX//61/fu3fvpp5++8847I0aM0PusIgpCFEASVSQinwt8XWhNVie/rBT9P7TEkaeF2huQJCoGSRoCgFAEAckgxQxBYySQBBS3TE+klH/84x+7urrYEs6bNy8/P58nfsGCBXv37rVYLGPHjuUFlJCQUF9f39LSwi1kZWXpnigQCGzYsKG+vh4RLRbLxo0b582bx3NmMpmeffbZxsZGADh9+jQDRdO0hoYGj8fD19OmTdu1a1d8fDwiTp8+3e/3r1+/nntYWVnZT/QupayqqtI0jUe0aNGi119/PSEhQUrp9/uXLl3KuffXvva1TZs2ZWdnc5S3fPlybpzRySm60+lcuXKl0+lExIyMjF/96lfTp0/X7c2SJUt8Pp/f7z937hzPE0cJerijadrQoUM3b9781a9+VVXVhoaGxx57rLKykmOstLS0hIQEHkhdXZ3H42E9MIa4A263e+/evUKI6OhobiozMxMACgoKDh06VFVVJaVUFEWlng4SFJRB1DRQI0Rshhj2vPKVb2NsFgFQZx04mwFVEIqU8priSFIATFEiKvVagtLfHr0eTFVVVfFoq6urf/jDHz766KPFxcU5OTmvvvrqa6+9pmmaqqomk4l1UVtb29PTw88znLn82LFjdrudQ6qZM2c+/PDDLpdLSmk2m7OysqKjoxkcgUAgEAgYDAaPx1NfXw8AmqaZzeZXXnklISEhEAgoimKxWAoLCyMjI91uN8fz/exZBINBPVdMTExcsGABt2MwGHjiGQFPPvlkTk4OlycmJnL1iIgINgms9I8//vjkyZOqqkopH3rooUmTJjmdTh5Cbm6u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" alt="Step Media"></div><div><b>SML Inventory <span class="lg-erp">ERP</span></b><span>Step Media Ltd · Cloud Suite</span></div></div>
+    <h1>Welcome back</h1>
+    <div class="sub">Sign in to your workspace to continue</div>
     <div id="loginErr"></div>
     <form id="loginForm">
       <div class="lfield"><label for="lgUser">Email</label><input id="lgUser" type="email" autocomplete="username" required placeholder="name@sml.com"></div>
-      <div class="lfield"><label for="lgPass">Password</label><input id="lgPass" type="password" autocomplete="current-password" required></div>
-      <button type="submit" class="login-btn">Sign in</button>
+      <div class="lfield"><label for="lgPass">Password</label><input id="lgPass" type="password" autocomplete="current-password" required placeholder="••••••••"></div>
+      <button type="submit" class="login-btn">Sign in <span class="arr">→</span></button>
     </form>
-    <div class="login-foot">Sign in with your company account — accounts are managed by admin in Firebase</div>
+    <div class="login-foot"><span class="dot"></span> Secured by Firebase · accounts managed by admin</div>
+    <div class="login-dev">Developed by <b>Ammar Khandoker</b></div>
   </div>
 </div>
 
 <!-- TOPBAR -->
 <header class="topbar">
   <button class="tb-burger" id="hamburger">☰</button>
-  <div class="tb-brand"><div class="bm">SM</div>SML Inventory ERP <small id="tbCompany">· Step Media Ltd</small></div>
+  <div class="tb-brand"><div class="bm bm-logo"><img src="data:image/png;base64,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RCTd7bLRLhuOykvHNcdx2ViuXTouG8ulo1z6nDz1/SODNX78+HFWh81mW758eUVFRW1t7UcffZSamsodysvL4xXW2tra0NBQVFSkG4PTp083NDQwdA4ePJiRkcFTm5iY+Oabbx4+fPj9999nQ8IjXLp0qQ6OLVu2WCwWXe+TJk0qLS39y1/+smzZMo51eJp/+ctfSilvCA6em0OHDnHjjKeFCxe+++67GzZs0DvDvS0pKdm+ffu2bduGDh2qv3TJkiWhqvjwww/1RTJ06ND169fv379/+/btWVlZXMVkMq1evVqfSyllT0/PzJkzdVhHRUU9+uijixcvzsnJCQ0+xo4dW19fz++qrq5OT0/XTV1oB0pLSyMiIvhdX//61/fu3fvpp5++8847I0aM0PusIgpCFEASVSQinwt8XWhNVie/rBT9P7TEkaeF2huQJCoGSRoCgFAEAckgxQxBYySQBBS3TE+klH/84x+7urrYEs6bNy8/P58nfsGCBXv37rVYLGPHjuUFlJCQUF9f39LSwi1kZWXpnigQCGzYsKG+vh4RLRbLxo0b582bx3NmMpmeffbZxsZGADh9+jQDRdO0hoYGj8fD19OmTdu1a1d8fDwiTp8+3e/3r1+/nntYWVnZT/QupayqqtI0jUe0aNGi119/PSEhQUrp9/uXLl3KuffXvva1TZs2ZWdnc5S3fPlybpzRySm60+lcuXKl0+lExIyMjF/96lfTp0/X7c2SJUt8Pp/f7z937hzPE0cJerijadrQoUM3b9781a9+VVXVhoaGxx57rLKykmOstLS0hIQEHkhdXZ3H42E9MIa4A263e+/evUKI6OhobiozMxMACgoKDh06VFVVJaVUFEWlng4SFJRB1DRQI0Rshhj2vPKVb2NsFgFQZx04mwFVEIqU8priSFIATFEiKvVagtLfHr0eTFVVVfFoq6urf/jDHz766KPFxcU5OTmvvvrqa6+9pmmaqqomk4l1UVtb29PTw88znLn82LFjdrudQ6qZM2c+/PDDLpdLSmk2m7OysqKjoxkcgUAgEAgYDAaPx1NfXw8AmqaZzeZXXnklISEhEAgoimKxWAoLCyMjI91uN8fz/exZBINBPVdMTExcsGABt2MwGHjiGQFPPvlkTk4OlycmJnL1iIgINgms9I8//vjkyZOqqkopH3rooUmTJjmdTh5Cbm6uwWDg/vj9ft3RuFyuHTt2cEl0dPSKFSsefPBB7tjIkSMXLFjAMyqESE9Pt1qtPFkMDkVRDAbD8OHD9ZDWaDT+9Kc//dnPfqYoiqIoKSkp7e3tnZ2d+/bt++ijj/ilI0eOVMWIh1ExicgUiB6CiWPE4HFgsEgZhJ4r4GqigA8UY+9Xr3qmKoOIiLEZAAKI+jcbunJ73RgAr7Bjx44dO3YMEVNTUydPnrxw4cJp06YZjUa91oULFzwejxDCYDDwQmSQlZeXNzU18eDLy8sfeOABn8/HrsHv91+8eJHXlsFgYPPb1tZ2+fJlbnPatGmcEBkMvZ/lWa1Wk8nEkxEVFdUP0RQMBpleZEvGrpA56crKSgbfoEGDGAQs58+f5+pRUVGhrqesrIwXNCLu2bPnyJEjgUCAW3O73S6Xi60FR7U8nUeOHGGIA8CYMWMef/zx0B6mp6fz8M1m87Bhw3RrrVsOg8HAC4zLOaPhXK+ioqKmpqa+vt7hcHA3+O1jx45VjfN+d20OJckABLzSdQU9VynoAaGgagSia0eFgRBR8wMixmWDMZJ/leOWB3tYuUKIhQsXlpWVXbx4MRQ3Dodj586dO3fufOONN5YtWxaqWY/Hw7M+cuRIHWRnzpzhnI2IWlpampubdYqQ38VGJTExkWfi6tWrTJYAQHFxsdFo7JPfMzIAYPjw4aGERB+61uv11tbWcklKSgqzSYgopWT7z96Qw2Tuw+nTp7nPoeDQNK2iooJXuZTS4XCwqevDzSiKwlwFG5vKysqenh5FUYQQDz74oMlkCu0n205mjNhC8IscDgf7waioKD344Oe3bt36+uuvt7W16eF5bGys0WhsbW0NBoNMs6rU1QCkUTCAQS9ofimDSBJQQcXS+4VS7+cqCAikBQAAYrLIEofXTpsPhGVkh1pSUvLBBx+8/fbbFRUVzc3NTU1NHIKoqhoMBtevX//Nb34zNTWVg6b6+nruZWRkJHtERHQ6nfpMp6WlPffcc6H7CzwlQgiPxzN9+nR+rLW1Va/CK0y3ZIFA4OTJkwxBo9E4bty4G25a8jQ4HA69ndTU1JiYGJ2fZnfJWZJuUZxOJwfXnF7q6VJ7e3tzczPP+ogRIx5//PFgMChl7w9h6AGvpmlz587VVdfY2MgGUrcBoVJZWRkIBKSUVquVLYcQgoN6nRbj1I9b3rJly8svv8xrLDc3d8qUKSkpKffdd9+FCxdWrFjR3d2tquqYMWNU6nIIIj62IxAJFRQqoQAiICmv+RKSRNKHihljM8CaQDTQEz2s2cuXL9fX1zNBuWrVqs7Ozvr6+rNnzx46dOgPf/gDM5WKorBZQ8SOjg59YGlpacnJydyO1+vVI4OUlJSXX375hsFvMBhkx4GIFy9e7Ozs1DlZTj34GMDp06f//ve/c628vDzmQm5ISjIF2d7ezpYpMzNTt0AXL168cuWKnncwUc28Ne9ocHqp+yyPx8OrGQBGjRr1yiuvDIQ29Pl8+jW7S03TEFFRlObm5kOHDjG8EhMTdb92+fLltrY2hnt6errNZuOBnzlzprS01Ov1ImJ+fv6WLVt0ruW1117jOC8+Pj49PV1FxUzQiwHeoCeA3l90wWt7bzIARGCOxaghZI7Cz7MrwU++8847v/nNb4QQERERb7zxRklJSVJSUmFh4dy5cw8ePMjgGDlypE5CNDU1tba2ct3s7GxeppwD63xAVVWV3W7X8/6Kioo1a9a43e5AIDBixIiVK1cqiuLz+dgXsA3fvXv3E088wa01NTWtWrXq3LlzrL4nn3wyPj7+htkKP1BdXc3KtdlsbKLZ4FdVVbGF0006N9LQ0NDV1SWE4CDRYDDo1fXQ6uzZs3V1dZzxcixSWlpqMBhcLldxcfH3v/99vTNsFHljwW63z58/nyHChGFNTQ0/kJOTo1P4DQ0NTqfz+oj+6NGjFy9eZIX84Ac/0JFRWVn5+9//noGblJQ0ePDg3t8h1Xna0J9zQpIgA0QSDRawDUJrAihGICL83L/41tjYqDvmDRs22Gy2xMTE1tbW0tJS3khUFGXhwoWqqmqapiiKw+Ho6elhoDY2Nv7tb3+Lj48vKCiwWCy5ubkffvghhwvPPffcs88+m5GRUVdXt2PHDrvdzq/YtWsXW+Pu7m62QNzUP/7xj29961uzZs3yeDwffPDBgQMHOHqdMGHC/PnzQymgPmuXiPQDAwkJCewjuM2zZ8/yM7pf5/Jz584Fg0HOt3XQMFOZm5tbVVXFGdnixYuffvrpQYMG/fvf/962bRtryWg0ssfkuBsRk5OTjUYj+45du3aNHz++pKSkqamptLT0rbfe8vv9QghVVXXOg/XmdDq5bxy0sU4uX76sh1knTpyYM2eOz+c7ePDg2rVrT506xaDJzs6OiIgAeem4dBwnx3HpsMvGctlYrjUclfVH5MXDsuET2fxv6nbIgLsPJ0QDFqZcdu7caTQahRCcVmVkZOTk5GRkZOgk4wsvvOB2u3UOavv27bGxsbzsmLz77ne/y7fsdjuHIFw3MjIyOTmZ+Rwu3LRpk95OTU0NmxZE1OlIm83GuzOMhuzsbDbL/XDnTJBw9aKiopqaGn1oCxYs4PZzcnIqKir08mXLlnEPk5KSysrK2J3xrT179phMJp18i42NTUlJ4S4xMpj/5oe5V4cPH+bEmB1iQkLC6NGjhw8fzvPNyLBYLL/73e/0ij/+8Y/Z8JhMpvLycr188+bNPBdCCKvVWlRUdP/99/Nmm9Vq5S699NJLfr8fZP0RWX9Eqz+s1R+RDUdk4zF56YRsPSu7GsjTSVqAoSA/DyCu5xa9Xu/SpUtvaFQSEhJWrlzJ1Kc+QwcOHGAE6EZ1xYoVnE9qmrZ79+7Q2FuX7Ozs9957LxAI6Cyn3W7njX4A+NGPfrRo0aI+uyqFhYWMjP7739LSom92M7PCd9vb2/Py8rh8/PjxV65c0avoYMrIyLhw4YJermlaIBBYt26djoZQyc/P37t3r6ZpoUQts90/+clP+mzZAMCECRPGjx/PKLfZbHa7nas4nc5vfOMb/Ex8fHxra6sOjoaGhpKSkuvfu27dOp1rnzZtWnd3twrWWFAMqFpBNYFiRFRAUQHV3hyFgH9g9La/RGGbbDKZVq1aNXPmzD179lRXVwcCAVVVExMTCwoKZs+enZWVxbvwuostLi7eunXrjh07nE6noijBYHDq1Kn6Vsgjjzxy3333vf/++59++unVq1fNZnNKSkphYeGsWbMGDx4cuuvY2NjY0dGhszpPPfVUQUHB/v37/X5/cnJycXHxjBkzONrtfxRXr17Ny8tTVdXj8cyYMSMiIkIPkIcPH56YmBgMBktKSjj55NON6enpU6dOlVKOHj06FMq89L/3ve/xVlFlZaXL5TKbzUOGDJk4ceLcuXNjY2N5CKEdUBTllVdeSUlJWbt2LSdNUVFR8+bNW758+a9//Wuz2awoSlJSEifMAOD1ekeMGMHAGjVqFJ+TYrWkpaWVlpZu3br10KFDPp9vyJAhU6dOnTdvntVqjY6Obm1tZWvt9XrhZuuFSBJJSZJIozuW/o0274D0Way3dFX939I0LRgMrlmzRnclf/3rX2/YsX5au2X/ry/vs+96J0MIbUe/cLlcp06dOnnyZHt7++1pL7TNG75LF1X/uQ19qRMgXCMw+DDYnX+/xvaDs6/QNcEJWJ9IUD+hc7MT5xw0he6p6tRFaONer/fChQt8HRcXxwwEB7z6q/tUueUBpVuW3/CM2fVJkD4E/e08PTqJF9qOHhQzEz9mzBhde5zNfq6jcUzc6TZMV4XeJb2H+g/ji5DTgZ/dKrlL3yj1GcYtJ6b/Oetz93oYMafJBHYo06D3YSCYuMMzpPqk3gzifUr0vt3wrNf1HxaEAqt/EN/w1aGc8g27pN7s+Oj/XH0BPxbRj+QfP35cZ8xCD0/c9VO+/ZQPcMLu5LHbOwx7y1oq3Iuip3CzZ8/msGDWrFn6+YmwDFSN9/BnIJqm9fT0sIu1WCyhW75h+bKDIyx3KPf+b9SHv8AOW46whC1HWMLgCEsYHGEJgyMsYXCE5R6T/wYMQ3eoCfJL4gAAAABJRU5ErkJggg==" alt="Step Media"></div>SML Inventory ERP <small id="tbCompany">· Step Media Ltd</small></div>
   <div class="tb-spacer"></div>
   <div class="tb-clock" id="clock"></div>
   <div class="tb-user"><div class="av" id="userAv">?</div><div><div class="nm" id="userName">—</div><div class="rl" id="userRole">—</div></div></div>
@@ -239,18 +305,6 @@ td.muted{color:var(--faint)}
     <div class="nav-label">Inventory</div>
     <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
     <button class="nav-item" data-view="catalog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M7 12h14"/><path d="M11 19h10"/></svg>Categories &amp; Groups</button>
-    <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>Stock In</button>
-    <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M4 3h16"/></svg>Stock Out</button>
-    <button class="nav-item" data-view="returns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Returns</button>
-    <button class="nav-item" data-view="adjustments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>Adjustments</button>
-    <button class="nav-item" data-view="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v3.6L4 17h16l-2-4.4V9a6 6 0 0 0-6-6z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Stock Alerts<span class="nav-badge" id="alertBadge">0</span></button>
-    <div class="nav-label">Procurement</div>
-    <button class="nav-item" data-view="requisitions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6a1 1 0 0 1 1 1v2H8V4a1 1 0 0 1 1-1z"/><rect x="5" y="5" width="14" height="16" rx="2"/><path d="M9 11h6"/><path d="M9 15h4"/></svg>Requisitions</button>
-    <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Suppliers</button>
-    <button class="nav-item" data-view="procurers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="3.5"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>Procurers</button>
-    <div class="nav-label">Production</div>
-    <button class="nav-item" data-view="jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Jobs &amp; Delivery</button>
-    <button class="nav-item" data-view="requisitors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4a3.5 3.5 0 0 1 0 7"/><path d="M17.5 14.5c2.2.8 3.5 2.9 3.5 5.5"/></svg>Requisitors</button>
     <div class="nav-label">Clients</div>
     <button class="nav-item" data-view="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4a3.5 3.5 0 0 1 0 7"/><path d="M17.5 14.5c2.2.8 3.5 2.9 3.5 5.5"/></svg>Clients</button>
     <button class="nav-item" data-view="ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M10 8h6"/><path d="M10 12h6"/></svg>Client Ledger</button>
@@ -260,6 +314,7 @@ td.muted{color:var(--faint)}
     <button class="nav-item admin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
     <button class="nav-item admin-only" data-view="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Audit Trail</button>
     <button class="nav-item admin-only" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    <div class="side-dev">Developed by<br><b>Ammar Khandoker</b></div>
   </aside>
   <div class="scrim" id="scrim"></div>
 
@@ -268,18 +323,8 @@ td.muted{color:var(--faint)}
     <div class="view" id="view-dashboard"></div>
     <div class="view" id="view-items"></div>
     <div class="view" id="view-catalog"></div>
-    <div class="view" id="view-stockin"></div>
-    <div class="view" id="view-stockout"></div>
-    <div class="view" id="view-returns"></div>
-    <div class="view" id="view-adjustments"></div>
-    <div class="view" id="view-alerts"></div>
-    <div class="view" id="view-requisitions"></div>
-    <div class="view" id="view-suppliers"></div>
-    <div class="view" id="view-procurers"></div>
-    <div class="view" id="view-jobs"></div>
     <div class="view" id="view-clients"></div>
     <div class="view" id="view-ledger"></div>
-    <div class="view" id="view-requisitors"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
     <div class="view" id="view-audit"></div>
@@ -658,41 +703,48 @@ function exportCSV(name, head, rows){
 
 /* ---------- dashboard ---------- */
 function renderDashboard(){
-  const low = lowItems(), pend = DB.requisitions.filter(q => q.status==="Pending").length;
-  const running = DB.jobs.filter(j => j.status==="Running").length;
+  ensureCL();
+  const month = todayISO().slice(0,7);
+  const jomaMonth = DB.ledger.filter(e => e.type==="JOMA" && e.date.slice(0,7)===month).reduce((s,e)=>s+(Number(e.qty)||0),0);
+  const soldMonth = DB.ledger.filter(e => e.type==="SOLD" && e.date.slice(0,7)===month).reduce((s,e)=>s+(Number(e.qty)||0),0);
+  const balMap = {};
+  DB.ledger.forEach(e => { const k = e.clientId+"|"+e.itemId; balMap[k]=(balMap[k]||0)+(e.type==="JOMA"?Number(e.qty)||0:-(Number(e.qty)||0)); });
+  const negBal = Object.values(balMap).filter(v => r2(v) < 0).length;
+  const recent = DB.ledger.slice().sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date))).slice(0,8);
   const el = $("#view-dashboard");
   el.innerHTML = `
-  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Store overview \u2014 ${esc(DB.settings.company)}</p></div>
-    <div class="page-actions"><button class="btn btn-green" onclick="siModal()">\u2193 Stock In</button><button class="btn btn-primary" onclick="soModal()">\u2191 Stock Out</button></div></div>
-  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s":""} at or below alarm level.</b> <a href="#alerts" style="color:var(--orange)">Review stock alerts \u2192</a></div></div>` : ""}
+  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Client stock overview \u2014 ${esc(DB.settings.company)}</p></div>
+    <div class="page-actions"><button class="btn" onclick="clientModal()">+ Add Client</button><button class="btn btn-primary" onclick="ledgerModal()">+ Ledger Entry</button></div></div>
+  ${negBal ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${negBal} client-item balance${negBal>1?"s are":" is"} negative.</b> <a href="#ledger" style="color:var(--orange)">Check the ledger \u2192</a></div></div>` : ""}
   <div class="kpi-grid">
-    <div class="card kpi"><div class="label">Total Items</div><div class="value">${DB.items.length}</div><div class="delta">${DB.categories.length} categories \u00b7 ${DB.groups.length} groups</div></div>
-    <div class="card kpi k-blue"><div class="label">Stock Value</div><div class="value">${tk(stockValue())}</div><div class="delta">estimated at purchase price</div></div>
-    <div class="card kpi ${low.length?"k-red":"k-green"}"><div class="label">Low Stock</div><div class="value">${low.length}</div><div class="delta">items need reorder</div></div>
-    <div class="card kpi k-orange"><div class="label">Pending Requisitions</div><div class="value">${pend}</div><div class="delta">waiting for approval</div></div>
-    <div class="card kpi k-green"><div class="label">Running Jobs</div><div class="value">${running}</div><div class="delta">of ${DB.jobs.length} total jobs</div></div>
+    <div class="card kpi"><div class="label">Clients</div><div class="value">${DB.clients.length}</div><div class="delta">in client master</div></div>
+    <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${DB.items.length}</div><div class="delta">${DB.categories.length} categories \u00b7 ${DB.groups.length} groups</div></div>
+    <div class="card kpi k-green"><div class="label">Joma \u2014 this month</div><div class="value">${r2(jomaMonth)}</div><div class="delta">material received</div></div>
+    <div class="card kpi k-orange"><div class="label">Sold \u2014 this month</div><div class="value">${r2(soldMonth)}</div><div class="delta">delivered / used</div></div>
+    <div class="card kpi ${negBal?"k-red":"k-green"}"><div class="label">Negative Balances</div><div class="value">${negBal}</div><div class="delta">client-item pairs</div></div>
   </div>
   <div class="grid-2">
-    <div class="card"><h3>Stock Movement \u2014 last 14 days</h3><div class="sub">Daily transaction quantity</div>
-      <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
+    <div class="card"><h3>Joma vs Sold \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Joma (In)</span><span><i style="background:var(--accent)"></i>Sold (Out)</span></div>
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
-    <div class="card"><h3>Stock Value by Category</h3><div class="sub">Current holding value</div>
+    <div class="card"><h3>Top Clients by Balance</h3><div class="sub">Total balance across all items</div>
       <div class="chart-box"><canvas id="dashBar"></canvas></div></div>
   </div>
-  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3></div>
-    <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Type</th><th>Item</th><th class="num">Qty</th><th>Ref</th><th>By</th></tr></thead><tbody>
-    ${DB.txns.slice(0,8).map(t => { const it = itemById(t.itemId), j = t.jobId ? byId(DB.jobs,t.jobId) : null, s = t.supplierId ? byId(DB.suppliers,t.supplierId) : null;
-      return `<tr><td class="muted">${t.id}</td><td>${fmtD(t.date)}</td><td>${typeBadge(t.type)}</td><td class="type-cell">${esc(itemName(it))}</td><td class="num ${t.qty>0?"pos":"neg"}">${t.qty>0?"+":""}${t.qty} ${it?esc(it.uomOut):""}</td><td class="muted">${j?esc(j.no):s?esc(s.name):t.reason?esc(t.reason):"\u2014"}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("")}
+  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Ledger Entries</h3></div>
+    <div class="table-scroll"><table><thead><tr><th>Date</th><th>Client</th><th>Job No</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>By</th></tr></thead><tbody>
+    ${recent.map(e => { const it = itemById(e.itemId); return `<tr><td>${fmtD(e.date)}</td><td class="type-cell">${esc(clientName(e.clientId))}</td><td class="muted">${esc(e.jobNo||"\u2014")}</td><td>${esc(itemName(it))}</td><td>${lgBadge(e.type)}</td><td class="num"><b>${r2(e.qty)}</b> ${it?esc(it.uomOut):""}</td><td class="muted">${esc(e.user||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No entries yet \u2014 add your first Joma entry</td></tr>`}
     </tbody></table></div></div>`;
-  const labels = [], ins = [], outs = [];
+  const labels = [], joma = [], sold = [];
   for(let d = 13; d >= 0; d--){
     const day = daysAgo(d); labels.push(fmtD(day));
-    ins.push(DB.txns.filter(t => t.date===day && t.type==="IN").reduce((s,t)=>s+t.qty,0));
-    outs.push(DB.txns.filter(t => t.date===day && t.type==="OUT").reduce((s,t)=>s-t.qty,0));
+    joma.push(DB.ledger.filter(e => e.date===day && e.type==="JOMA").reduce((s,e)=>s+(Number(e.qty)||0),0));
+    sold.push(DB.ledger.filter(e => e.date===day && e.type==="SOLD").reduce((s,e)=>s+(Number(e.qty)||0),0));
   }
-  drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
-  const cl = DB.categories.map(c => c.name), cv = DB.categories.map(c => Math.round(DB.items.filter(it=>it.catId===c.id).reduce((s,it)=>s+it.stock*(it.price/(it.mult||1)),0)));
-  drawBarChart($("#dashBar"), cl, cv, "#C74634");
+  drawLineChart($("#dashLine"), labels, [{data:joma,color:"#3F7D5A"},{data:sold,color:"#C74634"}]);
+  const cb = {};
+  DB.ledger.forEach(e => { cb[e.clientId] = (cb[e.clientId]||0) + (e.type==="JOMA"?Number(e.qty)||0:-(Number(e.qty)||0)); });
+  const top = Object.keys(cb).map(id => [clientName(id), Math.max(0, r2(cb[id]))]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  drawBarChart($("#dashBar"), top.map(x=>x[0]), top.map(x=>x[1]), "#2F6FBF");
 }
 
 /* ---------- items ---------- */
@@ -702,9 +754,6 @@ function renderItems(){
   let rows = DB.items.filter(it => {
     if(f.cat && it.catId!==f.cat) return false;
     if(f.grp && it.groupId!==f.grp) return false;
-    if(f.st==="low" && !(it.stock<=it.alarm && it.stock>0)) return false;
-    if(f.st==="out" && it.stock>0) return false;
-    if(f.st==="ok" && it.stock<=it.alarm) return false;
     if(f.q && !(it.desc.toLowerCase().includes(f.q) || itemCode(it).includes(f.q))) return false;
     return true;
   });
@@ -716,12 +765,11 @@ function renderItems(){
     <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search item or code\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value.toLowerCase();renderItems();document.querySelector('#view-items .input').focus()"></div>
     <select class="select" onchange="ITEM_F.cat=this.value;ITEM_F.grp='';renderItems()"><option value="">All Categories</option>${opts(DB.categories,f.cat,c=>c.code+" \u00b7 "+c.name)}</select>
     <select class="select" onchange="ITEM_F.grp=this.value;renderItems()"><option value="">All Groups</option>${opts(grpsOf,f.grp,g=>g.name)}</select>
-    <select class="select" onchange="ITEM_F.st=this.value;renderItems()"><option value="">All Status</option><option value="ok" ${f.st==="ok"?"selected":""}>In Stock</option><option value="low" ${f.st==="low"?"selected":""}>Low</option><option value="out" ${f.st==="out"?"selected":""}>Out of Stock</option></select>
   </div>
   <div class="table-card"><div class="table-scroll"><table>
-    <thead><tr><th>Code</th><th>Description</th><th>Category / Group</th><th>UOM</th><th>Location</th><th class="num">Stock</th><th>Level</th><th>Status</th><th class="num">Unit Price</th><th></th></tr></thead><tbody>
-    ${rows.map(it => `<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc((catOf(it)||{}).name||"")} / ${esc((grpOf(it)||{}).name||"")}</td><td class="muted">${esc(it.uomIn)}${it.mult>1?" \u00d7"+it.mult+" \u2192 "+esc(it.uomOut):""}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${it.stock}</b> ${esc(it.uomOut)}</td><td>${levelBar(it)}</td><td>${statusBadge(it)}</td><td class="num">${tk(it.price)} / ${esc(it.uomIn)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="itemModal('${it.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteItem('${it.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No items found</td></tr>`}
+    <thead><tr><th>Code</th><th>Description</th><th>Category / Group</th><th>UOM</th><th>Location</th><th class="num">Client Balance</th><th></th></tr></thead><tbody>
+    ${rows.map(it => `<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc((catOf(it)||{}).name||"")} / ${esc((grpOf(it)||{}).name||"")}</td><td class="muted">${esc(it.uomIn)}${it.mult>1?" \u00d7"+it.mult+" \u2192 "+esc(it.uomOut):""}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${r2(itemLedgerBal(it.id))}</b> ${esc(it.uomOut)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="itemModal('${it.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteItem('${it.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No items found</td></tr>`}
     </tbody></table></div></div>`;
 }
 function importItems(inp){
@@ -788,8 +836,8 @@ function parseCSV(text){
   return rows;
 }
 function exportItems(){
-  exportCSV("items.csv", ["Code","Description","Category","Group","UOM In","Multiply","UOM Out","Location","Stock","Alarm","Unit Price"],
-    DB.items.map(it => [itemCode(it), it.desc, (catOf(it)||{}).name, (grpOf(it)||{}).name, it.uomIn, it.mult, it.uomOut, it.loc, it.stock, it.alarm, it.price]));
+  exportCSV("items.csv", ["Code","Description","Category","Group","UOM In","Multiply","UOM Out","Location","Client Balance"],
+    DB.items.map(it => [itemCode(it), it.desc, (catOf(it)||{}).name, (grpOf(it)||{}).name, it.uomIn, it.mult, it.uomOut, it.loc, r2(itemLedgerBal(it.id))]));
 }
 function itemModal(id){
   if(!canWrite()) return;
@@ -805,12 +853,7 @@ function itemModal(id){
     <div class="field"><label>Multiply By</label><input class="input" id="fMult" type="number" min="1" value="${it?it.mult:1}"></div>
     <div class="field"><label>UOM Out (issue)</label><input class="input" id="fUomOut" value="${it?esc(it.uomOut):"Pcs"}"></div>
   </div>
-  <div class="row-3">
-    <div class="field"><label>Location</label><input class="input" id="fLoc" value="${it?esc(it.loc||""):""}" placeholder="Rack A-1"></div>
-    <div class="field"><label>Alarm Qty</label><input class="input" id="fAlarm" type="number" min="0" value="${it?it.alarm:DB.settings.alarmDefault}"></div>
-    <div class="field"><label>Price / UOM In</label><input class="input" id="fPrice" type="number" min="0" value="${it?it.price:""}"></div>
-  </div>
-  ${it?"":`<div class="field"><label>Opening Stock (UOM Out)</label><input class="input" id="fOpen" type="number" min="0" value="0"></div>`}
+  <div class="field"><label>Location</label><input class="input" id="fLoc" value="${it?esc(it.loc||""):""}" placeholder="Rack A-1"></div>
   <div class="hint">Example: buy in <b>Box</b>, multiply <b>144</b>, issue in <b>Pcs</b>.</div>
   <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitItem('${id||""}')">${it?"Save Changes":"Add Item"}</button></div>`);
   window.fillGrpSel = () => {
@@ -823,11 +866,11 @@ function submitItem(id){
   const desc = $("#fDesc").value.trim(); if(!desc) return toast("Please write a description");
   const catId = $("#fCat").value, groupId = $("#fGrp").value;
   if(!groupId) return toast("Please select a group");
-  const data = { desc, catId, groupId, uomIn:$("#fUomIn").value.trim()||"Pcs", mult:Math.max(1,Number($("#fMult").value)||1), uomOut:$("#fUomOut").value.trim()||"Pcs", loc:$("#fLoc").value.trim(), alarm:Math.max(0,Number($("#fAlarm").value)||0), price:Math.max(0,Number($("#fPrice").value)||0) };
+  const data = { desc, catId, groupId, uomIn:$("#fUomIn").value.trim()||"Pcs", mult:Math.max(1,Number($("#fMult").value)||1), uomOut:$("#fUomOut").value.trim()||"Pcs", loc:$("#fLoc").value.trim() };
   if(id){ Object.assign(itemById(id), data); audit("Edited item: "+desc); }
   else{
     const sl = Math.max(0, ...DB.items.map(i=>i.sl)) + 1;
-    DB.items.push(Object.assign({ id:"i"+Date.now(), sl, stock:Math.max(0,Number(($("#fOpen")||{}).value)||0) }, data));
+    DB.items.push(Object.assign({ id:"i"+Date.now(), sl, stock:0, alarm:0, price:0 }, data));
     audit("Added item: "+desc);
   }
   save(); closeModal(); renderAll(); toast(id?"Item updated":"Item added");
@@ -1358,67 +1401,56 @@ function submitDeliv(jobId){
 }
 
 /* ---------- reports ---------- */
-let REP = { type:"txns", from:daysAgo(29), to:todayISO() }, REP_OUT = null;
+let REP = { type:"ledger", from:daysAgo(29), to:todayISO(), q:"" }, REP_OUT = null;
 const REP_TYPES = [
-  ["txns","All Transactions (date range)"],
-  ["stockcat","Stock by Category"],
-  ["jobwise","Job-wise Consumption"],
-  ["reqrwise","Requisitor-wise Issue"],
-  ["supwise","Supplier-wise Receiving"],
-  ["lowstock","Low Stock / Alarm Report"]
+  ["ledger","Ledger Entries (date range)"],
+  ["clientwise","Client-wise Balance"],
+  ["itemwise","Item-wise Balance"],
+  ["jobwise","Job-wise Summary"]
 ];
 function runReport(){
-  const from = REP.from, to = REP.to;
-  const inRange = t => t.date >= from && t.date <= to;
-  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + ` (${fmtD(from)} \u2013 ${fmtD(to)})`;
+  ensureCL();
+  const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
+  const inRange = e => e.date >= from && e.date <= to;
+  const hay = e => { const it = itemById(e.itemId); return (clientName(e.clientId)+" "+(e.jobNo||"")+" "+(it?it.desc:"")+" "+(e.note||"")+" "+(e.user||"")).toLowerCase(); };
+  const L = DB.ledger.filter(e => inRange(e) && (!q || hay(e).includes(q)));
+  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + ` (${fmtD(from)} \u2013 ${fmtD(to)})` + (q ? ` \u00b7 search: "${REP.q}"` : "");
   let head = [], rows = [];
-  if(REP.type==="txns"){
-    head = ["ID","Date","Type","Item","Qty","Job/Supplier","Requisitor","By"];
-    rows = DB.txns.filter(inRange).map(t => { const it = itemById(t.itemId), j = t.jobId?byId(DB.jobs,t.jobId):null, s = t.supplierId?byId(DB.suppliers,t.supplierId):null, r = t.requisitorId?byId(DB.requisitors,t.requisitorId):null;
-      return [t.id, t.date, t.type, itemName(it), t.qty+" "+(it?it.uomOut:""), j?j.no:s?s.name:(t.reason||""), r?r.name:"", t.by||""]; });
-  } else if(REP.type==="stockcat"){
-    title = "Stock by Category (current)"; head = ["Category","Items","Total Units","Stock Value (Tk)"];
-    rows = DB.categories.map(c => { const its = DB.items.filter(i=>i.catId===c.id);
-      return [c.code+" \u00b7 "+c.name, its.length, its.reduce((s,i)=>s+i.stock,0), Math.round(its.reduce((s,i)=>s+i.stock*(i.price/(i.mult||1)),0))]; });
+  if(REP.type==="ledger"){
+    head = ["Date","Client","Job No","Item","Type","Qty","UOM","Note","By"];
+    rows = L.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
+      .map(e => { const it = itemById(e.itemId); return [e.date, clientName(e.clientId), e.jobNo||"", itemName(it), e.type==="JOMA"?"Joma (In)":"Sold (Out)", r2(e.qty), it?it.uomOut:"", e.note||"", e.user||""]; });
+  } else if(REP.type==="clientwise"){
+    head = ["Client","Item","Total Joma","Total Sold","Balance","UOM"];
+    const map = {};
+    L.forEach(e => { const k = e.clientId+"|"+e.itemId; const m = map[k]||(map[k]={c:e.clientId,i:e.itemId,j:0,s:0}); if(e.type==="JOMA") m.j+=Number(e.qty)||0; else m.s+=Number(e.qty)||0; });
+    rows = Object.values(map).sort((a,b)=>clientName(a.c).localeCompare(clientName(b.c))).map(m => { const it = itemById(m.i); return [clientName(m.c), itemName(it), r2(m.j), r2(m.s), r2(m.j-m.s), it?it.uomOut:""]; });
+  } else if(REP.type==="itemwise"){
+    head = ["Item Code","Item","Total Joma","Total Sold","Balance","UOM"];
+    const map = {};
+    L.forEach(e => { const m = map[e.itemId]||(map[e.itemId]={j:0,s:0}); if(e.type==="JOMA") m.j+=Number(e.qty)||0; else m.s+=Number(e.qty)||0; });
+    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemCode(it), itemName(it), r2(m.j), r2(m.s), r2(m.j-m.s), it?it.uomOut:""]; });
   } else if(REP.type==="jobwise"){
-    head = ["Job","Client","Item","Net Used","Value (Tk)"];
-    DB.jobs.forEach(j => { const used = {};
-      DB.txns.filter(t=>t.jobId===j.id && inRange(t)).forEach(t => {
-        if(t.type==="OUT") used[t.itemId] = (used[t.itemId]||0) - t.qty;
-        if(t.type==="RET") used[t.itemId] = (used[t.itemId]||0) - t.qty;
-      });
-      Object.keys(used).forEach(iid => { const it = itemById(iid); if(used[iid]>0) rows.push([j.no, j.client, itemName(it), used[iid]+" "+(it?it.uomOut:""), Math.round(used[iid]*(it?(it.price/(it.mult||1)):0))]); });
-    });
-  } else if(REP.type==="reqrwise"){
-    head = ["Requisitor","Department","Item","Issued","Value (Tk)"];
-    DB.requisitors.forEach(r => { const used = {};
-      DB.txns.filter(t=>t.requisitorId===r.id && t.type==="OUT" && inRange(t)).forEach(t => { used[t.itemId] = (used[t.itemId]||0) - t.qty; });
-      Object.keys(used).forEach(iid => { const it = itemById(iid); rows.push([r.name, r.dept, itemName(it), used[iid]+" "+(it?it.uomOut:""), Math.round(used[iid]*(it?(it.price/(it.mult||1)):0))]); });
-    });
-  } else if(REP.type==="supwise"){
-    head = ["Supplier","Item","Received","Value (Tk)"];
-    DB.suppliers.forEach(s => { const got = {};
-      DB.txns.filter(t=>t.supplierId===s.id && t.type==="IN" && inRange(t)).forEach(t => { got[t.itemId] = (got[t.itemId]||0) + t.qty; });
-      Object.keys(got).forEach(iid => { const it = itemById(iid); rows.push([s.name, itemName(it), got[iid]+" "+(it?it.uomOut:""), Math.round(got[iid]*(it?(it.price/(it.mult||1)):0))]); });
-    });
-  } else if(REP.type==="lowstock"){
-    title = "Low Stock / Alarm Report (current)"; head = ["Code","Item","Location","Stock","Alarm","Shortage"];
-    rows = lowItems().map(it => [itemCode(it), it.desc, it.loc||"", it.stock+" "+it.uomOut, it.alarm, Math.max(0,it.alarm-it.stock)]);
+    head = ["Client","Job No","Item","Joma","Sold","Balance","UOM"];
+    const map = {};
+    L.forEach(e => { const k = e.clientId+"|"+(e.jobNo||"(no job)")+"|"+e.itemId; const m = map[k]||(map[k]={c:e.clientId,jn:e.jobNo||"(no job)",i:e.itemId,j:0,s:0}); if(e.type==="JOMA") m.j+=Number(e.qty)||0; else m.s+=Number(e.qty)||0; });
+    rows = Object.values(map).sort((a,b)=>clientName(a.c).localeCompare(clientName(b.c)) || String(a.jn).localeCompare(String(b.jn))).map(m => { const it = itemById(m.i); return [clientName(m.c), m.jn, itemName(it), r2(m.j), r2(m.s), r2(m.j-m.s), it?it.uomOut:""]; });
   }
   REP_OUT = { title, head, rows };
   renderReports();
 }
 function renderReports(){
   $("#view-reports").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Insight / <b>Reports</b></div><h1>Reports</h1><p>Run, print or export any report</p></div></div>
+  <div class="page-head"><div><div class="crumb">Insight / <b>Reports</b></div><h1>Reports</h1><p>Run, search, print or export to Excel</p></div></div>
   <div class="card" style="margin-bottom:16px">
     <div class="filter-bar" style="margin-bottom:0">
       <select class="select" onchange="REP.type=this.value;runReport()">${REP_TYPES.map(x=>`<option value="${x[0]}" ${REP.type===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select>
       <input class="input" type="date" style="width:auto" value="${REP.from}" onchange="REP.from=this.value;runReport()">
       <span style="color:var(--faint)">to</span>
       <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
+      <input class="input" style="max-width:220px" placeholder="Search client, job, item\u2026" value="${esc(REP.q||"")}" onchange="REP.q=this.value;runReport()">
       <button class="btn btn-primary" onclick="runReport()">Run Report</button>
-      ${REP_OUT?`<button class="btn" onclick="exportCSV('report.csv',REP_OUT.head,REP_OUT.rows)">\u2913 CSV</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
+      ${REP_OUT?`<button class="btn" onclick="exportCSV('report.csv',REP_OUT.head,REP_OUT.rows)">\u2913 Excel</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
     </div>
   </div>
   ${REP_OUT?`<div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">${esc(REP_OUT.title)}</h3><div class="sub">${REP_OUT.rows.length} rows</div></div>
@@ -1433,6 +1465,7 @@ const r2 = n => Math.round((Number(n)||0) * 100) / 100;
 let CL_F = { q: "" };
 let LG_F = { q: "", client: "", item: "", type: "", from: "", to: "" };
 function clientName(id){ const c = byId(DB.clients, id); return c ? c.name : "(deleted client)"; }
+function itemLedgerBal(itemId){ return (DB.ledger||[]).reduce((s,e) => e.itemId === itemId ? s + (e.type === "JOMA" ? Number(e.qty)||0 : -(Number(e.qty)||0)) : s, 0); }
 
 function renderClients(){
   ensureCL();
@@ -1504,7 +1537,7 @@ function lgMatch(e, f, ignoreType){
   }
   return true;
 }
-function typeBadge(t){ return t === "JOMA" ? `<span class="badge" style="background:#E5F0E9;color:#3F7D5A">JOMA (IN)</span>` : `<span class="badge" style="background:#F9E8E5;color:#C7402E">SOLD (OUT)</span>`; }
+function lgBadge(t){ return t === "JOMA" ? `<span class="badge" style="background:#E5F0E9;color:#3F7D5A">JOMA (IN)</span>` : `<span class="badge" style="background:#F9E8E5;color:#C7402E">SOLD (OUT)</span>`; }
 function renderLedger(){
   ensureCL();
   const f = LG_F;
@@ -1537,7 +1570,7 @@ function renderLedger(){
   </tbody></table></div></div>
   <h3 style="margin:18px 2px 8px;font-size:14px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3>
   <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Client</th><th>Job No</th><th>Item</th><th>Type</th><th class="num">Qty</th><th class="num">Balance After</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(e => { const it = itemById(e.itemId); return `<tr><td class="muted">${fmtD(e.date)}</td><td class="type-cell">${esc(clientName(e.clientId))}</td><td class="muted">${esc(e.jobNo||"\u2014")}</td><td>${esc(itemName(it))}</td><td>${typeBadge(e.type)}</td><td class="num"><b>${r2(e.qty)}</b> ${it?esc(it.uomOut):""}</td><td class="num">${after[e.id] !== undefined ? r2(after[e.id]) : "\u2014"}</td><td class="muted">${esc(e.note||"")}</td><td class="muted">${esc(e.user||"")}</td>
+  ${rows.map(e => { const it = itemById(e.itemId); return `<tr><td class="muted">${fmtD(e.date)}</td><td class="type-cell">${esc(clientName(e.clientId))}</td><td class="muted">${esc(e.jobNo||"\u2014")}</td><td>${esc(itemName(it))}</td><td>${lgBadge(e.type)}</td><td class="num"><b>${r2(e.qty)}</b> ${it?esc(it.uomOut):""}</td><td class="num">${after[e.id] !== undefined ? r2(after[e.id]) : "\u2014"}</td><td class="muted">${esc(e.note||"")}</td><td class="muted">${esc(e.user||"")}</td>
     <td style="white-space:nowrap"><button class="btn btn-sm" onclick="ledgerModal('${e.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delLedger('${e.id}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No entries found</td></tr>`}
   </tbody></table></div></div>`;
 }
@@ -1739,10 +1772,8 @@ async function clearData(){
 
 /* ---------- router & init ---------- */
 const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, catalog:renderCatalog, stockin:renderStockIn,
-  stockout:renderStockOut, returns:renderReturns, adjustments:renderAdjustments, alerts:renderAlerts,
-  requisitions:renderRequisitions, suppliers:renderSuppliers, procurers:renderProcurers,
-  jobs:renderJobs, requisitors:renderRequisitors, clients:renderClients, ledger:renderLedger, reports:renderReports,
+  dashboard:renderDashboard, items:renderItems, catalog:renderCatalog,
+  clients:renderClients, ledger:renderLedger, reports:renderReports,
   users:renderUsers, audit:renderAudit, settings:renderSettings
 };
 function show(view){
@@ -1753,13 +1784,11 @@ function show(view){
   document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
   $("#view-"+view).classList.add("active");
   document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view===view));
-  $("#alertBadge").textContent = lowItems().length;
   VIEWS[view]();
   $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open");
   window.scrollTo(0,0);
 }
 function renderAll(){
-  $("#alertBadge").textContent = lowItems().length;
   if(currentUser && VIEWS[CURRENT_VIEW]) VIEWS[CURRENT_VIEW]();
 }
 document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
