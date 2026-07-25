@@ -251,6 +251,9 @@ td.muted{color:var(--faint)}
     <div class="nav-label">Production</div>
     <button class="nav-item" data-view="jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Jobs &amp; Delivery</button>
     <button class="nav-item" data-view="requisitors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4a3.5 3.5 0 0 1 0 7"/><path d="M17.5 14.5c2.2.8 3.5 2.9 3.5 5.5"/></svg>Requisitors</button>
+    <div class="nav-label">Clients</div>
+    <button class="nav-item" data-view="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4a3.5 3.5 0 0 1 0 7"/><path d="M17.5 14.5c2.2.8 3.5 2.9 3.5 5.5"/></svg>Clients</button>
+    <button class="nav-item" data-view="ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M10 8h6"/><path d="M10 12h6"/></svg>Client Ledger</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
     <div class="nav-label admin-only">Administration</div>
@@ -274,6 +277,8 @@ td.muted{color:var(--faint)}
     <div class="view" id="view-suppliers"></div>
     <div class="view" id="view-procurers"></div>
     <div class="view" id="view-jobs"></div>
+    <div class="view" id="view-clients"></div>
+    <div class="view" id="view-ledger"></div>
     <div class="view" id="view-requisitors"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
@@ -349,6 +354,7 @@ async function loadData(){
     ]);
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
     DB.audit = auSnap.docs.map(d => d.data());
+    DB.clients = DB.clients || []; DB.ledger = DB.ledger || [];
     SAVED_TXN = new Set(DB.txns.map(t => t.id));
     SAVED_AUDIT = new Set(DB.audit.map(a => a.id));
   } else {
@@ -374,7 +380,7 @@ function attachListeners(){
     const d = snap.data();
     if(d.client === CLIENT_ID) return;
     const txns = DB ? DB.txns : [], aud = DB ? DB.audit : [];
-    DB = d; DB.txns = txns; DB.audit = aud;
+    DB = d; DB.txns = txns; DB.audit = aud; DB.clients = DB.clients || []; DB.ledger = DB.ledger || [];
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
     renderAll();
   });
@@ -1421,6 +1427,187 @@ function renderReports(){
   </tbody></table></div></div>`:`<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Select a report and press <b>Run Report</b></div>`}`;
 }
 
+/* ---------- clients & client ledger ---------- */
+function ensureCL(){ DB.clients = DB.clients || []; DB.ledger = DB.ledger || []; }
+const r2 = n => Math.round((Number(n)||0) * 100) / 100;
+let CL_F = { q: "" };
+let LG_F = { q: "", client: "", item: "", type: "", from: "", to: "" };
+function clientName(id){ const c = byId(DB.clients, id); return c ? c.name : "(deleted client)"; }
+
+function renderClients(){
+  ensureCL();
+  const q = CL_F.q;
+  const rows = DB.clients.filter(c => !q || (c.name + " " + (c.phone||"") + " " + (c.jobs||[]).join(" ") + " " + (c.note||"")).toLowerCase().includes(q))
+    .slice().sort((a,b) => a.name.localeCompare(b.name));
+  const balCount = c => { const s = {}; DB.ledger.forEach(e => { if(e.clientId === c.id){ s[e.itemId] = (s[e.itemId]||0) + (e.type === "JOMA" ? Number(e.qty)||0 : -(Number(e.qty)||0)); } }); return Object.values(s).filter(v => r2(v) !== 0).length; };
+  $("#view-clients").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Clients / <b>Client Master</b></div><h1>Clients</h1><p>${rows.length} of ${DB.clients.length} clients \u00b7 add once, reuse everywhere</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportClients()">\u2913 Export Excel</button><button class="btn btn-primary" onclick="clientModal()">+ Add Client</button></div></div>
+  <div class="filter-bar"><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search client, phone or job no\u2026" value="${esc(q)}" oninput="CL_F.q=this.value.toLowerCase();renderClients();document.querySelector('#view-clients .input').focus()"></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Client Name</th><th>Phone</th><th>Job Numbers</th><th>Items w/ Balance</th><th>Note</th><th></th></tr></thead><tbody>
+  ${rows.map(c => `<tr><td class="type-cell">${esc(c.name)}</td><td class="muted">${esc(c.phone||"\u2014")}</td><td class="muted">${esc((c.jobs||[]).join(", ")||"\u2014")}</td><td class="num">${balCount(c)}</td><td class="muted">${esc(c.note||"")}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="viewClientLedger('${c.id}')">Ledger</button> <button class="btn btn-sm" onclick="clientModal('${c.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delClient('${c.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--faint);padding:30px">No clients yet \u2014 add your first client</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function viewClientLedger(id){ LG_F = { q: "", client: id, item: "", type: "", from: "", to: "" }; show("ledger"); }
+function clientModal(id){
+  if(!canWrite()) return;
+  const c = id ? byId(DB.clients, id) : null;
+  openModal(`<h3>${c ? "Edit" : "Add"} Client</h3><div class="sub">Add once \u2014 then pick from dropdown everywhere</div>
+  <div class="field"><label>Client Name *</label><input class="input" id="fClName" value="${c?esc(c.name):""}"></div>
+  <div class="field"><label>Phone</label><input class="input" id="fClPhone" value="${c?esc(c.phone||""):""}"></div>
+  <div class="field"><label>Job Numbers <span style="color:var(--faint)">(comma separated)</span></label><input class="input" id="fClJobs" value="${c?esc((c.jobs||[]).join(", ")):""}" placeholder="JB-1001, JB-1002"></div>
+  <div class="field"><label>Note</label><input class="input" id="fClNote" value="${c?esc(c.note||""):""}"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitClient('${c?c.id:""}')">Save</button></div>`);
+  $("#fClName").focus();
+}
+function submitClient(id){
+  ensureCL();
+  const name = $("#fClName").value.trim();
+  if(!name) return toast("Client name is required");
+  const dup = DB.clients.find(c => c.name.toLowerCase() === name.toLowerCase() && c.id !== id);
+  if(dup) return toast("This client already exists");
+  const jobs = $("#fClJobs").value.split(",").map(s => s.trim()).filter(Boolean);
+  const data = { name, phone: $("#fClPhone").value.trim(), jobs: Array.from(new Set(jobs)), note: $("#fClNote").value.trim() };
+  if(id){ Object.assign(byId(DB.clients, id), data); audit("Edited client: " + name); }
+  else { DB.clients.push(Object.assign({ id: "cl" + Date.now().toString(36) + Math.random().toString(36).slice(2,6) }, data)); audit("Added client: " + name); }
+  save(); closeModal(); renderAll(); toast("Client saved");
+}
+function delClient(id){
+  if(!canWrite()) return;
+  const c = byId(DB.clients, id); if(!c) return;
+  if(DB.ledger.some(e => e.clientId === id)) return toast("This client has ledger entries \u2014 delete those first");
+  if(!confirm(`Delete client "${c.name}"?`)) return;
+  DB.clients = DB.clients.filter(x => x.id !== id);
+  audit("Deleted client: " + c.name); save(); renderAll(); toast("Client deleted");
+}
+function exportClients(){
+  exportCSV("clients.csv", ["Client Name","Phone","Job Numbers","Note"], DB.clients.map(c => [c.name, c.phone||"", (c.jobs||[]).join(" | "), c.note||""]));
+}
+
+function ledgerBalances(){
+  const sorted = DB.ledger.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)));
+  const run = {}, after = {};
+  sorted.forEach(e => { const k = e.clientId + "|" + e.itemId; run[k] = (run[k]||0) + (e.type === "JOMA" ? Number(e.qty)||0 : -(Number(e.qty)||0)); after[e.id] = run[k]; });
+  return after;
+}
+function lgMatch(e, f, ignoreType){
+  if(f.client && e.clientId !== f.client) return false;
+  if(f.item && e.itemId !== f.item) return false;
+  if(!ignoreType && f.type && e.type !== f.type) return false;
+  if(f.from && e.date < f.from) return false;
+  if(f.to && e.date > f.to) return false;
+  if(f.q){
+    const it = itemById(e.itemId);
+    const hay = (clientName(e.clientId) + " " + (e.jobNo||"") + " " + (it?it.desc:"") + " " + itemCode(it) + " " + (e.note||"") + " " + (e.user||"")).toLowerCase();
+    if(!hay.includes(f.q)) return false;
+  }
+  return true;
+}
+function typeBadge(t){ return t === "JOMA" ? `<span class="badge" style="background:#E5F0E9;color:#3F7D5A">JOMA (IN)</span>` : `<span class="badge" style="background:#F9E8E5;color:#C7402E">SOLD (OUT)</span>`; }
+function renderLedger(){
+  ensureCL();
+  const f = LG_F;
+  const rows = DB.ledger.filter(e => lgMatch(e, f)).sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date)));
+  const after = ledgerBalances();
+  const map = {};
+  DB.ledger.filter(e => lgMatch(e, f, true)).forEach(e => {
+    const k = e.clientId + "|" + e.itemId;
+    const m = map[k] || (map[k] = { clientId: e.clientId, itemId: e.itemId, joma: 0, sold: 0 });
+    if(e.type === "JOMA") m.joma += Number(e.qty)||0; else m.sold += Number(e.qty)||0;
+  });
+  const sums = Object.values(map).sort((a,b) => clientName(a.clientId).localeCompare(clientName(b.clientId)));
+  const itemOpts = sel => DB.items.map(i => `<option value="${i.id}" ${i.id===sel?"selected":""}>${itemCode(i)} \u00b7 ${esc(i.desc)}</option>`).join("");
+  const clientOpts = sel => DB.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}</option>`).join("");
+  $("#view-ledger").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Clients / <b>Client Ledger</b></div><h1>Client Ledger</h1><p>Joma (In) \u2212 Sold (Out) = Balance \u00b7 per client &amp; item</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportBalance()">\u2913 Balance Excel</button><button class="btn" onclick="exportLedger()">\u2913 Ledger Excel</button><button class="btn btn-primary" onclick="ledgerModal()">+ New Entry</button></div></div>
+  ${DB.ledger.length ? "" : `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>Purber joma first:</b> add each client's previous stock as a <b>Joma (In)</b> entry \u2014 balance then stays automatic.</div></div>`}
+  <div class="filter-bar">
+    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search client, job, item, note\u2026" value="${esc(f.q)}" oninput="LG_F.q=this.value.toLowerCase();renderLedger();document.querySelector('#view-ledger .input').focus()"></div>
+    <select class="select" onchange="LG_F.client=this.value;renderLedger()"><option value="">All Clients</option>${clientOpts(f.client)}</select>
+    <select class="select" onchange="LG_F.item=this.value;renderLedger()"><option value="">All Items</option>${itemOpts(f.item)}</select>
+    <select class="select" onchange="LG_F.type=this.value;renderLedger()"><option value="">All Types</option><option value="JOMA" ${f.type==="JOMA"?"selected":""}>Joma (In)</option><option value="SOLD" ${f.type==="SOLD"?"selected":""}>Sold (Out)</option></select>
+    <input type="date" class="input" style="max-width:150px" value="${f.from}" onchange="LG_F.from=this.value;renderLedger()" title="From date">
+    <input type="date" class="input" style="max-width:150px" value="${f.to}" onchange="LG_F.to=this.value;renderLedger()" title="To date">
+  </div>
+  <h3 style="margin:18px 2px 8px;font-size:14px">Balance Summary ${f.client||f.item||f.q||f.from||f.to ? `<span style="color:var(--faint);font-weight:400">(filtered)</span>` : ""}</h3>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Client</th><th>Item</th><th class="num">Total Joma</th><th class="num">Total Sold</th><th class="num">Balance</th></tr></thead><tbody>
+  ${sums.map(s => { const it = itemById(s.itemId); const bal = r2(s.joma - s.sold); return `<tr><td class="type-cell">${esc(clientName(s.clientId))}</td><td>${esc(itemName(it))}</td><td class="num">${r2(s.joma)} ${it?esc(it.uomOut):""}</td><td class="num">${r2(s.sold)} ${it?esc(it.uomOut):""}</td><td class="num"><b style="color:${bal < 0 ? "#C7402E" : bal === 0 ? "var(--faint)" : "#3F7D5A"}">${bal}</b> ${it?esc(it.uomOut):""}</td></tr>`; }).join("") || `<tr><td colspan="5" style="text-align:center;color:var(--faint);padding:24px">No data yet</td></tr>`}
+  </tbody></table></div></div>
+  <h3 style="margin:18px 2px 8px;font-size:14px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Client</th><th>Job No</th><th>Item</th><th>Type</th><th class="num">Qty</th><th class="num">Balance After</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
+  ${rows.map(e => { const it = itemById(e.itemId); return `<tr><td class="muted">${fmtD(e.date)}</td><td class="type-cell">${esc(clientName(e.clientId))}</td><td class="muted">${esc(e.jobNo||"\u2014")}</td><td>${esc(itemName(it))}</td><td>${typeBadge(e.type)}</td><td class="num"><b>${r2(e.qty)}</b> ${it?esc(it.uomOut):""}</td><td class="num">${after[e.id] !== undefined ? r2(after[e.id]) : "\u2014"}</td><td class="muted">${esc(e.note||"")}</td><td class="muted">${esc(e.user||"")}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="ledgerModal('${e.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delLedger('${e.id}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No entries found</td></tr>`}
+  </tbody></table></div></div>`;
+}
+function ledgerModal(id){
+  if(!canWrite()) return;
+  ensureCL();
+  if(!DB.clients.length) return toast("Add a client first (Clients section)");
+  if(!DB.items.length) return toast("Add items first (Items section)");
+  const e = id ? byId(DB.ledger, id) : null;
+  const clientOpts = DB.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<option value="${c.id}" ${e&&e.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("");
+  const itemOpts = DB.items.map(i => `<option value="${i.id}" ${e&&e.itemId===i.id?"selected":""}>${itemCode(i)} \u00b7 ${esc(i.desc)}</option>`).join("");
+  openModal(`<h3>${e ? "Edit" : "New"} Ledger Entry</h3><div class="sub">Joma = client's material in \u00b7 Sold = delivered / used out</div>
+  <div class="field"><label>Date *</label><input class="input" id="leDate" type="date" value="${e?e.date:todayISO()}"></div>
+  <div class="field"><label>Client *</label><select class="select" id="leClient" onchange="fillJobNos()" style="width:100%">${e?"":`<option value="">\u2014 Select client \u2014</option>`}${clientOpts}</select></div>
+  <div class="field"><label>Job Number</label><input class="input" id="leJob" list="jobNosDl" placeholder="Pick previous or type new" value="${e?esc(e.jobNo||""):""}"><datalist id="jobNosDl"></datalist></div>
+  <div class="field"><label>Item *</label><select class="select" id="leItem" style="width:100%">${e?"":`<option value="">\u2014 Select item \u2014</option>`}${itemOpts}</select></div>
+  <div class="field"><label>Type *</label><select class="select" id="leType" style="width:100%"><option value="JOMA" ${e&&e.type==="JOMA"?"selected":""}>Joma (In) \u2014 purber joma / new deposit</option><option value="SOLD" ${e&&e.type==="SOLD"?"selected":""}>Sold (Out)</option></select></div>
+  <div class="field"><label>Quantity *</label><input class="input" id="leQty" type="number" min="0" step="any" value="${e?e.qty:""}"></div>
+  <div class="field"><label>Note</label><input class="input" id="leNote" value="${e?esc(e.note||""):""}" placeholder="optional"></div>
+  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitLedger('${e?e.id:""}')">Save Entry</button></div>`);
+  fillJobNos();
+}
+function fillJobNos(){
+  const c = byId(DB.clients, $("#leClient").value);
+  const dl = $("#jobNosDl"); if(dl) dl.innerHTML = ((c && c.jobs) || []).map(j => `<option value="${esc(j)}">`).join("");
+}
+function submitLedger(id){
+  ensureCL();
+  const clientId = $("#leClient").value, itemId = $("#leItem").value;
+  const date = $("#leDate").value, qty = Number($("#leQty").value);
+  if(!date) return toast("Date is required");
+  if(!clientId) return toast("Select a client");
+  if(!itemId) return toast("Select an item");
+  if(!(qty > 0)) return toast("Quantity must be more than 0");
+  const jobNo = $("#leJob").value.trim(), type = $("#leType").value, note = $("#leNote").value.trim();
+  if(jobNo){ const c = byId(DB.clients, clientId); c.jobs = c.jobs || []; if(!c.jobs.includes(jobNo)) c.jobs.push(jobNo); }
+  if(id){
+    Object.assign(byId(DB.ledger, id), { date, clientId, jobNo, itemId, type, qty, note });
+    audit("Edited ledger entry for " + clientName(clientId));
+  } else {
+    DB.ledger.push({ id: "le" + Date.now().toString(36) + Math.random().toString(36).slice(2,6), date, clientId, jobNo, itemId, type, qty, note, user: currentUser ? currentUser.username : "" });
+    audit((type === "JOMA" ? "Joma" : "Sold") + " " + qty + " \u00d7 " + itemName(itemById(itemId)) + " \u2014 " + clientName(clientId));
+  }
+  save(); closeModal(); renderAll(); toast("Entry saved");
+}
+function delLedger(id){
+  if(!canWrite()) return;
+  const e = byId(DB.ledger, id); if(!e) return;
+  if(!confirm("Delete this ledger entry?")) return;
+  DB.ledger = DB.ledger.filter(x => x.id !== id);
+  audit("Deleted ledger entry for " + clientName(e.clientId));
+  save(); renderAll(); toast("Entry deleted");
+}
+function exportLedger(){
+  const f = LG_F, after = ledgerBalances();
+  const rows = DB.ledger.filter(e => lgMatch(e, f)).sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)));
+  exportCSV("client-ledger.csv", ["Date","Client","Job No","Item Code","Item","Type","Qty","UOM","Balance After","Note","By"],
+    rows.map(e => { const it = itemById(e.itemId); return [e.date, clientName(e.clientId), e.jobNo||"", itemCode(it), itemName(it), e.type === "JOMA" ? "Joma (In)" : "Sold (Out)", e.qty, it?it.uomOut:"", after[e.id] !== undefined ? r2(after[e.id]) : "", e.note||"", e.user||""]; }));
+}
+function exportBalance(){
+  const f = LG_F, map = {};
+  DB.ledger.filter(e => lgMatch(e, f, true)).forEach(e => {
+    const k = e.clientId + "|" + e.itemId;
+    const m = map[k] || (map[k] = { clientId: e.clientId, itemId: e.itemId, joma: 0, sold: 0 });
+    if(e.type === "JOMA") m.joma += Number(e.qty)||0; else m.sold += Number(e.qty)||0;
+  });
+  exportCSV("client-balance.csv", ["Client","Item Code","Item","Total Joma","Total Sold","Balance","UOM"],
+    Object.values(map).sort((a,b) => clientName(a.clientId).localeCompare(clientName(b.clientId))).map(s => { const it = itemById(s.itemId); return [clientName(s.clientId), itemCode(it), itemName(it), r2(s.joma), r2(s.sold), r2(s.joma - s.sold), it?it.uomOut:""]; }));
+}
+
 /* ---------- users (Firebase roles) ---------- */
 let ROLES = [];
 function accessOf(role){ role = String(role||"").toLowerCase(); return role==="admin" ? "Admin" : (role==="staff"||role==="store") ? "Store" : "Viewer"; }
@@ -1544,7 +1731,7 @@ async function clearData(){
   toast("Clearing\u2026 please wait");
   await wipeColl("erp_txns"); await wipeColl("erp_audit");
   const st = DB.settings;
-  DB = { settings: st, seq:{si:0,so:0,rt:0,ad:0,req:0,job:0}, categories:[], groups:[], items:[], suppliers:[], procurers:[], requisitors:[], jobs:[], requisitions:[], txns:[], audit:[] };
+  DB = { settings: st, seq:{si:0,so:0,rt:0,ad:0,req:0,job:0}, categories:[], groups:[], items:[], suppliers:[], procurers:[], requisitors:[], jobs:[], clients:[], ledger:[], requisitions:[], txns:[], audit:[] };
   SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
   audit("Cleared all data \u2014 fresh start");
   await doSave(); renderAll(); toast("All clear \u2014 fresh start!");
@@ -1555,7 +1742,7 @@ const VIEWS = {
   dashboard:renderDashboard, items:renderItems, catalog:renderCatalog, stockin:renderStockIn,
   stockout:renderStockOut, returns:renderReturns, adjustments:renderAdjustments, alerts:renderAlerts,
   requisitions:renderRequisitions, suppliers:renderSuppliers, procurers:renderProcurers,
-  jobs:renderJobs, requisitors:renderRequisitors, reports:renderReports,
+  jobs:renderJobs, requisitors:renderRequisitors, clients:renderClients, ledger:renderLedger, reports:renderReports,
   users:renderUsers, audit:renderAudit, settings:renderSettings
 };
 function show(view){
