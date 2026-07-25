@@ -267,6 +267,7 @@ tbody tr:hover{background:#FAF6F3}
 .bm-logo img{width:100%;height:100%;object-fit:contain;display:block}
 .side-dev{margin-top:22px;padding:12px 12px 6px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:9px;font-size:10.5px;color:var(--faint);line-height:1.5;letter-spacing:.2px}
 .side-dev b{font-weight:700;font-size:11.5px;background:linear-gradient(90deg,var(--accent),#8B5CF6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.cat-chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#EDF3FC;color:#2F6FBF;border:1px solid #D9E6F8;letter-spacing:.2px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -476,7 +477,7 @@ function seedData(){
     [361,"Merin Gorjon Ply","","18 mm",90],
     [367,"Merin Gorjon Ply","","25 mm",25]
   ];
-  const items = base.map((x,i) => ({ id:"i"+(i+1), sl:i+1, page:String(x[0]), type:x[1], color:x[2], thickness:x[3], uom:"Pcs", alarm:5, stock:x[4] }));
+  const items = base.map((x,i) => ({ id:"i"+(i+1), sl:i+1, page:String(x[0]), category:"Board", type:x[1], color:x[2], thickness:x[3], uom:"Pcs", alarm:5, stock:x[4] }));
   const txns = []; const seq = { si:0, so:0 };
   let rs = 7; const rnd = () => { rs = (rs*1103515245+12345) % 2147483648; return rs/2147483648; };
   for(let d = 13; d >= 0; d--){
@@ -509,6 +510,7 @@ function migrateDB(){
   DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0;
   DB.items.forEach(it => {
     if(it.type === undefined) it.type = "";
+    if(!it.category) it.category = "Board";
     if(it.color === undefined) it.color = "";
     if(it.thickness === undefined) it.thickness = "";
     if(it.page === undefined) it.page = "";
@@ -663,7 +665,7 @@ function renderDashboard(){
   const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
   const recent = DB.txns.slice(0,8);
   $("#view-dashboard").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Board stock overview \u2014 ${esc(DB.settings.company)}</p></div>
+  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Stock overview \u2014 ${esc(DB.settings.company)}</p></div>
     <div class="page-actions"><button class="btn btn-green" onclick="txnModal('IN')">+ Stock In</button><button class="btn btn-primary" onclick="txnModal('OUT')">+ Stock Out</button></div></div>
   ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items \u2192</a></div></div>` : ""}
   <div class="kpi-grid">
@@ -677,7 +679,7 @@ function renderDashboard(){
     <div class="card"><h3>Stock In vs Out \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
       <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
-    <div class="card"><h3>Current Stock by Type</h3><div class="sub">Total quantity per board type</div>
+    <div class="card"><h3>Current Stock by Category</h3><div class="sub">Total quantity per category</div>
       <div class="chart-box"><canvas id="dashBar"></canvas></div></div>
   </div>
   <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3></div>
@@ -692,49 +694,56 @@ function renderDashboard(){
   }
   drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
   const tb = {};
-  DB.items.forEach(it => { const k = it.type || "Other"; tb[k] = (tb[k]||0) + (Number(it.stock)||0); });
+  DB.items.forEach(it => { const k = it.category || "Other"; tb[k] = (tb[k]||0) + (Number(it.stock)||0); });
   const top = Object.keys(tb).map(k => [k, tb[k]]).sort((a,b)=>b[1]-a[1]).slice(0,8);
   drawBarChart($("#dashBar"), top.map(x=>x[0]), top.map(x=>x[1]), "#2F6FBF");
 }
 
 /* ---------- items ---------- */
-let ITEM_F = { q:"", type:"" };
+let ITEM_F = { q:"", cat:"", type:"" };
 function itemTypes(){ return [...new Set(DB.items.map(it => it.type).filter(Boolean))].sort(); }
+function itemCats(){ return [...new Set(DB.items.map(it => it.category).filter(Boolean))].sort(); }
+function catSuggest(){ return [...new Set(["Board","Acrylic","PVC","ACP","Ink"].concat(itemCats()))]; }
+function itemLabel(it){ return (it.category ? it.category + " \u00b7 " : "") + itemName(it); }
 function renderItems(){
   const f = ITEM_F;
   const rows = DB.items.filter(it => {
+    if(f.cat && (it.category||"Board") !== f.cat) return false;
     if(f.type && it.type !== f.type) return false;
-    if(f.q){ const h = (itemName(it)+" "+(it.page||"")+" "+(it.type||"")).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
+    if(f.q){ const h = (itemName(it)+" "+(it.page||"")+" "+(it.category||"")+" "+(it.type||"")).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
     return true;
-  }).slice().sort((a,b) => (a.type||"").localeCompare(b.type||"") || String(a.thickness||"").localeCompare(String(b.thickness||""), undefined, {numeric:true}) || ((a.sl||0)-(b.sl||0)));
+  }).slice().sort((a,b) => (a.category||"").localeCompare(b.category||"") || (a.type||"").localeCompare(b.type||"") || String(a.thickness||"").localeCompare(String(b.thickness||""), undefined, {numeric:true}) || ((a.sl||0)-(b.sl||0)));
   $("#view-items").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Board item master \u2014 type, color &amp; thickness</p></div>
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
       <label class="btn" style="cursor:pointer">\u2912 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importItems(this)"></label>
       <button class="btn" onclick="exportItems()">\u2913 Export Excel</button>
       <button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>
     </div></div>
   <div class="filter-bar">
-    <div class="search-wrap"><input class="input" placeholder="Search type, color, thickness, page\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value;renderItems()"></div>
+    <div class="search-wrap"><input class="input" placeholder="Search category, type, color, thickness, page\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value;renderItems()"></div>
+    <select class="select" onchange="ITEM_F.cat=this.value;renderItems()"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
     <select class="select" onchange="ITEM_F.type=this.value;renderItems()"><option value="">All Types</option>${itemTypes().map(t=>`<option value="${esc(t)}" ${f.type===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
   </div>
   <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Items <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3></div>
-  <div class="table-scroll"><table><thead><tr><th>SL</th><th>Page</th><th>Type</th><th>Color</th><th>Thickness</th><th class="num">Stock</th><th>Level</th><th>Status</th><th></th></tr></thead><tbody>
+  <div class="table-scroll"><table><thead><tr><th>SL</th><th>Page</th><th>Category</th><th>Type</th><th>Color</th><th>Thickness</th><th class="num">Stock</th><th>Level</th><th>Status</th><th></th></tr></thead><tbody>
   ${rows.map(it => `<tr>
     <td class="muted">${it.sl}</td><td>${esc(it.page||"\u2014")}</td>
-    <td><b>${esc(it.type || itemName(it))}</b></td><td>${esc(it.color||"\u2014")}</td><td>${esc(it.thickness||"\u2014")}</td>
+    <td><span class="cat-chip">${esc(it.category||"Board")}</span></td><td><b>${esc(it.type || itemName(it))}</b></td><td>${esc(it.color||"\u2014")}</td><td>${esc(it.thickness||"\u2014")}</td>
     <td class="num"><b>${it.stock}</b> ${esc(it.uom||"Pcs")}</td>
     <td>${levelBar(it)}</td><td>${statusBadge(it)}</td>
     <td class="num" style="white-space:nowrap"><button class="btn" style="padding:3px 10px;font-size:12px" onclick="itemModal('${it.id}')">Edit</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="delItem('${it.id}')">Delete</button></td>
-  </tr>`).join("") || `<tr><td colspan="9" style="text-align:center;color:var(--faint);padding:30px">No items found \u2014 add or import items</td></tr>`}
+  </tr>`).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No items found \u2014 add or import items</td></tr>`}
   </tbody></table></div></div>`;
 }
 function itemModal(id){
   if(!canWrite()) return;
   const it = id ? itemById(id) : null;
-  openModal(`<h2>${it?"Edit Item":"Add Item"}</h2><div class="hint" style="margin-bottom:14px">Type + Color + Thickness together make the item name</div>
+  openModal(`<h2>${it?"Edit Item":"Add Item"}</h2><div class="hint" style="margin-bottom:14px">Category groups items \u00b7 Type + Color + Thickness make the item name</div>
   <form onsubmit="submitItem(event${it?`,'${it.id}'`:""})">
-    <div class="field"><label>Type *</label><input class="input" id="itType" list="typesDl" value="${esc(it?it.type:"")}" placeholder="e.g. Melamine / Gorjon Ply / PVC / Acrylic" required>
+    <div class="field"><label>Category *</label><input class="input" id="itCat" list="catsDl" value="${esc(it?(it.category||"Board"):"Board")}" placeholder="Board / Acrylic / PVC / ACP / Ink" required>
+      <datalist id="catsDl">${catSuggest().map(c=>`<option value="${esc(c)}">`).join("")}</datalist></div>
+    <div class="field"><label>Type *</label><input class="input" id="itType" list="typesDl" value="${esc(it?it.type:"")}" placeholder="e.g. Melamine / Gorjon Ply / Acrylic Sheet / Solvent Ink" required>
       <datalist id="typesDl">${itemTypes().map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div>
     <div class="row-2">
       <div class="field"><label>Color</label><input class="input" id="itColor" value="${esc(it?it.color:"")}" placeholder="e.g. Elegant / Antik / White"></div>
@@ -753,7 +762,7 @@ function itemModal(id){
 function submitItem(e, id){
   e.preventDefault(); if(!canWrite()) return;
   const type = $("#itType").value.trim(); if(!type){ toast("Type is required"); return; }
-  const data = { type, color: $("#itColor").value.trim(), thickness: $("#itThick").value.trim(), page: $("#itPage").value.trim(), uom: $("#itUom").value.trim() || "Pcs", alarm: Math.max(0, Number($("#itAlarm").value)||0) };
+  const data = { category: ($("#itCat").value.trim() || "Board"), type, color: $("#itColor").value.trim(), thickness: $("#itThick").value.trim(), page: $("#itPage").value.trim(), uom: $("#itUom").value.trim() || "Pcs", alarm: Math.max(0, Number($("#itAlarm").value)||0) };
   if(id){
     const it = itemById(id); if(!it) return;
     Object.assign(it, data); delete it.desc;
@@ -800,23 +809,24 @@ function importItems(inp){
       if(rows.length < 2){ toast("CSV file is empty"); inp.value = ""; return; }
       const head = rows[0].map(h => String(h).trim().toLowerCase());
       const col = name => head.findIndex(h => h.includes(name));
-      const cType = col("type"), cColor = col("color"), cThick = col("thick"), cPage = col("page"), cStock = col("stock"), cUnit = col("unit") >= 0 ? col("unit") : col("uom"), cAlarm = col("alarm");
+      const cCat = col("categ"), cType = col("type"), cColor = col("color"), cThick = col("thick"), cPage = col("page"), cStock = col("stock"), cUnit = col("unit") >= 0 ? col("unit") : col("uom"), cAlarm = col("alarm");
       if(cType < 0){ toast('CSV needs a "Type" column'); inp.value = ""; return; }
       let added = 0, skipped = 0;
       let sl = DB.items.reduce((m,x) => Math.max(m, x.sl||0), 0);
-      const keyOf = (t,c,th) => (t+"|"+c+"|"+th).toLowerCase();
-      const seen = new Set(DB.items.map(it => keyOf(it.type||"", it.color||"", it.thickness||"")));
+      const keyOf = (g,t,c,th) => (g+"|"+t+"|"+c+"|"+th).toLowerCase();
+      const seen = new Set(DB.items.map(it => keyOf(it.category||"Board", it.type||"", it.color||"", it.thickness||"")));
       rows.slice(1).forEach(r => {
         const type = String(r[cType]||"").trim(); if(!type){ skipped++; return; }
+        const cat = (cCat >= 0 && String(r[cCat]||"").trim()) || "Board";
         const color = cColor >= 0 ? String(r[cColor]||"").trim() : "";
         const thick = cThick >= 0 ? String(r[cThick]||"").trim() : "";
-        const k = keyOf(type, color, thick);
+        const k = keyOf(cat, type, color, thick);
         if(seen.has(k)){ skipped++; return; }
         seen.add(k); sl++;
         DB.items.push({
           id: "i" + Date.now() + "_" + sl, sl,
           page: cPage >= 0 ? String(r[cPage]||"").trim() : "",
-          type, color, thickness: thick,
+          category: cat, type, color, thickness: thick,
           uom: (cUnit >= 0 && String(r[cUnit]||"").trim()) || "Pcs",
           alarm: cAlarm >= 0 ? Math.max(0, Number(r[cAlarm])||0) : (DB.settings.alarmDefault||5),
           stock: cStock >= 0 ? (Number(String(r[cStock]).replace(/,/g,"").trim())||0) : 0
@@ -832,19 +842,20 @@ function importItems(inp){
   rd.readAsText(f);
 }
 function exportItems(){
-  exportCSV("items.csv", ["SL","Page","Type","Color","Thickness","Unit","Stock","Alarm Qty","Status"],
-    DB.items.map(it => [it.sl, it.page||"", it.type||itemName(it), it.color||"", it.thickness||"", it.uom||"Pcs", it.stock, it.alarm, it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]));
+  exportCSV("items.csv", ["SL","Page","Category","Type","Color","Thickness","Unit","Stock","Alarm Qty","Status"],
+    DB.items.map(it => [it.sl, it.page||"", it.category||"Board", it.type||itemName(it), it.color||"", it.thickness||"", it.uom||"Pcs", it.stock, it.alarm, it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]));
 }
 
 /* ---------- stock in / out ---------- */
-let SI_F = { q:"", item:"", from:"", to:"" }, SO_F = { q:"", item:"", from:"", to:"" };
+let SI_F = { q:"", cat:"", item:"", from:"", to:"" }, SO_F = { q:"", cat:"", item:"", from:"", to:"" };
 function txnRows(kind, f){
   return DB.txns.filter(t => {
     if(t.type !== kind) return false;
+    if(f.cat){ const ci = itemById(t.itemId); if(!ci || (ci.category||"Board") !== f.cat) return false; }
     if(f.item && t.itemId !== f.item) return false;
     if(f.from && t.date < f.from) return false;
     if(f.to && t.date > f.to) return false;
-    if(f.q){ const h = (itemName(itemById(t.itemId))+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
+    if(f.q){ const qi = itemById(t.itemId); const h = ((qi?qi.category||"":"")+" "+itemName(qi)+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
     return true;
   });
 }
@@ -862,13 +873,14 @@ function renderTxns(kind){
     </div></div>
   <div class="filter-bar">
     <div class="search-wrap"><input class="input" placeholder="Search item, note, user\u2026" value="${esc(f.q)}" oninput="${F}.q=this.value;renderTxns('${kind}')"></div>
-    <select class="select" onchange="${F}.item=this.value;renderTxns('${kind}')"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemName(a).localeCompare(itemName(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemName(it))}</option>`).join("")}</select>
+    <select class="select" onchange="${F}.cat=this.value;renderTxns('${kind}')"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
+    <select class="select" onchange="${F}.item=this.value;renderTxns('${kind}')"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemLabel(it))}</option>`).join("")}</select>
     <input type="date" class="input" style="max-width:160px" value="${f.from}" onchange="${F}.from=this.value;renderTxns('${kind}')">
     <input type="date" class="input" style="max-width:160px" value="${f.to}" onchange="${F}.to=this.value;renderTxns('${kind}')">
   </div>
   <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
-  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th class="num">Qty</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="delTxn('${t.id}')">Delete</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
+  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="delTxn('${t.id}')">Delete</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="8" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
   </tbody></table></div></div>`;
 }
 function txnModal(kind){
@@ -876,7 +888,7 @@ function txnModal(kind){
   const fin = kind === "IN";
   openModal(`<h2>${fin?"New Stock In":"New Stock Out"}</h2><div class="hint" style="margin-bottom:14px">${fin?"Add received material to stock":"Issue material from stock"}</div>
   <form onsubmit="submitTxn(event,'${kind}')">
-    <div class="field"><label>Item *</label><select class="select" id="txItem" required><option value="">Select item\u2026</option>${DB.items.slice().sort((a,b)=>itemName(a).localeCompare(itemName(b))).map(it=>`<option value="${it.id}">${esc(itemName(it))} \u2014 ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select></div>
+    <div class="field"><label>Item *</label><select class="select" id="txItem" required><option value="">Select item\u2026</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}">${esc(itemLabel(it))} \u2014 ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select></div>
     <div class="row-2">
       <div class="field"><label>Date</label><input class="input" type="date" id="txDate" value="${todayISO()}" required></div>
       <div class="field"><label>Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
@@ -914,15 +926,16 @@ function exportTxns(kind){
   const fin = kind === "IN";
   const rows = txnRows(kind, fin ? SI_F : SO_F);
   exportCSV(fin ? "stock-in.csv" : "stock-out.csv",
-    ["ID","Date","Type","Color","Thickness","Item","Qty","Unit","Note","By"],
-    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
+    ["ID","Date","Category","Type","Color","Thickness","Item","Qty","Unit","Note","By"],
+    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
 }
 
 /* ---------- reports ---------- */
-let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"" }, REP_OUT = null;
+let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"" }, REP_OUT = null;
 const REP_TYPES = [
   ["txns","All Transactions (date range)"],
   ["itemwise","Item-wise In / Out / Net"],
+  ["catwise","Category-wise Summary"],
   ["typewise","Type-wise Summary"],
   ["stock","Current Stock List"],
   ["low","Low Stock Report"]
@@ -930,32 +943,38 @@ const REP_TYPES = [
 function runReport(){
   const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
   const inRange = t => t.date >= from && t.date <= to;
-  const hay = t => { const it = itemById(t.itemId); return (itemName(it)+" "+(it?it.page||"":"")+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); };
-  const ihay = it => (itemName(it)+" "+(it.page||"")+" "+(it.type||"")).toLowerCase();
-  const T = DB.txns.filter(t => inRange(t) && (!q || hay(t).includes(q)));
-  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (q ? ` \u00b7 search: "${REP.q}"` : "");
+  const hay = t => { const it = itemById(t.itemId); return (itemName(it)+" "+(it?it.category||"":"")+" "+(it?it.page||"":"")+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); };
+  const ihay = it => (itemName(it)+" "+(it.page||"")+" "+(it.category||"")+" "+(it.type||"")).toLowerCase();
+  const catOk = it => !REP.cat || ((it ? (it.category||"Board") : "") === REP.cat);
+  const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && (!q || hay(t).includes(q)));
+  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
   let head = [], rows = [];
   if(REP.type==="txns"){
-    head = ["ID","Date","Item","Type","Qty","Unit","Note","By"];
+    head = ["ID","Date","Category","Item","Type","Qty","Unit","Note","By"];
     rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); return [t.id, t.date, itemName(it), t.type==="IN"?"Stock In":"Stock Out", Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
+      .map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", itemName(it), t.type==="IN"?"Stock In":"Stock Out", Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
-    head = ["Item","Type","Thickness","Stock In","Stock Out","Net","Current Stock","Unit"];
+    head = ["Item","Category","Type","Thickness","Stock In","Stock Out","Net","Current Stock","Unit"];
     const map = {};
     T.forEach(t => { const m = map[t.itemId]||(map[t.itemId]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemName(it), it?it.type||"":"", it?it.thickness||"":"", m.i, m.o, m.i-m.o, it?it.stock:"", it?it.uom||"Pcs":""]; })
+    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemName(it), it?it.category||"":"", it?it.type||"":"", it?it.thickness||"":"", m.i, m.o, m.i-m.o, it?it.stock:"", it?it.uom||"Pcs":""]; })
       .sort((a,b) => String(a[0]).localeCompare(String(b[0])));
+  } else if(REP.type==="catwise"){
+    head = ["Category","Stock In","Stock Out","Net","Current Stock"];
+    const map = {};
+    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.category||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
+    rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.category||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
   } else if(REP.type==="typewise"){
     head = ["Type","Stock In","Stock Out","Net","Current Stock"];
     const map = {};
     T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.type||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
     rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.type||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
   } else if(REP.type==="stock"){
-    head = ["SL","Page","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
-    rows = DB.items.filter(it => !q || ihay(it).includes(q)).map(it => [it.sl, it.page||"", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
+    head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
+    rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [it.sl, it.page||"", it.category||"Board", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
   } else if(REP.type==="low"){
-    head = ["Item","Type","Thickness","Current Stock","Alarm Qty","Shortage","Unit"];
-    rows = lowItems().filter(it => !q || ihay(it).includes(q)).map(it => [itemName(it), it.type||"", it.thickness||"", it.stock, it.alarm, Math.max(0, it.alarm-it.stock), it.uom||"Pcs"]);
+    head = ["Item","Category","Type","Thickness","Current Stock","Alarm Qty","Shortage","Unit"];
+    rows = lowItems().filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [itemName(it), it.category||"Board", it.type||"", it.thickness||"", it.stock, it.alarm, Math.max(0, it.alarm-it.stock), it.uom||"Pcs"]);
   }
   REP_OUT = { title, head, rows };
   renderReports();
@@ -966,6 +985,7 @@ function renderReports(){
   <div class="card" style="margin-bottom:16px">
     <div class="filter-bar" style="margin-bottom:0">
       <select class="select" onchange="REP.type=this.value;runReport()">${REP_TYPES.map(x=>`<option value="${x[0]}" ${REP.type===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select>
+      <select class="select" onchange="REP.cat=this.value;runReport()"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${REP.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
       <input class="input" type="date" style="width:auto" value="${REP.from}" onchange="REP.from=this.value;runReport()">
       <span style="color:var(--faint)">to</span>
       <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
