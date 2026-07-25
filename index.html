@@ -257,14 +257,16 @@ tbody tr:hover{background:#FAF6F3}
 ::-webkit-scrollbar-track{background:transparent}
 
 /* ---------- LOGO & CREDIT ---------- */
-.lm.lm-logo{width:72px;height:46px;background:#fff;padding:6px 8px;box-shadow:0 0 24px rgba(255,255,255,.28),inset 0 1px 0 rgba(255,255,255,.3)}
+.lm.lm-logo{background:#fff;padding:5px;box-shadow:0 0 24px rgba(255,255,255,.28),inset 0 1px 0 rgba(255,255,255,.3)}
 .lm-logo img{width:100%;height:100%;object-fit:contain;border-radius:8px;display:block}
-.login-dev{margin-top:9px;text-align:center;color:#6E6A63;font-size:11.5px;letter-spacing:.3px}
-.login-dev b{color:#A49E96;font-weight:600}
-.tb-brand .bm.bm-logo{width:42px;height:28px;background:#fff;padding:3px 5px;box-shadow:0 0 12px rgba(255,255,255,.3)}
+.dev-ak{width:24px;height:24px;min-width:24px;border-radius:8px;background:linear-gradient(135deg,#E05A45,#8B5CF6);display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#fff;letter-spacing:.5px;box-shadow:0 2px 8px rgba(199,70,52,.4)}
+.dev-badge{margin:14px auto 0;display:flex;align-items:center;justify-content:center;gap:9px;width:max-content;padding:7px 14px 7px 9px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);font-size:11.5px;color:#8E8880}
+.dev-badge .dev-ak{box-shadow:0 0 14px rgba(224,90,69,.55)}
+.dev-badge b{font-weight:700;background:linear-gradient(90deg,#F0A395,#E05A45 60%,#B07CF0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.tb-brand .bm.bm-logo{background:#fff;padding:3px;box-shadow:0 0 12px rgba(255,255,255,.3)}
 .bm-logo img{width:100%;height:100%;object-fit:contain;display:block}
-.side-dev{margin-top:20px;padding:12px 10px 4px;border-top:1px solid var(--border2);font-size:11px;color:var(--faint);text-align:center;line-height:1.6}
-.side-dev b{color:var(--muted);font-weight:600}
+.side-dev{margin-top:22px;padding:12px 12px 6px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:9px;font-size:10.5px;color:var(--faint);line-height:1.5;letter-spacing:.2px}
+.side-dev b{font-weight:700;font-size:11.5px;background:linear-gradient(90deg,var(--accent),#8B5CF6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 </style>
 </head>
 <body>
@@ -283,7 +285,7 @@ tbody tr:hover{background:#FAF6F3}
       <button type="submit" class="login-btn">Sign in <span class="arr">→</span></button>
     </form>
     <div class="login-foot"><span class="dot"></span> Secured by Firebase · accounts managed by admin</div>
-    <div class="login-dev">Developed by <b>Ammar Khandoker</b></div>
+    <div class="dev-badge"><span class="dev-ak">AK</span><span>Developed by&nbsp;<b>Ammar Khandoker</b></span></div>
   </div>
 </div>
 
@@ -304,17 +306,15 @@ tbody tr:hover{background:#FAF6F3}
     <button class="nav-item" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <div class="nav-label">Inventory</div>
     <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
-    <button class="nav-item" data-view="catalog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M7 12h14"/><path d="M11 19h10"/></svg>Categories &amp; Groups</button>
-    <div class="nav-label">Clients</div>
-    <button class="nav-item" data-view="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4a3.5 3.5 0 0 1 0 7"/><path d="M17.5 14.5c2.2.8 3.5 2.9 3.5 5.5"/></svg>Clients</button>
-    <button class="nav-item" data-view="ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M10 8h6"/><path d="M10 12h6"/></svg>Client Ledger</button>
+    <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
+    <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="M6 13l6-6 6 6"/><path d="M4 3h16"/></svg>Stock Out</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
     <div class="nav-label admin-only">Administration</div>
     <button class="nav-item admin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
     <button class="nav-item admin-only" data-view="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Audit Trail</button>
     <button class="nav-item admin-only" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
-    <div class="side-dev">Developed by<br><b>Ammar Khandoker</b></div>
+    <div class="side-dev"><span class="dev-ak">AK</span><div>Developed by<br><b>Ammar Khandoker</b></div></div>
   </aside>
   <div class="scrim" id="scrim"></div>
 
@@ -322,9 +322,8 @@ tbody tr:hover{background:#FAF6F3}
   <main class="main">
     <div class="view" id="view-dashboard"></div>
     <div class="view" id="view-items"></div>
-    <div class="view" id="view-catalog"></div>
-    <div class="view" id="view-clients"></div>
-    <div class="view" id="view-ledger"></div>
+    <div class="view" id="view-stockin"></div>
+    <div class="view" id="view-stockout"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
     <div class="view" id="view-audit"></div>
@@ -399,7 +398,7 @@ async function loadData(){
     ]);
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
     DB.audit = auSnap.docs.map(d => d.data());
-    DB.clients = DB.clients || []; DB.ledger = DB.ledger || [];
+    migrateDB();
     SAVED_TXN = new Set(DB.txns.map(t => t.id));
     SAVED_AUDIT = new Set(DB.audit.map(a => a.id));
   } else {
@@ -425,7 +424,7 @@ function attachListeners(){
     const d = snap.data();
     if(d.client === CLIENT_ID) return;
     const txns = DB ? DB.txns : [], aud = DB ? DB.audit : [];
-    DB = d; DB.txns = txns; DB.audit = aud; DB.clients = DB.clients || []; DB.ledger = DB.ledger || [];
+    DB = d; DB.txns = txns; DB.audit = aud; migrateDB();
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
     renderAll();
   });
@@ -443,11 +442,11 @@ function attachListeners(){
 /* ---------- id helpers ---------- */
 function nextSeq(key, prefix){ DB.seq[key] = (DB.seq[key]||0)+1; return prefix + String(DB.seq[key]).padStart(4,"0"); }
 const byId = (arr, id) => arr.find(x => x.id === id);
-const catOf = it => byId(DB.categories, it.catId);
-const grpOf = it => byId(DB.groups, it.groupId);
+const catOf = it => byId(DB.categories||[], it.catId);
+const grpOf = it => byId(DB.groups||[], it.groupId);
 const itemById = id => byId(DB.items, id);
-function itemName(it){ return it ? it.desc : "(deleted item)"; }
-function itemCode(it){ if(!it) return "\u2014"; const c = catOf(it), g = grpOf(it); return (c?c.code:"00")+"-"+(g?g.code:"00")+"-"+String(it.sl).padStart(3,"0"); }
+function itemName(it){ if(!it) return "(deleted item)"; const n = [it.type, it.color, it.thickness].filter(Boolean).join(" "); return n || it.desc || "(unnamed)"; }
+function itemCode(it){ return it ? "B-"+String(it.sl).padStart(3,"0") : "\u2014"; }
 
 /* ---------- audit ---------- */
 function audit(action){
@@ -461,108 +460,62 @@ function canWrite(){ if(currentUser && currentUser.access !== "Viewer") return t
 
 /* ---------- seed data ---------- */
 function seedData(){
-  const cats = [
-    {id:"c1",code:"01",name:"Board & Sheet"}, {id:"c2",code:"02",name:"Hardware & Fittings"},
-    {id:"c3",code:"03",name:"Adhesive & Chemical"}, {id:"c4",code:"04",name:"Paint & Polish"},
-    {id:"c5",code:"05",name:"Electrical"}
+  const base = [
+    [521,"Melamine","Elegant","18 mm",24],
+    [293,"Melamine","Antik","18 mm",10],
+    [295,"Gorjon Ply","","2/3 mm",55],
+    [301,"Gorjon Ply","","5/6 mm",118],
+    [313,"Gorjon Ply","","12 mm",134],
+    [325,"Gorjon Ply","","15/16 mm",59],
+    [336,"Gorjon Ply","","18 mm",46],
+    [455,"Gorjon Ply","","25 mm",20],
+    [347,"Flexible Gorjon Ply","","3/4 mm",104],
+    [353,"Flexible Gorjon Ply","","5/6 mm",10],
+    [369,"Merin Gorjon Ply","","5/6 mm",19],
+    [357,"Merin Gorjon Ply","","12 mm",12],
+    [361,"Merin Gorjon Ply","","18 mm",90],
+    [367,"Merin Gorjon Ply","","25 mm",25]
   ];
-  const grps = [
-    {id:"g1",code:"01",catId:"c1",name:"Melamine Board"}, {id:"g2",code:"02",catId:"c1",name:"PVC Board"},
-    {id:"g3",code:"03",catId:"c1",name:"MDF Plain"},
-    {id:"g4",code:"01",catId:"c2",name:"Screws & Fasteners"}, {id:"g5",code:"02",catId:"c2",name:"Hinges & Channels"},
-    {id:"g6",code:"01",catId:"c3",name:"Glue & Adhesive"}, {id:"g7",code:"02",catId:"c3",name:"Sealant"},
-    {id:"g8",code:"01",catId:"c4",name:"Spray Paint"}, {id:"g9",code:"02",catId:"c4",name:"Polish Material"},
-    {id:"g10",code:"01",catId:"c5",name:"LED & Wiring"}
-  ];
-  const items = [
-    {sl:1,catId:"c1",groupId:"g1",desc:"Melamine Board White 8x4 (18mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-1",alarm:10,price:3200,open:24},
-    {sl:2,catId:"c1",groupId:"g1",desc:"Melamine Board Teak 8x4 (18mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-1",alarm:8,price:3400,open:18},
-    {sl:3,catId:"c1",groupId:"g2",desc:"PVC Board White 8x4 (12mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-2",alarm:10,price:2600,open:30},
-    {sl:4,catId:"c1",groupId:"g2",desc:"PVC Board Grey 8x4 (10mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-2",alarm:6,price:2300,open:12},
-    {sl:5,catId:"c1",groupId:"g3",desc:"MDF Plain 8x4 (6mm)",uomIn:"Sheet",mult:1,uomOut:"Sheet",loc:"Rack A-3",alarm:12,price:1450,open:40},
-    {sl:6,catId:"c2",groupId:"g4",desc:"Wood Screw 1.5 inch (Box of 144)",uomIn:"Box",mult:144,uomOut:"Pcs",loc:"Bin B-1",alarm:300,price:520,open:1200},
-    {sl:7,catId:"c2",groupId:"g4",desc:"Machine Screw 2 inch (Box of 100)",uomIn:"Box",mult:100,uomOut:"Pcs",loc:"Bin B-1",alarm:200,price:640,open:700},
-    {sl:8,catId:"c2",groupId:"g5",desc:"Soft-Close Hinge (Pair)",uomIn:"Carton",mult:50,uomOut:"Pair",loc:"Bin B-3",alarm:60,price:5200,open:210},
-    {sl:9,catId:"c2",groupId:"g5",desc:"Drawer Channel 18 inch",uomIn:"Carton",mult:20,uomOut:"Set",loc:"Bin B-4",alarm:30,price:3800,open:85},
-    {sl:10,catId:"c3",groupId:"g6",desc:"Super Glue 50g",uomIn:"Carton",mult:24,uomOut:"Pcs",loc:"Shelf C-1",alarm:48,price:1900,open:150},
-    {sl:11,catId:"c3",groupId:"g6",desc:"Wood Glue 1kg",uomIn:"Carton",mult:12,uomOut:"Pcs",loc:"Shelf C-1",alarm:24,price:2600,open:70},
-    {sl:12,catId:"c3",groupId:"g7",desc:"Silicone Sealant Clear",uomIn:"Carton",mult:24,uomOut:"Pcs",loc:"Shelf C-2",alarm:36,price:4100,open:96},
-    {sl:13,catId:"c4",groupId:"g8",desc:"Spray Paint Black 400ml",uomIn:"Carton",mult:12,uomOut:"Can",loc:"Shelf D-1",alarm:24,price:2200,open:60},
-    {sl:14,catId:"c4",groupId:"g8",desc:"Spray Paint Silver 400ml",uomIn:"Carton",mult:12,uomOut:"Can",loc:"Shelf D-1",alarm:24,price:2350,open:48},
-    {sl:15,catId:"c4",groupId:"g9",desc:"Sanding Sealer 4L",uomIn:"Can",mult:1,uomOut:"Can",loc:"Shelf D-2",alarm:6,price:1850,open:15},
-    {sl:16,catId:"c5",groupId:"g10",desc:"LED Strip 5m Warm White",uomIn:"Roll",mult:1,uomOut:"Roll",loc:"Shelf E-1",alarm:10,price:850,open:35},
-    {sl:17,catId:"c5",groupId:"g10",desc:"Flexible Wire 1.5mm (90m Coil)",uomIn:"Coil",mult:1,uomOut:"Coil",loc:"Shelf E-1",alarm:5,price:2900,open:14},
-    {sl:18,catId:"c5",groupId:"g10",desc:"LED Driver 12V 5A",uomIn:"Box",mult:10,uomOut:"Pcs",loc:"Shelf E-2",alarm:12,price:4500,open:30}
-  ].map((x,i)=>({ id:"i"+(i+1), sl:x.sl, catId:x.catId, groupId:x.groupId, desc:x.desc, uomIn:x.uomIn, mult:x.mult, uomOut:x.uomOut, loc:x.loc, alarm:x.alarm, price:x.price, stock:x.open }));
-  const suppliers = [
-    {id:"s1",name:"Akij Board House",contact:"Mr. Faruk",phone:"01711-000001",address:"Tejgaon, Dhaka"},
-    {id:"s2",name:"Partex Star Group",contact:"Mr. Selim",phone:"01811-000002",address:"Gulshan, Dhaka"},
-    {id:"s3",name:"RFL Hardware Point",contact:"Mr. Jashim",phone:"01911-000003",address:"Nawabpur, Dhaka"},
-    {id:"s4",name:"Berger Paints Dealer",contact:"Mr. Alamgir",phone:"01611-000004",address:"Mirpur, Dhaka"}
-  ];
-  const procurers = [
-    {id:"p1",empId:"EMP-011",name:"Rafiq Islam",phone:"01712-111111"},
-    {id:"p2",empId:"EMP-023",name:"Sabbir Hossain",phone:"01813-222222"}
-  ];
-  const requisitors = [
-    {id:"r1",name:"Kamal Uddin",dept:"Production"},
-    {id:"r2",name:"Sohel Rana",dept:"Site Installation"},
-    {id:"r3",name:"Nusrat Jahan",dept:"Design Studio"},
-    {id:"r4",name:"Habib Mia",dept:"Office Maintenance"}
-  ];
-  const jobs = [
-    {id:"j1",no:"JB-2026-001",client:"City Bank",desc:"Banani Branch Interior & Signage",status:"Running",deliveries:[]},
-    {id:"j2",no:"JB-2026-002",client:"Aarong",desc:"Dhanmondi Showroom Display Units",status:"Running",deliveries:[{date:daysAgo(6),note:"Phase 1 \u2014 12 display units",by:"admin"}]},
-    {id:"j3",no:"JB-2026-003",client:"Unimart",desc:"Gulshan Outlet Shelving",status:"Delivered",deliveries:[{date:daysAgo(12),note:"Full delivery",by:"admin"}]},
-    {id:"j4",no:"JB-2026-004",client:"Square Pharma",desc:"HQ Reception Renovation",status:"Running",deliveries:[]}
-  ];
-  const users = [
-    {id:"u1",name:"Ammar Khandokar",username:"admin",pass:"1234",access:"Admin"},
-    {id:"u2",name:"Sazu Ahmed",username:"sazu",pass:"1234",access:"Store"},
-    {id:"u3",name:"Guest Viewer",username:"viewer",pass:"1234",access:"Viewer"}
-  ];
-  let rs = 42; const rnd = () => { rs = (rs*1103515245+12345) % 2147483648; return rs/2147483648; };
-  const txns = []; const seq = {si:0,so:0,rt:0,ad:0,req:0,job:4,user:3};
-  const jobIds = ["j1","j2","j3","j4"], reqIds = ["r1","r2","r3","r4"], supIds = ["s1","s2","s3","s4"];
-  for(let d = 29; d >= 0; d--){
-    const nOut = 1 + Math.floor(rnd()*3);
-    for(let k = 0; k < nOut; k++){
+  const items = base.map((x,i) => ({ id:"i"+(i+1), sl:i+1, page:String(x[0]), type:x[1], color:x[2], thickness:x[3], uom:"Pcs", alarm:5, stock:x[4] }));
+  const txns = []; const seq = { si:0, so:0 };
+  let rs = 7; const rnd = () => { rs = (rs*1103515245+12345) % 2147483648; return rs/2147483648; };
+  for(let d = 13; d >= 0; d--){
+    if(rnd() > .5){
       const it = items[Math.floor(rnd()*items.length)];
-      const q = Math.max(1, Math.floor(rnd()*(it.mult>1?18:4)));
+      const q = 10 + Math.floor(rnd()*40);
+      seq.si++;
+      txns.push({ id:"SI-"+String(seq.si).padStart(4,"0"), type:"IN", date:daysAgo(d), itemId:it.id, qty:q, note:"", by:"admin" });
+      it.stock += q;
+    }
+    const n = 1 + Math.floor(rnd()*2);
+    for(let k = 0; k < n; k++){
+      const it = items[Math.floor(rnd()*items.length)];
+      const q = 1 + Math.floor(rnd()*8);
+      if(it.stock - q < 0) continue;
       seq.so++;
-      txns.push({id:"SO-"+String(seq.so).padStart(4,"0"),type:"OUT",date:daysAgo(d),itemId:it.id,qty:-q,jobId:jobIds[Math.floor(rnd()*4)],requisitorId:reqIds[Math.floor(rnd()*4)],note:"",by:rnd()>.5?"admin":"sazu"});
+      txns.push({ id:"SO-"+String(seq.so).padStart(4,"0"), type:"OUT", date:daysAgo(d), itemId:it.id, qty:-q, note:"", by:"admin" });
       it.stock -= q;
     }
-    if(rnd() > .62){
-      const it = items[Math.floor(rnd()*items.length)];
-      const qin = Math.max(1, Math.floor(rnd()*(it.mult>1?4:20)));
-      seq.si++;
-      txns.push({id:"SI-"+String(seq.si).padStart(4,"0"),type:"IN",date:daysAgo(d),itemId:it.id,qtyIn:qin,qty:qin*it.mult,supplierId:supIds[Math.floor(rnd()*4)],procurerId:rnd()>.5?"p1":"p2",note:"",by:"admin"});
-      it.stock += qin*it.mult;
-    }
   }
-  seq.rt = 2;
-  txns.push({id:"RT-0001",type:"RET",date:daysAgo(9),itemId:"i8",qty:6,jobId:"j3",requisitorId:"r2",note:"Extra hinges returned after delivery",by:"sazu"});
-  items[7].stock += 6;
-  txns.push({id:"RT-0002",type:"RET",date:daysAgo(3),itemId:"i13",qty:4,jobId:"j2",requisitorId:"r1",note:"Unused cans returned",by:"sazu"});
-  items[12].stock += 4;
-  seq.ad = 1;
-  txns.push({id:"AD-0001",type:"ADJ",date:daysAgo(7),itemId:"i10",qty:-3,reason:"Damaged in store \u2014 physical count",by:"admin"});
-  items[9].stock -= 3;
-  items.forEach(it => { if(it.stock < 0) it.stock = 0; });
-  txns.sort((a,b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
-  const requisitions = [
-    {id:"q1",no:"REQ-0001",jobId:"j1",requisitorId:"r1",date:daysAgo(2),status:"Pending",lines:[{itemId:"i1",qty:6},{itemId:"i6",qty:200},{itemId:"i11",qty:8}]},
-    {id:"q2",no:"REQ-0002",jobId:"j4",requisitorId:"r2",date:daysAgo(1),status:"Approved",lines:[{itemId:"i3",qty:8},{itemId:"i12",qty:12}]},
-    {id:"q3",no:"REQ-0003",jobId:"j2",requisitorId:"r3",date:daysAgo(5),status:"Issued",lines:[{itemId:"i16",qty:5},{itemId:"i18",qty:6}]}
-  ];
-  seq.req = 3;
+  txns.sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date)));
   return {
     settings:{ company:"Step Media Ltd", address:"Tejgaon Industrial Area, Dhaka", alarmDefault:5 },
-    seq, categories:cats, groups:grps, items, suppliers, procurers, requisitors, jobs, users,
-    txns, requisitions,
-    audit:[{date:todayISO(),time:nowTime(),user:"system",action:"System initialized with demo data"}]
+    seq, categories:[], groups:[], items, txns,
+    audit:[{ date:todayISO(), time:nowTime(), user:"system", action:"System initialized with demo data" }]
   };
+}
+function migrateDB(){
+  DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
+  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0;
+  DB.items.forEach(it => {
+    if(it.type === undefined) it.type = "";
+    if(it.color === undefined) it.color = "";
+    if(it.thickness === undefined) it.thickness = "";
+    if(it.page === undefined) it.page = "";
+    if(!it.uom) it.uom = it.uomOut || "Pcs";
+    if(it.alarm === undefined || it.alarm === null) it.alarm = 0;
+    it.stock = Number(it.stock) || 0;
+  });
 }
 
 /* ---------- auth (Firebase) ---------- */
@@ -703,738 +656,306 @@ function exportCSV(name, head, rows){
 
 /* ---------- dashboard ---------- */
 function renderDashboard(){
-  ensureCL();
   const month = todayISO().slice(0,7);
-  const jomaMonth = DB.ledger.filter(e => e.type==="JOMA" && e.date.slice(0,7)===month).reduce((s,e)=>s+(Number(e.qty)||0),0);
-  const soldMonth = DB.ledger.filter(e => e.type==="SOLD" && e.date.slice(0,7)===month).reduce((s,e)=>s+(Number(e.qty)||0),0);
-  const balMap = {};
-  DB.ledger.forEach(e => { const k = e.clientId+"|"+e.itemId; balMap[k]=(balMap[k]||0)+(e.type==="JOMA"?Number(e.qty)||0:-(Number(e.qty)||0)); });
-  const negBal = Object.values(balMap).filter(v => r2(v) < 0).length;
-  const recent = DB.ledger.slice().sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date))).slice(0,8);
-  const el = $("#view-dashboard");
-  el.innerHTML = `
-  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Client stock overview \u2014 ${esc(DB.settings.company)}</p></div>
-    <div class="page-actions"><button class="btn" onclick="clientModal()">+ Add Client</button><button class="btn btn-primary" onclick="ledgerModal()">+ Ledger Entry</button></div></div>
-  ${negBal ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${negBal} client-item balance${negBal>1?"s are":" is"} negative.</b> <a href="#ledger" style="color:var(--orange)">Check the ledger \u2192</a></div></div>` : ""}
+  const inMonth = DB.txns.filter(t => t.type==="IN" && String(t.date).slice(0,7)===month).reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0);
+  const outMonth = DB.txns.filter(t => t.type==="OUT" && String(t.date).slice(0,7)===month).reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0);
+  const low = lowItems();
+  const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
+  const recent = DB.txns.slice(0,8);
+  $("#view-dashboard").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Board stock overview \u2014 ${esc(DB.settings.company)}</p></div>
+    <div class="page-actions"><button class="btn btn-green" onclick="txnModal('IN')">+ Stock In</button><button class="btn btn-primary" onclick="txnModal('OUT')">+ Stock Out</button></div></div>
+  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items \u2192</a></div></div>` : ""}
   <div class="kpi-grid">
-    <div class="card kpi"><div class="label">Clients</div><div class="value">${DB.clients.length}</div><div class="delta">in client master</div></div>
-    <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${DB.items.length}</div><div class="delta">${DB.categories.length} categories \u00b7 ${DB.groups.length} groups</div></div>
-    <div class="card kpi k-green"><div class="label">Joma \u2014 this month</div><div class="value">${r2(jomaMonth)}</div><div class="delta">material received</div></div>
-    <div class="card kpi k-orange"><div class="label">Sold \u2014 this month</div><div class="value">${r2(soldMonth)}</div><div class="delta">delivered / used</div></div>
-    <div class="card kpi ${negBal?"k-red":"k-green"}"><div class="label">Negative Balances</div><div class="value">${negBal}</div><div class="delta">client-item pairs</div></div>
+    <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${DB.items.length}</div><div class="delta">in item master</div></div>
+    <div class="card kpi"><div class="label">Total Stock</div><div class="value">${totalStock}</div><div class="delta">all items combined</div></div>
+    <div class="card kpi k-green"><div class="label">Stock In \u2014 this month</div><div class="value">${inMonth}</div><div class="delta">material received</div></div>
+    <div class="card kpi k-orange"><div class="label">Stock Out \u2014 this month</div><div class="value">${outMonth}</div><div class="delta">delivered / used</div></div>
+    <div class="card kpi ${low.length?"k-red":"k-green"}"><div class="label">Low Stock</div><div class="value">${low.length}</div><div class="delta">at or below alarm qty</div></div>
   </div>
   <div class="grid-2">
-    <div class="card"><h3>Joma vs Sold \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
-      <div class="legend"><span><i style="background:var(--green)"></i>Joma (In)</span><span><i style="background:var(--accent)"></i>Sold (Out)</span></div>
+    <div class="card"><h3>Stock In vs Out \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
-    <div class="card"><h3>Top Clients by Balance</h3><div class="sub">Total balance across all items</div>
+    <div class="card"><h3>Current Stock by Type</h3><div class="sub">Total quantity per board type</div>
       <div class="chart-box"><canvas id="dashBar"></canvas></div></div>
   </div>
-  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Ledger Entries</h3></div>
-    <div class="table-scroll"><table><thead><tr><th>Date</th><th>Client</th><th>Job No</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>By</th></tr></thead><tbody>
-    ${recent.map(e => { const it = itemById(e.itemId); return `<tr><td>${fmtD(e.date)}</td><td class="type-cell">${esc(clientName(e.clientId))}</td><td class="muted">${esc(e.jobNo||"\u2014")}</td><td>${esc(itemName(it))}</td><td>${lgBadge(e.type)}</td><td class="num"><b>${r2(e.qty)}</b> ${it?esc(it.uomOut):""}</td><td class="muted">${esc(e.user||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No entries yet \u2014 add your first Joma entry</td></tr>`}
+  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3></div>
+    <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>Note</th><th>By</th></tr></thead><tbody>
+    ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.type)}</td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet \u2014 add your first Stock In</td></tr>`}
     </tbody></table></div></div>`;
-  const labels = [], joma = [], sold = [];
+  const labels = [], ins = [], outs = [];
   for(let d = 13; d >= 0; d--){
     const day = daysAgo(d); labels.push(fmtD(day));
-    joma.push(DB.ledger.filter(e => e.date===day && e.type==="JOMA").reduce((s,e)=>s+(Number(e.qty)||0),0));
-    sold.push(DB.ledger.filter(e => e.date===day && e.type==="SOLD").reduce((s,e)=>s+(Number(e.qty)||0),0));
+    ins.push(DB.txns.filter(t => t.date===day && t.type==="IN").reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0));
+    outs.push(DB.txns.filter(t => t.date===day && t.type==="OUT").reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0));
   }
-  drawLineChart($("#dashLine"), labels, [{data:joma,color:"#3F7D5A"},{data:sold,color:"#C74634"}]);
-  const cb = {};
-  DB.ledger.forEach(e => { cb[e.clientId] = (cb[e.clientId]||0) + (e.type==="JOMA"?Number(e.qty)||0:-(Number(e.qty)||0)); });
-  const top = Object.keys(cb).map(id => [clientName(id), Math.max(0, r2(cb[id]))]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
+  const tb = {};
+  DB.items.forEach(it => { const k = it.type || "Other"; tb[k] = (tb[k]||0) + (Number(it.stock)||0); });
+  const top = Object.keys(tb).map(k => [k, tb[k]]).sort((a,b)=>b[1]-a[1]).slice(0,8);
   drawBarChart($("#dashBar"), top.map(x=>x[0]), top.map(x=>x[1]), "#2F6FBF");
 }
 
 /* ---------- items ---------- */
-let ITEM_F = {q:"",cat:"",grp:"",st:""};
+let ITEM_F = { q:"", type:"" };
+function itemTypes(){ return [...new Set(DB.items.map(it => it.type).filter(Boolean))].sort(); }
 function renderItems(){
   const f = ITEM_F;
-  let rows = DB.items.filter(it => {
-    if(f.cat && it.catId!==f.cat) return false;
-    if(f.grp && it.groupId!==f.grp) return false;
-    if(f.q && !(it.desc.toLowerCase().includes(f.q) || itemCode(it).includes(f.q))) return false;
+  const rows = DB.items.filter(it => {
+    if(f.type && it.type !== f.type) return false;
+    if(f.q){ const h = (itemName(it)+" "+(it.page||"")+" "+(it.type||"")).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
     return true;
-  });
-  const grpsOf = f.cat ? DB.groups.filter(g=>g.catId===f.cat) : DB.groups;
+  }).slice().sort((a,b) => (a.type||"").localeCompare(b.type||"") || String(a.thickness||"").localeCompare(String(b.thickness||""), undefined, {numeric:true}) || ((a.sl||0)-(b.sl||0)));
   $("#view-items").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Item Master</h1><p>${rows.length} of ${DB.items.length} items</p></div>
-    <div class="page-actions"><label class="btn" style="cursor:pointer">\u2912 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importItems(this)"></label><button class="btn" onclick="exportItems()">\u2913 Export CSV</button><button class="btn btn-primary" onclick="itemModal()">+ Add Item</button></div></div>
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Board item master \u2014 type, color &amp; thickness</p></div>
+    <div class="page-actions">
+      <label class="btn" style="cursor:pointer">\u2912 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importItems(this)"></label>
+      <button class="btn" onclick="exportItems()">\u2913 Export Excel</button>
+      <button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>
+    </div></div>
   <div class="filter-bar">
-    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search item or code\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value.toLowerCase();renderItems();document.querySelector('#view-items .input').focus()"></div>
-    <select class="select" onchange="ITEM_F.cat=this.value;ITEM_F.grp='';renderItems()"><option value="">All Categories</option>${opts(DB.categories,f.cat,c=>c.code+" \u00b7 "+c.name)}</select>
-    <select class="select" onchange="ITEM_F.grp=this.value;renderItems()"><option value="">All Groups</option>${opts(grpsOf,f.grp,g=>g.name)}</select>
+    <div class="search-wrap"><input class="input" placeholder="Search type, color, thickness, page\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value;renderItems()"></div>
+    <select class="select" onchange="ITEM_F.type=this.value;renderItems()"><option value="">All Types</option>${itemTypes().map(t=>`<option value="${esc(t)}" ${f.type===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
   </div>
-  <div class="table-card"><div class="table-scroll"><table>
-    <thead><tr><th>Code</th><th>Description</th><th>Category / Group</th><th>UOM</th><th>Location</th><th class="num">Client Balance</th><th></th></tr></thead><tbody>
-    ${rows.map(it => `<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc((catOf(it)||{}).name||"")} / ${esc((grpOf(it)||{}).name||"")}</td><td class="muted">${esc(it.uomIn)}${it.mult>1?" \u00d7"+it.mult+" \u2192 "+esc(it.uomOut):""}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${r2(itemLedgerBal(it.id))}</b> ${esc(it.uomOut)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="itemModal('${it.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteItem('${it.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No items found</td></tr>`}
-    </tbody></table></div></div>`;
-}
-function importItems(inp){
-  if(!canWrite()) return;
-  const f = inp.files[0]; if(!f) return;
-  const rd = new FileReader();
-  rd.onload = () => {
-    try{
-      const rows = parseCSV(String(rd.result));
-      if(rows.length < 2) return toast("CSV file is empty");
-      const head = rows[0].map(h => String(h).trim().toLowerCase());
-      const col = n => head.findIndex(h => h.indexOf(n) !== -1);
-      const ci = { cat: col("categor"), grp: col("group"), desc: col("desc"), uomIn: col("uom in"), mult: col("multiply"), uomOut: col("uom out"), loc: col("location"), alarm: col("alarm"), price: col("price"), stock: col("stock") };
-      if(ci.desc === -1) return toast("CSV must have a Description column");
-      const num = (r, idx, dflt) => { if(idx === -1) return dflt; const v = Number(String(r[idx]||"").replace(/[^0-9.\-]/g,"")); return isNaN(v) ? dflt : v; };
-      let added = 0, skipped = 0;
-      rows.slice(1).forEach((r, k) => {
-        const desc = String(r[ci.desc]||"").trim();
-        if(!desc) return;
-        if(DB.items.some(i => i.desc.toLowerCase() === desc.toLowerCase())){ skipped++; return; }
-        const catName = (ci.cat !== -1 ? String(r[ci.cat]||"").trim() : "") || "General";
-        let cat = DB.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-        if(!cat){ cat = { id: "c" + Date.now() + "_" + k, code: String(DB.categories.length + 1).padStart(2,"0"), name: catName }; DB.categories.push(cat); }
-        const grpName = (ci.grp !== -1 ? String(r[ci.grp]||"").trim() : "") || "General";
-        let grp = DB.groups.find(g => g.catId === cat.id && g.name.toLowerCase() === grpName.toLowerCase());
-        if(!grp){ grp = { id: "g" + Date.now() + "_" + k, code: String(DB.groups.filter(x => x.catId === cat.id).length + 1).padStart(2,"0"), catId: cat.id, name: grpName }; DB.groups.push(grp); }
-        const uomIn = (ci.uomIn !== -1 ? String(r[ci.uomIn]||"").trim() : "") || "Pcs";
-        DB.items.push({
-          id: "i" + Date.now() + "_" + k,
-          sl: DB.items.reduce((m,i) => Math.max(m, i.sl||0), 0) + 1,
-          catId: cat.id, groupId: grp.id, desc,
-          uomIn,
-          mult: Math.max(1, num(r, ci.mult, 1)),
-          uomOut: (ci.uomOut !== -1 ? String(r[ci.uomOut]||"").trim() : "") || uomIn,
-          loc: ci.loc !== -1 ? String(r[ci.loc]||"").trim() : "",
-          alarm: num(r, ci.alarm, DB.settings.alarmDefault),
-          price: num(r, ci.price, 0),
-          stock: num(r, ci.stock, 0)
-        });
-        added++;
-      });
-      if(added){ audit("Imported " + added + " items from CSV"); save(); renderAll(); }
-      toast(added + " items imported" + (skipped ? " \u00b7 " + skipped + " duplicate skipped" : ""));
-    }catch(e){ console.error(e); toast("Could not read CSV file"); }
-    inp.value = "";
-  };
-  rd.readAsText(f);
-}
-function parseCSV(text){
-  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-  const rows = []; let row = [], cell = "", q = false;
-  for(let i = 0; i < text.length; i++){
-    const ch = text[i];
-    if(q){
-      if(ch === '"'){ if(text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
-      else cell += ch;
-    }
-    else if(ch === '"') q = true;
-    else if(ch === ','){ row.push(cell); cell = ""; }
-    else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && text[i+1] === '\n') i++; row.push(cell); cell = ""; if(row.some(c => String(c).trim() !== "")) rows.push(row); row = []; }
-    else cell += ch;
-  }
-  row.push(cell); if(row.some(c => String(c).trim() !== "")) rows.push(row);
-  return rows;
-}
-function exportItems(){
-  exportCSV("items.csv", ["Code","Description","Category","Group","UOM In","Multiply","UOM Out","Location","Client Balance"],
-    DB.items.map(it => [itemCode(it), it.desc, (catOf(it)||{}).name, (grpOf(it)||{}).name, it.uomIn, it.mult, it.uomOut, it.loc, r2(itemLedgerBal(it.id))]));
+  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Items <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3></div>
+  <div class="table-scroll"><table><thead><tr><th>SL</th><th>Page</th><th>Type</th><th>Color</th><th>Thickness</th><th class="num">Stock</th><th>Level</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map(it => `<tr>
+    <td class="muted">${it.sl}</td><td>${esc(it.page||"\u2014")}</td>
+    <td><b>${esc(it.type || itemName(it))}</b></td><td>${esc(it.color||"\u2014")}</td><td>${esc(it.thickness||"\u2014")}</td>
+    <td class="num"><b>${it.stock}</b> ${esc(it.uom||"Pcs")}</td>
+    <td>${levelBar(it)}</td><td>${statusBadge(it)}</td>
+    <td class="num" style="white-space:nowrap"><button class="btn" style="padding:3px 10px;font-size:12px" onclick="itemModal('${it.id}')">Edit</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="delItem('${it.id}')">Delete</button></td>
+  </tr>`).join("") || `<tr><td colspan="9" style="text-align:center;color:var(--faint);padding:30px">No items found \u2014 add or import items</td></tr>`}
+  </tbody></table></div></div>`;
 }
 function itemModal(id){
   if(!canWrite()) return;
   const it = id ? itemById(id) : null;
-  openModal(`<h3>${it?"Edit Item":"Add New Item"}</h3><div class="sub">${it?itemCode(it):"Item will get the next code in its group"}</div>
-  <div class="field"><label>Description *</label><input class="input" id="fDesc" value="${it?esc(it.desc):""}"></div>
-  <div class="row-2">
-    <div class="field"><label>Category *</label><select class="select" id="fCat" onchange="fillGrpSel()">${opts(DB.categories, it?it.catId:DB.categories[0].id, c=>c.name)}</select></div>
-    <div class="field"><label>Group *</label><select class="select" id="fGrp"></select></div>
-  </div>
-  <div class="row-3">
-    <div class="field"><label>UOM In (purchase)</label><input class="input" id="fUomIn" value="${it?esc(it.uomIn):"Pcs"}"></div>
-    <div class="field"><label>Multiply By</label><input class="input" id="fMult" type="number" min="1" value="${it?it.mult:1}"></div>
-    <div class="field"><label>UOM Out (issue)</label><input class="input" id="fUomOut" value="${it?esc(it.uomOut):"Pcs"}"></div>
-  </div>
-  <div class="field"><label>Location</label><input class="input" id="fLoc" value="${it?esc(it.loc||""):""}" placeholder="Rack A-1"></div>
-  <div class="hint">Example: buy in <b>Box</b>, multiply <b>144</b>, issue in <b>Pcs</b>.</div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitItem('${id||""}')">${it?"Save Changes":"Add Item"}</button></div>`);
-  window.fillGrpSel = () => {
-    const cid = $("#fCat").value;
-    $("#fGrp").innerHTML = opts(DB.groups.filter(g=>g.catId===cid), it && it.catId===cid ? it.groupId : (DB.groups.find(g=>g.catId===cid)||{}).id, g=>g.name);
-  };
-  fillGrpSel();
-}
-function submitItem(id){
-  const desc = $("#fDesc").value.trim(); if(!desc) return toast("Please write a description");
-  const catId = $("#fCat").value, groupId = $("#fGrp").value;
-  if(!groupId) return toast("Please select a group");
-  const data = { desc, catId, groupId, uomIn:$("#fUomIn").value.trim()||"Pcs", mult:Math.max(1,Number($("#fMult").value)||1), uomOut:$("#fUomOut").value.trim()||"Pcs", loc:$("#fLoc").value.trim() };
-  if(id){ Object.assign(itemById(id), data); audit("Edited item: "+desc); }
-  else{
-    const sl = Math.max(0, ...DB.items.map(i=>i.sl)) + 1;
-    DB.items.push(Object.assign({ id:"i"+Date.now(), sl, stock:0, alarm:0, price:0 }, data));
-    audit("Added item: "+desc);
-  }
-  save(); closeModal(); renderAll(); toast(id?"Item updated":"Item added");
-}
-function deleteItem(id){
-  if(!canWrite()) return;
-  const it = itemById(id);
-  if(!confirm(`Delete "${it.desc}"? Transaction history will keep its records.`)) return;
-  DB.items = DB.items.filter(x => x.id!==id);
-  audit("Deleted item: "+it.desc); save(); renderAll(); toast("Item deleted");
-}
-
-/* ---------- catalog (categories & groups) ---------- */
-function renderCatalog(){
-  $("#view-catalog").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Categories & Groups</b></div><h1>Categories &amp; Groups</h1><p>Item classification \u2014 category \u2192 group \u2192 item</p></div>
-    <div class="page-actions"><button class="btn" onclick="grpModal()">+ Add Group</button><button class="btn btn-primary" onclick="catModal()">+ Add Category</button></div></div>
-  <div class="grid-2">
-    <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Categories</h3></div><div class="table-scroll"><table><thead><tr><th>Code</th><th>Name</th><th class="num">Groups</th><th class="num">Items</th><th></th></tr></thead><tbody>
-    ${DB.categories.map(c => `<tr><td class="muted">${esc(c.code)}</td><td class="type-cell">${esc(c.name)}</td><td class="num">${DB.groups.filter(g=>g.catId===c.id).length}</td><td class="num">${DB.items.filter(i=>i.catId===c.id).length}</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="catModal('${c.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteCat('${c.id}')">Delete</button></td></tr>`).join("")}
-    </tbody></table></div></div>
-    <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Groups</h3></div><div class="table-scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th class="num">Items</th><th></th></tr></thead><tbody>
-    ${DB.groups.map(g => `<tr><td class="muted">${esc(g.code)}</td><td class="type-cell">${esc(g.name)}</td><td class="muted">${esc((byId(DB.categories,g.catId)||{}).name||"")}</td><td class="num">${DB.items.filter(i=>i.groupId===g.id).length}</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="grpModal('${g.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="deleteGrp('${g.id}')">Delete</button></td></tr>`).join("")}
-    </tbody></table></div></div>
-  </div>`;
-}
-function catModal(id){
-  if(!canWrite()) return;
-  const c = id ? byId(DB.categories,id) : null;
-  openModal(`<h3>${c?"Edit":"Add"} Category</h3><div class="sub"></div>
-  <div class="field"><label>Name *</label><input class="input" id="fName" value="${c?esc(c.name):""}"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitCat('${id||""}')">Save</button></div>`);
-}
-function submitCat(id){
-  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
-  if(id){ byId(DB.categories,id).name = name; audit("Edited category: "+name); }
-  else{ const code = String(DB.categories.length+1).padStart(2,"0"); DB.categories.push({id:"c"+Date.now(), code, name}); audit("Added category: "+name); }
-  save(); closeModal(); renderAll(); toast("Category saved");
-}
-function deleteCat(id){
-  if(!canWrite()) return;
-  if(DB.items.some(i=>i.catId===id) || DB.groups.some(g=>g.catId===id)) return toast("Category is in use \u2014 move its groups/items first");
-  const c = byId(DB.categories,id);
-  if(!confirm(`Delete category "${c.name}"?`)) return;
-  DB.categories = DB.categories.filter(x=>x.id!==id); audit("Deleted category: "+c.name); save(); renderAll();
-}
-function grpModal(id){
-  if(!canWrite()) return;
-  const g = id ? byId(DB.groups,id) : null;
-  openModal(`<h3>${g?"Edit":"Add"} Group</h3><div class="sub"></div>
-  <div class="field"><label>Category *</label><select class="select" id="fGCat">${opts(DB.categories, g?g.catId:DB.categories[0].id, c=>c.name)}</select></div>
-  <div class="field"><label>Name *</label><input class="input" id="fName" value="${g?esc(g.name):""}"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitGrp('${id||""}')">Save</button></div>`);
-}
-function submitGrp(id){
-  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
-  const catId = $("#fGCat").value;
-  if(id){ const g = byId(DB.groups,id); g.name = name; g.catId = catId; audit("Edited group: "+name); }
-  else{ const code = String(DB.groups.filter(g=>g.catId===catId).length+1).padStart(2,"0"); DB.groups.push({id:"g"+Date.now(), code, catId, name}); audit("Added group: "+name); }
-  save(); closeModal(); renderAll(); toast("Group saved");
-}
-function deleteGrp(id){
-  if(!canWrite()) return;
-  if(DB.items.some(i=>i.groupId===id)) return toast("Group has items \u2014 move them first");
-  const g = byId(DB.groups,id);
-  if(!confirm(`Delete group "${g.name}"?`)) return;
-  DB.groups = DB.groups.filter(x=>x.id!==id); audit("Deleted group: "+g.name); save(); renderAll();
-}
-
-/* ---------- transactions listings ---------- */
-function txTable(types, cols){
-  const rows = DB.txns.filter(t => types.includes(t.type));
-  return `<div class="table-card"><div class="table-scroll"><table><thead><tr>${cols.map(c=>`<th${c.n?' class="num"':""}>${c.h}</th>`).join("")}</tr></thead><tbody>
-  ${rows.map(t => `<tr>${cols.map(c=>c.f(t)).join("")}</tr>`).join("") || `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--faint);padding:30px">No records yet</td></tr>`}
-  </tbody></table></div></div>`;
-}
-const cId  = {h:"ID", f:t=>`<td class="muted">${t.id}</td>`};
-const cDate= {h:"Date", f:t=>`<td>${fmtD(t.date)}</td>`};
-const cItem= {h:"Item", f:t=>{const it=itemById(t.itemId);return `<td class="type-cell">${esc(itemName(it))}<div style="font-size:11px;color:var(--faint)">${itemCode(it)}</div></td>`}};
-const cBy  = {h:"By", f:t=>`<td class="muted">${esc(t.by||"")}</td>`};
-const cNote= {h:"Note", f:t=>`<td class="muted">${esc(t.note||t.reason||"\u2014")}</td>`};
-const cJob = {h:"Job", f:t=>{const j=t.jobId?byId(DB.jobs,t.jobId):null;return `<td>${j?esc(j.no)+`<div style="font-size:11px;color:var(--faint)">${esc(j.client)}</div>`:"\u2014"}</td>`}};
-const cReqr= {h:"Requisitor", f:t=>{const r=t.requisitorId?byId(DB.requisitors,t.requisitorId):null;return `<td>${r?esc(r.name)+`<div style="font-size:11px;color:var(--faint)">${esc(r.dept)}</div>`:"\u2014"}</td>`}};
-
-function renderStockIn(){
-  $("#view-stockin").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Stock In</b></div><h1>Stock In</h1><p>Material receiving from suppliers</p></div>
-    <div class="page-actions"><button class="btn btn-green" onclick="siModal()">\u2193 New Stock In</button></div></div>
-  ${txTable(["IN"], [cId, cDate, cItem,
-    {h:"Received", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num">${t.qtyIn||t.qty} ${it?esc(it.uomIn):""}</td>`}},
-    {h:"Added to Stock", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num pos">+${t.qty} ${it?esc(it.uomOut):""}</td>`}},
-    {h:"Supplier", f:t=>`<td>${esc((byId(DB.suppliers,t.supplierId)||{}).name||"\u2014")}</td>`},
-    {h:"Procurer", f:t=>`<td class="muted">${esc((byId(DB.procurers,t.procurerId)||{}).name||"\u2014")}</td>`},
-    cNote, cBy])}`;
-}
-function siModal(){
-  if(!canWrite()) return;
-  openModal(`<h3>New Stock In</h3><div class="sub">Receive material into the store</div>
-  <div class="field"><label>Item *</label><select class="select" id="fItem" onchange="siHint()">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select></div>
-  <div class="row-2">
-    <div class="field"><label>Quantity (purchase unit) *</label><input class="input" id="fQty" type="number" min="1" value="1" oninput="siHint()"><div class="hint" id="siHintEl"></div></div>
-    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
-  </div>
-  <div class="row-2">
-    <div class="field"><label>Supplier</label><select class="select" id="fSup"><option value="">\u2014</option>${opts(DB.suppliers,null,s=>s.name)}</select></div>
-    <div class="field"><label>Procurer</label><select class="select" id="fProc"><option value="">\u2014</option>${opts(DB.procurers,null,p=>p.name)}</select></div>
-  </div>
-  <div class="field"><label>Note</label><input class="input" id="fNote" placeholder="Challan no, remarks\u2026"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-green" onclick="submitSI()">Receive Stock</button></div>`);
-  window.siHint = () => {
-    const it = itemById($("#fItem").value), q = Number($("#fQty").value)||0;
-    $("#siHintEl").innerHTML = it ? `${q} ${esc(it.uomIn)} = <b>${q*it.mult} ${esc(it.uomOut)}</b> added to stock` : "";
-  };
-  siHint();
-}
-function submitSI(){
-  const it = itemById($("#fItem").value), qIn = Number($("#fQty").value);
-  if(!it) return toast("Please select an item");
-  if(!qIn || qIn<=0) return toast("Quantity must be at least 1");
-  const qty = qIn*it.mult;
-  it.stock += qty;
-  DB.txns.unshift({ id:nextSeq("si","SI-"), type:"IN", date:$("#fDate").value||todayISO(), itemId:it.id, qtyIn:qIn, qty, supplierId:$("#fSup").value||null, procurerId:$("#fProc").value||null, note:$("#fNote").value.trim(), by:currentUser.username });
-  audit(`Stock In: ${qty} ${it.uomOut} \u2014 ${it.desc}`);
-  save(); closeModal(); renderAll(); toast(`Received ${qty} ${it.uomOut} of ${it.desc}`);
-}
-
-function renderStockOut(){
-  $("#view-stockout").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Stock Out</b></div><h1>Stock Out</h1><p>Material issue against jobs</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="soModal()">\u2191 New Stock Out</button></div></div>
-  ${txTable(["OUT"], [cId, cDate, cItem,
-    {h:"Issued", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num neg">${t.qty} ${it?esc(it.uomOut):""}</td>`}},
-    cJob, cReqr, cNote, cBy,
-    {h:"", f:t=>`<td><button class="btn btn-sm" onclick="printSlip('${t.id}')">\ud83d\udda8 Slip</button></td>`}])}`;
-}
-function soModal(){
-  if(!canWrite()) return;
-  openModal(`<h3>New Stock Out</h3><div class="sub">Issue material to a job / department</div>
-  <div class="field"><label>Item *</label><select class="select" id="fItem" onchange="soHint()">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc+" ("+i.stock+" "+i.uomOut+")")}</select></div>
-  <div class="row-2">
-    <div class="field"><label>Quantity *</label><input class="input" id="fQty" type="number" min="1" value="1"><div class="hint" id="soHintEl"></div></div>
-    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
-  </div>
-  <div class="row-2">
-    <div class="field"><label>Job *</label><select class="select" id="fJob">${opts(DB.jobs.filter(j=>j.status!=="Closed"),null,j=>j.no+" \u00b7 "+j.client)}</select></div>
-    <div class="field"><label>Requisitor *</label><select class="select" id="fReqr">${opts(DB.requisitors,null,r=>r.name+" ("+r.dept+")")}</select></div>
-  </div>
-  <div class="field"><label>Note</label><input class="input" id="fNote" placeholder="Purpose, slip remarks\u2026"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitSO()">Issue Stock</button></div>`);
-  window.soHint = () => {
-    const it = itemById($("#fItem").value);
-    $("#soHintEl").innerHTML = it ? `Available: <b>${it.stock} ${esc(it.uomOut)}</b>` : "";
-  };
-  soHint();
-}
-function submitSO(){
-  const it = itemById($("#fItem").value), q = Number($("#fQty").value);
-  if(!it) return toast("Please select an item");
-  if(!q || q<=0) return toast("Quantity must be at least 1");
-  if(q > it.stock) return toast(`Not enough stock \u2014 only ${it.stock} ${it.uomOut} available`);
-  it.stock -= q;
-  DB.txns.unshift({ id:nextSeq("so","SO-"), type:"OUT", date:$("#fDate").value||todayISO(), itemId:it.id, qty:-q, jobId:$("#fJob").value||null, requisitorId:$("#fReqr").value||null, note:$("#fNote").value.trim(), by:currentUser.username });
-  audit(`Stock Out: ${q} ${it.uomOut} \u2014 ${it.desc}`);
-  save(); closeModal(); renderAll(); toast(`Issued ${q} ${it.uomOut} of ${it.desc}`);
-}
-function printSlip(txId){
-  const t = DB.txns.find(x=>x.id===txId); if(!t) return;
-  const it = itemById(t.itemId), j = t.jobId?byId(DB.jobs,t.jobId):null, r = t.requisitorId?byId(DB.requisitors,t.requisitorId):null;
-  $("#slipPrint").innerHTML = `
-  <div style="max-width:640px;margin:0 auto;font-family:Arial,sans-serif;color:#111">
-    <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px">
-      <div style="font-size:20px;font-weight:800">${esc(DB.settings.company)}</div>
-      <div style="font-size:12px">${esc(DB.settings.address)}</div>
-      <div style="font-size:15px;font-weight:700;margin-top:8px;letter-spacing:1px">STOCK OUT SLIP</div>
+  openModal(`<h2>${it?"Edit Item":"Add Item"}</h2><div class="hint" style="margin-bottom:14px">Type + Color + Thickness together make the item name</div>
+  <form onsubmit="submitItem(event${it?`,'${it.id}'`:""})">
+    <div class="field"><label>Type *</label><input class="input" id="itType" list="typesDl" value="${esc(it?it.type:"")}" placeholder="e.g. Melamine / Gorjon Ply / PVC / Acrylic" required>
+      <datalist id="typesDl">${itemTypes().map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div>
+    <div class="row-2">
+      <div class="field"><label>Color</label><input class="input" id="itColor" value="${esc(it?it.color:"")}" placeholder="e.g. Elegant / Antik / White"></div>
+      <div class="field"><label>Thickness</label><input class="input" id="itThick" value="${esc(it?it.thickness:"")}" placeholder="e.g. 18 mm / 5/6 mm"></div>
     </div>
-    <table style="width:100%;font-size:13px;margin-top:14px;border-collapse:collapse">
-      <tr><td style="padding:5px 0"><b>Slip No:</b> ${t.id}</td><td style="text-align:right"><b>Date:</b> ${fmtD(t.date)}</td></tr>
-      <tr><td style="padding:5px 0"><b>Job:</b> ${j?esc(j.no+" \u2014 "+j.client):"\u2014"}</td><td style="text-align:right"><b>Dept:</b> ${r?esc(r.dept):"\u2014"}</td></tr>
-      <tr><td style="padding:5px 0" colspan="2"><b>Requisitor:</b> ${r?esc(r.name):"\u2014"}</td></tr>
-    </table>
-    <table style="width:100%;font-size:13px;margin-top:10px;border-collapse:collapse" border="1" cellpadding="7">
-      <tr style="background:#eee"><th align="left">Code</th><th align="left">Item Description</th><th align="right">Qty</th><th align="left">Unit</th></tr>
-      <tr><td>${itemCode(it)}</td><td>${esc(itemName(it))}</td><td align="right">${Math.abs(t.qty)}</td><td>${it?esc(it.uomOut):""}</td></tr>
-    </table>
-    ${t.note?`<div style="font-size:12px;margin-top:8px"><b>Note:</b> ${esc(t.note)}</div>`:""}
-    <table style="width:100%;margin-top:70px;font-size:12px"><tr>
-      <td style="text-align:center;border-top:1px solid #111;width:30%">Store Keeper</td><td></td>
-      <td style="text-align:center;border-top:1px solid #111;width:30%">Received By</td><td></td>
-      <td style="text-align:center;border-top:1px solid #111;width:30%">Authorized</td>
-    </tr></table>
-  </div>`;
-  document.body.classList.add("slip-mode");
-  window.print();
+    <div class="row-3">
+      <div class="field"><label>Page No</label><input class="input" id="itPage" value="${esc(it?it.page:"")}" placeholder="Stock book page"></div>
+      <div class="field"><label>Unit</label><input class="input" id="itUom" value="${esc(it?(it.uom||"Pcs"):"Pcs")}" placeholder="Pcs / Sheet"></div>
+      <div class="field"><label>Alarm Qty</label><input class="input" id="itAlarm" type="number" min="0" value="${it?it.alarm:(DB.settings.alarmDefault||5)}"></div>
+    </div>
+    ${it?"":`<div class="field"><label>Opening Stock</label><input class="input" id="itOpen" type="number" min="0" value="0"></div>`}
+    <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary">${it?"Save Changes":"Add Item"}</button></div>
+  </form>`);
+  $("#itType").focus();
 }
-window.addEventListener("afterprint", () => document.body.classList.remove("slip-mode"));
-
-function renderReturns(){
-  $("#view-returns").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Returns</b></div><h1>Item Returns</h1><p>Material returned to store from jobs</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="rtModal()">\u21a9 New Return</button></div></div>
-  ${txTable(["RET"], [cId, cDate, cItem,
-    {h:"Returned", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num pos">+${t.qty} ${it?esc(it.uomOut):""}</td>`}},
-    cJob, cReqr, cNote, cBy])}`;
-}
-function rtModal(){
-  if(!canWrite()) return;
-  openModal(`<h3>New Item Return</h3><div class="sub">Return unused material back to store</div>
-  <div class="field"><label>Item *</label><select class="select" id="fItem">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select></div>
-  <div class="row-2">
-    <div class="field"><label>Quantity *</label><input class="input" id="fQty" type="number" min="1" value="1"></div>
-    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
-  </div>
-  <div class="row-2">
-    <div class="field"><label>From Job</label><select class="select" id="fJob"><option value="">\u2014</option>${opts(DB.jobs,null,j=>j.no+" \u00b7 "+j.client)}</select></div>
-    <div class="field"><label>Returned By</label><select class="select" id="fReqr"><option value="">\u2014</option>${opts(DB.requisitors,null,r=>r.name+" ("+r.dept+")")}</select></div>
-  </div>
-  <div class="field"><label>Note</label><input class="input" id="fNote" placeholder="Reason for return\u2026"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitRT()">Save Return</button></div>`);
-}
-function submitRT(){
-  const it = itemById($("#fItem").value), q = Number($("#fQty").value);
-  if(!it) return toast("Please select an item");
-  if(!q || q<=0) return toast("Quantity must be at least 1");
-  it.stock += q;
-  DB.txns.unshift({ id:nextSeq("rt","RT-"), type:"RET", date:$("#fDate").value||todayISO(), itemId:it.id, qty:q, jobId:$("#fJob").value||null, requisitorId:$("#fReqr").value||null, note:$("#fNote").value.trim(), by:currentUser.username });
-  audit(`Return: ${q} ${it.uomOut} \u2014 ${it.desc}`);
-  save(); closeModal(); renderAll(); toast("Return saved");
-}
-
-function renderAdjustments(){
-  $("#view-adjustments").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Adjustments</b></div><h1>Qty Adjustments</h1><p>Physical count corrections, damage &amp; wastage</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="adModal()">\u2696 New Adjustment</button></div></div>
-  ${txTable(["ADJ"], [cId, cDate, cItem,
-    {h:"Change", n:1, f:t=>{const it=itemById(t.itemId);return `<td class="num ${t.qty>0?"pos":"neg"}">${t.qty>0?"+":""}${t.qty} ${it?esc(it.uomOut):""}</td>`}},
-    {h:"Reason", f:t=>`<td>${esc(t.reason||"\u2014")}</td>`}, cBy])}`;
-}
-function adModal(){
-  if(!canWrite()) return;
-  openModal(`<h3>Qty Adjustment</h3><div class="sub">Set the actual counted stock \u2014 the difference is recorded</div>
-  <div class="field"><label>Item *</label><select class="select" id="fItem" onchange="adHint()">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select></div>
-  <div class="row-2">
-    <div class="field"><label>Actual Counted Qty *</label><input class="input" id="fQty" type="number" min="0" oninput="adHint()"><div class="hint" id="adHintEl"></div></div>
-    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
-  </div>
-  <div class="field"><label>Reason *</label><input class="input" id="fReason" placeholder="Damage / count correction / wastage\u2026"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitAD()">Apply</button></div>`);
-  window.adHint = () => {
-    const it = itemById($("#fItem").value), q = $("#fQty").value==="" ? null : Number($("#fQty").value);
-    $("#adHintEl").innerHTML = it ? `System stock: <b>${it.stock} ${esc(it.uomOut)}</b>${q!==null?` \u2192 change: <b>${q-it.stock>0?"+":""}${q-it.stock}</b>`:""}` : "";
-  };
-  adHint();
-}
-function submitAD(){
-  const it = itemById($("#fItem").value);
-  if(!it) return toast("Please select an item");
-  if($("#fQty").value==="") return toast("Please enter the counted quantity");
-  const q = Math.max(0, Number($("#fQty").value)), reason = $("#fReason").value.trim();
-  if(!reason) return toast("Please write a reason");
-  const delta = q - it.stock;
-  if(delta === 0) return toast("No difference \u2014 nothing to adjust");
-  it.stock = q;
-  DB.txns.unshift({ id:nextSeq("ad","AD-"), type:"ADJ", date:$("#fDate").value||todayISO(), itemId:it.id, qty:delta, reason, by:currentUser.username });
-  audit(`Adjustment: ${delta>0?"+":""}${delta} ${it.uomOut} \u2014 ${it.desc} (${reason})`);
-  save(); closeModal(); renderAll(); toast("Adjustment applied");
-}
-
-/* ---------- alerts ---------- */
-function renderAlerts(){
-  const low = lowItems();
-  $("#view-alerts").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Stock Alerts</b></div><h1>Stock Alerts</h1><p>${low.length} item${low.length===1?"":"s"} at or below alarm level</p></div>
-    <div class="page-actions"><button class="btn" onclick="exportCSV('stock-alerts.csv',['Code','Item','Stock','Alarm','Shortage'],lowItems().map(it=>[itemCode(it),it.desc,it.stock,it.alarm,Math.max(0,it.alarm-it.stock)]))">\u2913 Export CSV</button></div></div>
-  ${low.length===0 ? `<div class="card" style="text-align:center;padding:50px;color:var(--muted)"><div style="font-size:34px">\u2705</div><h3 style="margin:10px 0 4px">All good!</h3>No items are below their alarm level.</div>` : `
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Code</th><th>Item</th><th>Location</th><th class="num">Stock</th><th class="num">Alarm Level</th><th class="num">Shortage</th><th>Status</th><th></th></tr></thead><tbody>
-  ${low.sort((a,b)=>(a.stock-a.alarm)-(b.stock-b.alarm)).map(it=>`<tr><td class="muted">${itemCode(it)}</td><td class="type-cell">${esc(it.desc)}</td><td class="muted">${esc(it.loc||"\u2014")}</td><td class="num"><b>${it.stock}</b> ${esc(it.uomOut)}</td><td class="num">${it.alarm}</td><td class="num neg">${Math.max(0,it.alarm-it.stock)}</td><td>${statusBadge(it)}</td><td><button class="btn btn-sm btn-green" onclick="siModal()">\u2193 Stock In</button></td></tr>`).join("")}
-  </tbody></table></div></div>`}`;
-}
-
-/* ---------- requisitions ---------- */
-let REQ_LINES = [];
-function renderRequisitions(){
-  $("#view-requisitions").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Procurement / <b>Requisitions</b></div><h1>Requisitions</h1><p>Material requests \u2192 approve \u2192 issue from store</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="reqModal()">+ New Requisition</button></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Req No</th><th>Date</th><th>Job</th><th>Requisitor</th><th class="num">Lines</th><th>Status</th><th></th></tr></thead><tbody>
-  ${DB.requisitions.slice().sort((a,b)=>b.no.localeCompare(a.no)).map(q => { const j = byId(DB.jobs,q.jobId), r = byId(DB.requisitors,q.requisitorId);
-    return `<tr><td class="type-cell">${esc(q.no)}</td><td>${fmtD(q.date)}</td><td>${j?esc(j.no)+`<div style="font-size:11px;color:var(--faint)">${esc(j.client)}</div>`:"\u2014"}</td><td>${r?esc(r.name)+`<div style="font-size:11px;color:var(--faint)">${esc(r.dept)}</div>`:"\u2014"}</td><td class="num">${q.lines.length}</td><td><span class="badge ${q.status.toLowerCase()}">${q.status.toUpperCase()}</span></td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="viewReq('${q.id}')">Open</button></td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No requisitions yet</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function reqLinesHtml(){
-  return `<table style="margin-bottom:8px"><thead><tr><th>Item</th><th class="num">Qty</th><th></th></tr></thead><tbody>
-  ${REQ_LINES.map((l,i) => { const it = itemById(l.itemId); return `<tr><td>${esc(itemName(it))}</td><td class="num">${l.qty} ${it?esc(it.uomOut):""}</td><td><button class="btn btn-sm btn-danger-soft" onclick="REQ_LINES.splice(${i},1);refreshReqLines()">\u00d7</button></td></tr>`; }).join("") || `<tr><td colspan="3" style="color:var(--faint);text-align:center">No items added yet</td></tr>`}
-  </tbody></table>`;
-}
-function reqModal(){
-  if(!canWrite()) return;
-  REQ_LINES = [];
-  openModal(`<h3>New Requisition</h3><div class="sub">Request materials for a job</div>
-  <div class="row-2">
-    <div class="field"><label>Job *</label><select class="select" id="fJob">${opts(DB.jobs.filter(j=>j.status!=="Closed"),null,j=>j.no+" \u00b7 "+j.client)}</select></div>
-    <div class="field"><label>Requisitor *</label><select class="select" id="fReqr">${opts(DB.requisitors,null,r=>r.name+" ("+r.dept+")")}</select></div>
-  </div>
-  <div class="field"><label>Add Items</label>
-    <div style="display:flex;gap:8px"><select class="select" id="fLineItem" style="flex:1">${opts(DB.items,null,i=>itemCode(i)+" \u00b7 "+i.desc)}</select><input class="input" id="fLineQty" type="number" min="1" value="1" style="width:90px"><button class="btn" onclick="addReqLine()">Add</button></div>
-  </div>
-  <div id="reqLines">${reqLinesHtml()}</div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitReq()">Create Requisition</button></div>`, true);
-  window.refreshReqLines = () => { $("#reqLines").innerHTML = reqLinesHtml(); };
-  window.addReqLine = () => {
-    const itemId = $("#fLineItem").value, qty = Number($("#fLineQty").value);
-    if(!qty || qty<=0) return toast("Qty must be at least 1");
-    const ex = REQ_LINES.find(l=>l.itemId===itemId);
-    if(ex) ex.qty += qty; else REQ_LINES.push({itemId, qty});
-    refreshReqLines();
-  };
-}
-function submitReq(){
-  if(REQ_LINES.length===0) return toast("Add at least one item");
-  const q = { id:"q"+Date.now(), no:nextSeq("req","REQ-"), jobId:$("#fJob").value, requisitorId:$("#fReqr").value, date:todayISO(), status:"Pending", lines:REQ_LINES.slice() };
-  DB.requisitions.push(q);
-  audit("Created requisition "+q.no);
-  save(); closeModal(); renderAll(); toast(q.no+" created");
-}
-function viewReq(id){
-  const q = byId(DB.requisitions,id); if(!q) return;
-  const j = byId(DB.jobs,q.jobId), r = byId(DB.requisitors,q.requisitorId);
-  const lines = q.lines.map(l => { const it = itemById(l.itemId);
-    const short = it && q.status!=="Issued" && l.qty > it.stock;
-    return `<tr><td>${esc(itemName(it))}<div style="font-size:11px;color:var(--faint)">${itemCode(it)}</div></td><td class="num">${l.qty} ${it?esc(it.uomOut):""}</td><td class="num">${it?it.stock:"\u2014"}</td><td>${short?'<span class="badge out">SHORT</span>':'<span class="badge ok">OK</span>'}</td></tr>`; }).join("");
-  const canAct = currentUser.access !== "Viewer";
-  openModal(`<h3>${esc(q.no)} <span class="badge ${q.status.toLowerCase()}" style="vertical-align:2px">${q.status.toUpperCase()}</span></h3>
-  <div class="sub">${fmtD(q.date)} \u00b7 ${j?esc(j.no+" \u2014 "+j.client):""} \u00b7 ${r?esc(r.name+" ("+r.dept+")"):""}</div>
-  <table><thead><tr><th>Item</th><th class="num">Requested</th><th class="num">In Stock</th><th>Check</th></tr></thead><tbody>${lines}</tbody></table>
-  <div class="modal-actions">
-    <button class="btn" onclick="closeModal()">Close</button>
-    ${canAct && q.status==="Pending" ? `<button class="btn btn-danger-soft" onclick="setReqStatus('${q.id}','Rejected')">Reject</button><button class="btn btn-primary" onclick="setReqStatus('${q.id}','Approved')">Approve</button>` : ""}
-    ${canAct && q.status==="Approved" ? `<button class="btn btn-green" onclick="issueReq('${q.id}')">Issue All from Store</button>` : ""}
-  </div>`, true);
-}
-function setReqStatus(id, st){
-  const q = byId(DB.requisitions,id); q.status = st;
-  audit(q.no+" "+st.toLowerCase()); save(); closeModal(); renderAll(); toast(q.no+" "+st.toLowerCase());
-}
-function issueReq(id){
-  const q = byId(DB.requisitions,id);
-  for(const l of q.lines){ const it = itemById(l.itemId);
-    if(!it) return toast("An item in this requisition was deleted");
-    if(l.qty > it.stock) return toast(`Not enough stock for ${it.desc} \u2014 only ${it.stock} ${it.uomOut} available`);
+function submitItem(e, id){
+  e.preventDefault(); if(!canWrite()) return;
+  const type = $("#itType").value.trim(); if(!type){ toast("Type is required"); return; }
+  const data = { type, color: $("#itColor").value.trim(), thickness: $("#itThick").value.trim(), page: $("#itPage").value.trim(), uom: $("#itUom").value.trim() || "Pcs", alarm: Math.max(0, Number($("#itAlarm").value)||0) };
+  if(id){
+    const it = itemById(id); if(!it) return;
+    Object.assign(it, data); delete it.desc;
+    audit("Updated item: "+itemName(it));
+  } else {
+    const sl = DB.items.reduce((m,x) => Math.max(m, x.sl||0), 0) + 1;
+    const it = Object.assign({ id:"i"+Date.now(), sl, stock: Math.max(0, Number($("#itOpen").value)||0) }, data);
+    DB.items.push(it);
+    audit("Added item: "+itemName(it));
   }
-  q.lines.forEach(l => { const it = itemById(l.itemId);
-    it.stock -= l.qty;
-    DB.txns.unshift({ id:nextSeq("so","SO-"), type:"OUT", date:todayISO(), itemId:it.id, qty:-l.qty, jobId:q.jobId, requisitorId:q.requisitorId, note:"Against "+q.no, by:currentUser.username });
-  });
-  q.status = "Issued";
-  audit("Issued "+q.no+" ("+q.lines.length+" items)");
-  save(); closeModal(); renderAll(); toast(q.no+" issued \u2014 stock updated");
+  save(); closeModal(); renderItems(); toast(id?"Item updated":"Item added");
 }
-
-/* ---------- parties ---------- */
-function renderSuppliers(){
-  $("#view-suppliers").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Procurement / <b>Suppliers</b></div><h1>Suppliers</h1><p>${DB.suppliers.length} suppliers</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="supModal()">+ Add Supplier</button></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Address</th><th class="num">Stock Ins</th><th></th></tr></thead><tbody>
-  ${DB.suppliers.map(s => `<tr><td class="type-cell">${esc(s.name)}</td><td>${esc(s.contact||"\u2014")}</td><td class="muted">${esc(s.phone||"\u2014")}</td><td class="muted">${esc(s.address||"\u2014")}</td><td class="num">${DB.txns.filter(t=>t.supplierId===s.id).length}</td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="supModal('${s.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delSup('${s.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--faint);padding:30px">No suppliers yet</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function supModal(id){
+function delItem(id){
   if(!canWrite()) return;
-  const s = id ? byId(DB.suppliers,id) : null;
-  openModal(`<h3>${s?"Edit":"Add"} Supplier</h3><div class="sub"></div>
-  <div class="field"><label>Name *</label><input class="input" id="fName" value="${s?esc(s.name):""}"></div>
-  <div class="row-2">
-    <div class="field"><label>Contact Person</label><input class="input" id="fContact" value="${s?esc(s.contact||""):""}"></div>
-    <div class="field"><label>Phone</label><input class="input" id="fPhone" value="${s?esc(s.phone||""):""}"></div>
-  </div>
-  <div class="field"><label>Address</label><input class="input" id="fAddr" value="${s?esc(s.address||""):""}"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitSup('${id||""}')">Save</button></div>`);
+  const it = itemById(id); if(!it) return;
+  if(DB.txns.some(t => t.itemId === id)){ toast("Cannot delete \u2014 this item has stock transactions"); return; }
+  if(!confirm("Delete item \""+itemName(it)+"\"?")) return;
+  DB.items = DB.items.filter(x => x.id !== id);
+  audit("Deleted item: "+itemName(it));
+  save(); renderItems(); toast("Item deleted");
 }
-function submitSup(id){
-  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
-  const data = { name, contact:$("#fContact").value.trim(), phone:$("#fPhone").value.trim(), address:$("#fAddr").value.trim() };
-  if(id){ Object.assign(byId(DB.suppliers,id), data); audit("Edited supplier: "+name); }
-  else{ DB.suppliers.push(Object.assign({id:"s"+Date.now()}, data)); audit("Added supplier: "+name); }
-  save(); closeModal(); renderAll(); toast("Supplier saved");
-}
-function delSup(id){
-  if(!canWrite()) return;
-  const s = byId(DB.suppliers,id);
-  if(!confirm(`Delete supplier "${s.name}"?`)) return;
-  DB.suppliers = DB.suppliers.filter(x=>x.id!==id); audit("Deleted supplier: "+s.name); save(); renderAll();
-}
-function renderProcurers(){
-  $("#view-procurers").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Procurement / <b>Procurers</b></div><h1>Procurers</h1><p>Employees who purchase materials</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="procModal()">+ Add Procurer</button></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Phone</th><th class="num">Purchases</th><th></th></tr></thead><tbody>
-  ${DB.procurers.map(p => `<tr><td class="muted">${esc(p.empId||"\u2014")}</td><td class="type-cell">${esc(p.name)}</td><td class="muted">${esc(p.phone||"\u2014")}</td><td class="num">${DB.txns.filter(t=>t.procurerId===p.id).length}</td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="procModal('${p.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delProc('${p.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center;color:var(--faint);padding:30px">No procurers yet</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function procModal(id){
-  if(!canWrite()) return;
-  const p = id ? byId(DB.procurers,id) : null;
-  openModal(`<h3>${p?"Edit":"Add"} Procurer</h3><div class="sub"></div>
-  <div class="row-2">
-    <div class="field"><label>Employee ID</label><input class="input" id="fEmp" value="${p?esc(p.empId||""):""}"></div>
-    <div class="field"><label>Phone</label><input class="input" id="fPhone" value="${p?esc(p.phone||""):""}"></div>
-  </div>
-  <div class="field"><label>Name *</label><input class="input" id="fName" value="${p?esc(p.name):""}"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitProc('${id||""}')">Save</button></div>`);
-}
-function submitProc(id){
-  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
-  const data = { name, empId:$("#fEmp").value.trim(), phone:$("#fPhone").value.trim() };
-  if(id){ Object.assign(byId(DB.procurers,id), data); audit("Edited procurer: "+name); }
-  else{ DB.procurers.push(Object.assign({id:"p"+Date.now()}, data)); audit("Added procurer: "+name); }
-  save(); closeModal(); renderAll(); toast("Procurer saved");
-}
-function delProc(id){
-  if(!canWrite()) return;
-  const p = byId(DB.procurers,id);
-  if(!confirm(`Delete procurer "${p.name}"?`)) return;
-  DB.procurers = DB.procurers.filter(x=>x.id!==id); audit("Deleted procurer: "+p.name); save(); renderAll();
-}
-function renderRequisitors(){
-  $("#view-requisitors").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Production / <b>Requisitors</b></div><h1>Requisitors</h1><p>People who request &amp; receive materials</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="reqrModal()">+ Add Requisitor</button></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Name</th><th>Department</th><th class="num">Stock Outs</th><th></th></tr></thead><tbody>
-  ${DB.requisitors.map(r => `<tr><td class="type-cell">${esc(r.name)}</td><td>${esc(r.dept||"\u2014")}</td><td class="num">${DB.txns.filter(t=>t.requisitorId===r.id && t.type==="OUT").length}</td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="reqrModal('${r.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delReqr('${r.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No requisitors yet</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function reqrModal(id){
-  if(!canWrite()) return;
-  const r = id ? byId(DB.requisitors,id) : null;
-  openModal(`<h3>${r?"Edit":"Add"} Requisitor</h3><div class="sub"></div>
-  <div class="field"><label>Name *</label><input class="input" id="fName" value="${r?esc(r.name):""}"></div>
-  <div class="field"><label>Department *</label><input class="input" id="fDept" value="${r?esc(r.dept||""):""}" placeholder="Production / Site / Design\u2026"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitReqr('${id||""}')">Save</button></div>`);
-}
-function submitReqr(id){
-  const name = $("#fName").value.trim(); if(!name) return toast("Please write a name");
-  const data = { name, dept:$("#fDept").value.trim() };
-  if(id){ Object.assign(byId(DB.requisitors,id), data); audit("Edited requisitor: "+name); }
-  else{ DB.requisitors.push(Object.assign({id:"r"+Date.now()}, data)); audit("Added requisitor: "+name); }
-  save(); closeModal(); renderAll(); toast("Requisitor saved");
-}
-function delReqr(id){
-  if(!canWrite()) return;
-  const r = byId(DB.requisitors,id);
-  if(!confirm(`Delete requisitor "${r.name}"?`)) return;
-  DB.requisitors = DB.requisitors.filter(x=>x.id!==id); audit("Deleted requisitor: "+r.name); save(); renderAll();
-}
-
-/* ---------- jobs ---------- */
-function renderJobs(){
-  $("#view-jobs").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Production / <b>Jobs & Delivery</b></div><h1>Jobs &amp; Delivery</h1><p>Client jobs, material consumption &amp; deliveries</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="jobModal()">+ Add Job</button></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Job No</th><th>Client</th><th>Description</th><th class="num">Materials Used</th><th class="num">Deliveries</th><th>Status</th><th></th></tr></thead><tbody>
-  ${DB.jobs.slice().sort((a,b)=>b.no.localeCompare(a.no)).map(j => `<tr><td class="type-cell">${esc(j.no)}</td><td>${esc(j.client)}</td><td class="muted">${esc(j.desc)}</td><td class="num">${DB.txns.filter(t=>t.jobId===j.id && t.type==="OUT").length}</td><td class="num">${(j.deliveries||[]).length}</td><td><span class="badge ${j.status.toLowerCase()}">${j.status.toUpperCase()}</span></td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="jobDetails('${j.id}')">Details</button> <button class="btn btn-sm" onclick="jobModal('${j.id}')">Edit</button></td></tr>`).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No jobs yet</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function jobModal(id){
-  if(!canWrite()) return;
-  const j = id ? byId(DB.jobs,id) : null;
-  openModal(`<h3>${j?"Edit Job "+esc(j.no):"Add New Job"}</h3><div class="sub"></div>
-  <div class="field"><label>Client *</label><input class="input" id="fClient" value="${j?esc(j.client):""}"></div>
-  <div class="field"><label>Description *</label><input class="input" id="fDesc" value="${j?esc(j.desc):""}"></div>
-  ${j?`<div class="field"><label>Status</label><select class="select" id="fStatus">${["Running","Delivered","Closed"].map(s=>`<option ${j.status===s?"selected":""}>${s}</option>`).join("")}</select></div>`:""}
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitJob('${id||""}')">Save</button></div>`);
-}
-function submitJob(id){
-  const client = $("#fClient").value.trim(), desc = $("#fDesc").value.trim();
-  if(!client || !desc) return toast("Client and description are required");
-  if(id){ const j = byId(DB.jobs,id); Object.assign(j, {client, desc, status:$("#fStatus").value}); audit("Edited job "+j.no); }
-  else{
-    DB.seq.job = (DB.seq.job||0)+1;
-    const no = "JB-"+new Date().getFullYear()+"-"+String(DB.seq.job).padStart(3,"0");
-    DB.jobs.push({id:"j"+Date.now(), no, client, desc, status:"Running", deliveries:[]});
-    audit("Added job "+no);
+function parseCSV(text){
+  const rows = []; let row = [], cur = "", inQ = false;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(inQ){
+      if(ch === '"'){ if(text[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
+      else cur += ch;
+    } else if(ch === '"') inQ = true;
+    else if(ch === ","){ row.push(cur); cur = ""; }
+    else if(ch === "\n" || ch === "\r"){ if(ch === "\r" && text[i+1] === "\n") i++; row.push(cur); rows.push(row); row = []; cur = ""; }
+    else cur += ch;
   }
-  save(); closeModal(); renderAll(); toast("Job saved");
+  if(cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ""));
 }
-function jobDetails(id){
-  const j = byId(DB.jobs,id); if(!j) return;
-  const used = {};
-  DB.txns.filter(t=>t.jobId===id).forEach(t => {
-    used[t.itemId] = used[t.itemId] || {out:0, ret:0};
-    if(t.type==="OUT") used[t.itemId].out += -t.qty;
-    if(t.type==="RET") used[t.itemId].ret += t.qty;
+function importItems(inp){
+  const f = inp.files[0]; if(!f) return;
+  if(!canWrite()){ inp.value = ""; return; }
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const rows = parseCSV(String(rd.result));
+      if(rows.length < 2){ toast("CSV file is empty"); inp.value = ""; return; }
+      const head = rows[0].map(h => String(h).trim().toLowerCase());
+      const col = name => head.findIndex(h => h.includes(name));
+      const cType = col("type"), cColor = col("color"), cThick = col("thick"), cPage = col("page"), cStock = col("stock"), cUnit = col("unit") >= 0 ? col("unit") : col("uom"), cAlarm = col("alarm");
+      if(cType < 0){ toast('CSV needs a "Type" column'); inp.value = ""; return; }
+      let added = 0, skipped = 0;
+      let sl = DB.items.reduce((m,x) => Math.max(m, x.sl||0), 0);
+      const keyOf = (t,c,th) => (t+"|"+c+"|"+th).toLowerCase();
+      const seen = new Set(DB.items.map(it => keyOf(it.type||"", it.color||"", it.thickness||"")));
+      rows.slice(1).forEach(r => {
+        const type = String(r[cType]||"").trim(); if(!type){ skipped++; return; }
+        const color = cColor >= 0 ? String(r[cColor]||"").trim() : "";
+        const thick = cThick >= 0 ? String(r[cThick]||"").trim() : "";
+        const k = keyOf(type, color, thick);
+        if(seen.has(k)){ skipped++; return; }
+        seen.add(k); sl++;
+        DB.items.push({
+          id: "i" + Date.now() + "_" + sl, sl,
+          page: cPage >= 0 ? String(r[cPage]||"").trim() : "",
+          type, color, thickness: thick,
+          uom: (cUnit >= 0 && String(r[cUnit]||"").trim()) || "Pcs",
+          alarm: cAlarm >= 0 ? Math.max(0, Number(r[cAlarm])||0) : (DB.settings.alarmDefault||5),
+          stock: cStock >= 0 ? (Number(String(r[cStock]).replace(/,/g,"").trim())||0) : 0
+        });
+        added++;
+      });
+      audit("Imported "+added+" items from CSV");
+      save(); renderItems();
+      toast("Imported "+added+" items" + (skipped ? " \u00b7 skipped "+skipped+" (blank/duplicate)" : ""));
+    }catch(err){ console.error(err); toast("Could not read CSV file"); }
+    inp.value = "";
+  };
+  rd.readAsText(f);
+}
+function exportItems(){
+  exportCSV("items.csv", ["SL","Page","Type","Color","Thickness","Unit","Stock","Alarm Qty","Status"],
+    DB.items.map(it => [it.sl, it.page||"", it.type||itemName(it), it.color||"", it.thickness||"", it.uom||"Pcs", it.stock, it.alarm, it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]));
+}
+
+/* ---------- stock in / out ---------- */
+let SI_F = { q:"", item:"", from:"", to:"" }, SO_F = { q:"", item:"", from:"", to:"" };
+function txnRows(kind, f){
+  return DB.txns.filter(t => {
+    if(t.type !== kind) return false;
+    if(f.item && t.itemId !== f.item) return false;
+    if(f.from && t.date < f.from) return false;
+    if(f.to && t.date > f.to) return false;
+    if(f.q){ const h = (itemName(itemById(t.itemId))+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
+    return true;
   });
-  const rows = Object.keys(used).map(iid => { const it = itemById(iid), u = used[iid];
-    const net = u.out-u.ret, val = it ? net*(it.price/(it.mult||1)) : 0;
-    return `<tr><td>${esc(itemName(it))}</td><td class="num">${u.out}</td><td class="num">${u.ret}</td><td class="num"><b>${net}</b> ${it?esc(it.uomOut):""}</td><td class="num">${tk(val)}</td></tr>`; }).join("");
-  const totalVal = Object.keys(used).reduce((s,iid)=>{ const it=itemById(iid); return s + (it ? (used[iid].out-used[iid].ret)*(it.price/(it.mult||1)) : 0); },0);
-  openModal(`<h3>${esc(j.no)} \u2014 ${esc(j.client)} <span class="badge ${j.status.toLowerCase()}" style="vertical-align:2px">${j.status.toUpperCase()}</span></h3>
-  <div class="sub">${esc(j.desc)}</div>
-  <h3 style="font-size:13px;margin:10px 0 6px">Material Consumption \u2014 total ${tk(totalVal)}</h3>
-  <table><thead><tr><th>Item</th><th class="num">Out</th><th class="num">Returned</th><th class="num">Net Used</th><th class="num">Value</th></tr></thead><tbody>${rows || `<tr><td colspan="5" style="color:var(--faint);text-align:center">No materials issued yet</td></tr>`}</tbody></table>
-  <h3 style="font-size:13px;margin:14px 0 6px">Deliveries</h3>
-  ${(j.deliveries||[]).map(d=>`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--border2)"><b>${fmtD(d.date)}</b> \u2014 ${esc(d.note)} <span style="color:var(--faint)">(${esc(d.by)})</span></div>`).join("") || `<div style="color:var(--faint);font-size:13px">No deliveries recorded</div>`}
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Close</button>${currentUser.access!=="Viewer"?`<button class="btn btn-green" onclick="delivModal('${j.id}')">+ Record Delivery</button>`:""}</div>`, true);
 }
-function delivModal(jobId){
-  openModal(`<h3>Record Delivery</h3><div class="sub">${esc(byId(DB.jobs,jobId).no)}</div>
-  <div class="row-2">
-    <div class="field"><label>Date</label><input class="input" id="fDate" type="date" value="${todayISO()}"></div>
-    <div class="field"><label>Mark job as</label><select class="select" id="fStatus"><option value="">Keep current status</option><option>Delivered</option><option>Closed</option></select></div>
+function renderStockIn(){ renderTxns("IN"); }
+function renderStockOut(){ renderTxns("OUT"); }
+function renderTxns(kind){
+  const fin = kind === "IN", f = fin ? SI_F : SO_F, F = fin ? "SI_F" : "SO_F";
+  const rows = txnRows(kind, f);
+  const total = rows.reduce((s,t) => s + Math.abs(Number(t.qty)||0), 0);
+  $(fin ? "#view-stockin" : "#view-stockout").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>${fin?"Stock In":"Stock Out"}</b></div><h1>${fin?"Stock In":"Stock Out"}</h1><p>${fin?"Material received into store":"Material issued / delivered from store"}</p></div>
+    <div class="page-actions">
+      <button class="btn" onclick="exportTxns('${kind}')">\u2913 Export Excel</button>
+      <button class="btn ${fin?"btn-green":"btn-primary"}" onclick="txnModal('${kind}')">+ New ${fin?"Stock In":"Stock Out"}</button>
+    </div></div>
+  <div class="filter-bar">
+    <div class="search-wrap"><input class="input" placeholder="Search item, note, user\u2026" value="${esc(f.q)}" oninput="${F}.q=this.value;renderTxns('${kind}')"></div>
+    <select class="select" onchange="${F}.item=this.value;renderTxns('${kind}')"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemName(a).localeCompare(itemName(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemName(it))}</option>`).join("")}</select>
+    <input type="date" class="input" style="max-width:160px" value="${f.from}" onchange="${F}.from=this.value;renderTxns('${kind}')">
+    <input type="date" class="input" style="max-width:160px" value="${f.to}" onchange="${F}.to=this.value;renderTxns('${kind}')">
   </div>
-  <div class="field"><label>Delivery Note *</label><input class="input" id="fNote" placeholder="What was delivered\u2026"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-green" onclick="submitDeliv('${jobId}')">Save Delivery</button></div>`);
+  <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
+  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th class="num">Qty</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="delTxn('${t.id}')">Delete</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
+  </tbody></table></div></div>`;
 }
-function submitDeliv(jobId){
-  const note = $("#fNote").value.trim(); if(!note) return toast("Please write a delivery note");
-  const j = byId(DB.jobs,jobId);
-  j.deliveries = j.deliveries || [];
-  j.deliveries.push({ date:$("#fDate").value||todayISO(), note, by:currentUser.username });
-  if($("#fStatus").value) j.status = $("#fStatus").value;
-  audit("Delivery recorded for "+j.no);
-  save(); closeModal(); renderAll(); toast("Delivery recorded");
+function txnModal(kind){
+  if(!canWrite()) return;
+  const fin = kind === "IN";
+  openModal(`<h2>${fin?"New Stock In":"New Stock Out"}</h2><div class="hint" style="margin-bottom:14px">${fin?"Add received material to stock":"Issue material from stock"}</div>
+  <form onsubmit="submitTxn(event,'${kind}')">
+    <div class="field"><label>Item *</label><select class="select" id="txItem" required><option value="">Select item\u2026</option>${DB.items.slice().sort((a,b)=>itemName(a).localeCompare(itemName(b))).map(it=>`<option value="${it.id}">${esc(itemName(it))} \u2014 ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select></div>
+    <div class="row-2">
+      <div class="field"><label>Date</label><input class="input" type="date" id="txDate" value="${todayISO()}" required></div>
+      <div class="field"><label>Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
+    </div>
+    <div class="field"><label>Note (optional)</label><input class="input" id="txNote" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}"></div>
+    <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn ${fin?"btn-green":"btn-primary"}">Save Entry</button></div>
+  </form>`);
+}
+function submitTxn(e, kind){
+  e.preventDefault(); if(!canWrite()) return;
+  const fin = kind === "IN";
+  const it = itemById($("#txItem").value); if(!it){ toast("Please select an item"); return; }
+  const qty = Number($("#txQty").value);
+  if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
+  if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
+  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date: $("#txDate").value || todayISO(), itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
+  DB.txns.push(t); sortTxns();
+  it.stock += t.qty;
+  audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
+  save(); closeModal(); renderAll(); toast(fin?"Stock In saved":"Stock Out saved");
+}
+async function delTxn(id){
+  if(!isAdmin()){ toast("Only admin can delete entries"); return; }
+  const t = DB.txns.find(x => x.id === id); if(!t) return;
+  if(!confirm("Delete entry "+id+"? Stock will be adjusted back.")) return;
+  const it = itemById(t.itemId);
+  if(it) it.stock -= Number(t.qty)||0;
+  DB.txns = DB.txns.filter(x => x.id !== id);
+  SAVED_TXN.delete(id);
+  try{ await fdb.collection("erp_txns").doc(id).delete(); }catch(err){ console.error(err); }
+  audit("Deleted entry "+id);
+  save(); renderAll(); toast("Entry deleted");
+}
+function exportTxns(kind){
+  const fin = kind === "IN";
+  const rows = txnRows(kind, fin ? SI_F : SO_F);
+  exportCSV(fin ? "stock-in.csv" : "stock-out.csv",
+    ["ID","Date","Type","Color","Thickness","Item","Qty","Unit","Note","By"],
+    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
 }
 
 /* ---------- reports ---------- */
-let REP = { type:"ledger", from:daysAgo(29), to:todayISO(), q:"" }, REP_OUT = null;
+let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"" }, REP_OUT = null;
 const REP_TYPES = [
-  ["ledger","Ledger Entries (date range)"],
-  ["clientwise","Client-wise Balance"],
-  ["itemwise","Item-wise Balance"],
-  ["jobwise","Job-wise Summary"]
+  ["txns","All Transactions (date range)"],
+  ["itemwise","Item-wise In / Out / Net"],
+  ["typewise","Type-wise Summary"],
+  ["stock","Current Stock List"],
+  ["low","Low Stock Report"]
 ];
 function runReport(){
-  ensureCL();
   const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
-  const inRange = e => e.date >= from && e.date <= to;
-  const hay = e => { const it = itemById(e.itemId); return (clientName(e.clientId)+" "+(e.jobNo||"")+" "+(it?it.desc:"")+" "+(e.note||"")+" "+(e.user||"")).toLowerCase(); };
-  const L = DB.ledger.filter(e => inRange(e) && (!q || hay(e).includes(q)));
-  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + ` (${fmtD(from)} \u2013 ${fmtD(to)})` + (q ? ` \u00b7 search: "${REP.q}"` : "");
+  const inRange = t => t.date >= from && t.date <= to;
+  const hay = t => { const it = itemById(t.itemId); return (itemName(it)+" "+(it?it.page||"":"")+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); };
+  const ihay = it => (itemName(it)+" "+(it.page||"")+" "+(it.type||"")).toLowerCase();
+  const T = DB.txns.filter(t => inRange(t) && (!q || hay(t).includes(q)));
+  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (q ? ` \u00b7 search: "${REP.q}"` : "");
   let head = [], rows = [];
-  if(REP.type==="ledger"){
-    head = ["Date","Client","Job No","Item","Type","Qty","UOM","Note","By"];
-    rows = L.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(e => { const it = itemById(e.itemId); return [e.date, clientName(e.clientId), e.jobNo||"", itemName(it), e.type==="JOMA"?"Joma (In)":"Sold (Out)", r2(e.qty), it?it.uomOut:"", e.note||"", e.user||""]; });
-  } else if(REP.type==="clientwise"){
-    head = ["Client","Item","Total Joma","Total Sold","Balance","UOM"];
-    const map = {};
-    L.forEach(e => { const k = e.clientId+"|"+e.itemId; const m = map[k]||(map[k]={c:e.clientId,i:e.itemId,j:0,s:0}); if(e.type==="JOMA") m.j+=Number(e.qty)||0; else m.s+=Number(e.qty)||0; });
-    rows = Object.values(map).sort((a,b)=>clientName(a.c).localeCompare(clientName(b.c))).map(m => { const it = itemById(m.i); return [clientName(m.c), itemName(it), r2(m.j), r2(m.s), r2(m.j-m.s), it?it.uomOut:""]; });
+  if(REP.type==="txns"){
+    head = ["ID","Date","Item","Type","Qty","Unit","Note","By"];
+    rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
+      .map(t => { const it = itemById(t.itemId); return [t.id, t.date, itemName(it), t.type==="IN"?"Stock In":"Stock Out", Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
-    head = ["Item Code","Item","Total Joma","Total Sold","Balance","UOM"];
+    head = ["Item","Type","Thickness","Stock In","Stock Out","Net","Current Stock","Unit"];
     const map = {};
-    L.forEach(e => { const m = map[e.itemId]||(map[e.itemId]={j:0,s:0}); if(e.type==="JOMA") m.j+=Number(e.qty)||0; else m.s+=Number(e.qty)||0; });
-    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemCode(it), itemName(it), r2(m.j), r2(m.s), r2(m.j-m.s), it?it.uomOut:""]; });
-  } else if(REP.type==="jobwise"){
-    head = ["Client","Job No","Item","Joma","Sold","Balance","UOM"];
+    T.forEach(t => { const m = map[t.itemId]||(map[t.itemId]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
+    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemName(it), it?it.type||"":"", it?it.thickness||"":"", m.i, m.o, m.i-m.o, it?it.stock:"", it?it.uom||"Pcs":""]; })
+      .sort((a,b) => String(a[0]).localeCompare(String(b[0])));
+  } else if(REP.type==="typewise"){
+    head = ["Type","Stock In","Stock Out","Net","Current Stock"];
     const map = {};
-    L.forEach(e => { const k = e.clientId+"|"+(e.jobNo||"(no job)")+"|"+e.itemId; const m = map[k]||(map[k]={c:e.clientId,jn:e.jobNo||"(no job)",i:e.itemId,j:0,s:0}); if(e.type==="JOMA") m.j+=Number(e.qty)||0; else m.s+=Number(e.qty)||0; });
-    rows = Object.values(map).sort((a,b)=>clientName(a.c).localeCompare(clientName(b.c)) || String(a.jn).localeCompare(String(b.jn))).map(m => { const it = itemById(m.i); return [clientName(m.c), m.jn, itemName(it), r2(m.j), r2(m.s), r2(m.j-m.s), it?it.uomOut:""]; });
+    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.type||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
+    rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.type||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
+  } else if(REP.type==="stock"){
+    head = ["SL","Page","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
+    rows = DB.items.filter(it => !q || ihay(it).includes(q)).map(it => [it.sl, it.page||"", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
+  } else if(REP.type==="low"){
+    head = ["Item","Type","Thickness","Current Stock","Alarm Qty","Shortage","Unit"];
+    rows = lowItems().filter(it => !q || ihay(it).includes(q)).map(it => [itemName(it), it.type||"", it.thickness||"", it.stock, it.alarm, Math.max(0, it.alarm-it.stock), it.uom||"Pcs"]);
   }
   REP_OUT = { title, head, rows };
   renderReports();
@@ -1448,7 +969,7 @@ function renderReports(){
       <input class="input" type="date" style="width:auto" value="${REP.from}" onchange="REP.from=this.value;runReport()">
       <span style="color:var(--faint)">to</span>
       <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
-      <input class="input" style="max-width:220px" placeholder="Search client, job, item\u2026" value="${esc(REP.q||"")}" onchange="REP.q=this.value;runReport()">
+      <input class="input" style="max-width:220px" placeholder="Search item, note, user\u2026" value="${esc(REP.q||"")}" onchange="REP.q=this.value;runReport()">
       <button class="btn btn-primary" onclick="runReport()">Run Report</button>
       ${REP_OUT?`<button class="btn" onclick="exportCSV('report.csv',REP_OUT.head,REP_OUT.rows)">\u2913 Excel</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
     </div>
@@ -1457,188 +978,6 @@ function renderReports(){
   <div class="table-scroll"><table><thead><tr>${REP_OUT.head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
   ${REP_OUT.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${REP_OUT.head.length}" style="text-align:center;color:var(--faint);padding:30px">No data in this range</td></tr>`}
   </tbody></table></div></div>`:`<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Select a report and press <b>Run Report</b></div>`}`;
-}
-
-/* ---------- clients & client ledger ---------- */
-function ensureCL(){ DB.clients = DB.clients || []; DB.ledger = DB.ledger || []; }
-const r2 = n => Math.round((Number(n)||0) * 100) / 100;
-let CL_F = { q: "" };
-let LG_F = { q: "", client: "", item: "", type: "", from: "", to: "" };
-function clientName(id){ const c = byId(DB.clients, id); return c ? c.name : "(deleted client)"; }
-function itemLedgerBal(itemId){ return (DB.ledger||[]).reduce((s,e) => e.itemId === itemId ? s + (e.type === "JOMA" ? Number(e.qty)||0 : -(Number(e.qty)||0)) : s, 0); }
-
-function renderClients(){
-  ensureCL();
-  const q = CL_F.q;
-  const rows = DB.clients.filter(c => !q || (c.name + " " + (c.phone||"") + " " + (c.jobs||[]).join(" ") + " " + (c.note||"")).toLowerCase().includes(q))
-    .slice().sort((a,b) => a.name.localeCompare(b.name));
-  const balCount = c => { const s = {}; DB.ledger.forEach(e => { if(e.clientId === c.id){ s[e.itemId] = (s[e.itemId]||0) + (e.type === "JOMA" ? Number(e.qty)||0 : -(Number(e.qty)||0)); } }); return Object.values(s).filter(v => r2(v) !== 0).length; };
-  $("#view-clients").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Clients / <b>Client Master</b></div><h1>Clients</h1><p>${rows.length} of ${DB.clients.length} clients \u00b7 add once, reuse everywhere</p></div>
-    <div class="page-actions"><button class="btn" onclick="exportClients()">\u2913 Export Excel</button><button class="btn btn-primary" onclick="clientModal()">+ Add Client</button></div></div>
-  <div class="filter-bar"><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search client, phone or job no\u2026" value="${esc(q)}" oninput="CL_F.q=this.value.toLowerCase();renderClients();document.querySelector('#view-clients .input').focus()"></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Client Name</th><th>Phone</th><th>Job Numbers</th><th>Items w/ Balance</th><th>Note</th><th></th></tr></thead><tbody>
-  ${rows.map(c => `<tr><td class="type-cell">${esc(c.name)}</td><td class="muted">${esc(c.phone||"\u2014")}</td><td class="muted">${esc((c.jobs||[]).join(", ")||"\u2014")}</td><td class="num">${balCount(c)}</td><td class="muted">${esc(c.note||"")}</td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="viewClientLedger('${c.id}')">Ledger</button> <button class="btn btn-sm" onclick="clientModal('${c.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delClient('${c.id}')">Delete</button></td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;color:var(--faint);padding:30px">No clients yet \u2014 add your first client</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function viewClientLedger(id){ LG_F = { q: "", client: id, item: "", type: "", from: "", to: "" }; show("ledger"); }
-function clientModal(id){
-  if(!canWrite()) return;
-  const c = id ? byId(DB.clients, id) : null;
-  openModal(`<h3>${c ? "Edit" : "Add"} Client</h3><div class="sub">Add once \u2014 then pick from dropdown everywhere</div>
-  <div class="field"><label>Client Name *</label><input class="input" id="fClName" value="${c?esc(c.name):""}"></div>
-  <div class="field"><label>Phone</label><input class="input" id="fClPhone" value="${c?esc(c.phone||""):""}"></div>
-  <div class="field"><label>Job Numbers <span style="color:var(--faint)">(comma separated)</span></label><input class="input" id="fClJobs" value="${c?esc((c.jobs||[]).join(", ")):""}" placeholder="JB-1001, JB-1002"></div>
-  <div class="field"><label>Note</label><input class="input" id="fClNote" value="${c?esc(c.note||""):""}"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitClient('${c?c.id:""}')">Save</button></div>`);
-  $("#fClName").focus();
-}
-function submitClient(id){
-  ensureCL();
-  const name = $("#fClName").value.trim();
-  if(!name) return toast("Client name is required");
-  const dup = DB.clients.find(c => c.name.toLowerCase() === name.toLowerCase() && c.id !== id);
-  if(dup) return toast("This client already exists");
-  const jobs = $("#fClJobs").value.split(",").map(s => s.trim()).filter(Boolean);
-  const data = { name, phone: $("#fClPhone").value.trim(), jobs: Array.from(new Set(jobs)), note: $("#fClNote").value.trim() };
-  if(id){ Object.assign(byId(DB.clients, id), data); audit("Edited client: " + name); }
-  else { DB.clients.push(Object.assign({ id: "cl" + Date.now().toString(36) + Math.random().toString(36).slice(2,6) }, data)); audit("Added client: " + name); }
-  save(); closeModal(); renderAll(); toast("Client saved");
-}
-function delClient(id){
-  if(!canWrite()) return;
-  const c = byId(DB.clients, id); if(!c) return;
-  if(DB.ledger.some(e => e.clientId === id)) return toast("This client has ledger entries \u2014 delete those first");
-  if(!confirm(`Delete client "${c.name}"?`)) return;
-  DB.clients = DB.clients.filter(x => x.id !== id);
-  audit("Deleted client: " + c.name); save(); renderAll(); toast("Client deleted");
-}
-function exportClients(){
-  exportCSV("clients.csv", ["Client Name","Phone","Job Numbers","Note"], DB.clients.map(c => [c.name, c.phone||"", (c.jobs||[]).join(" | "), c.note||""]));
-}
-
-function ledgerBalances(){
-  const sorted = DB.ledger.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)));
-  const run = {}, after = {};
-  sorted.forEach(e => { const k = e.clientId + "|" + e.itemId; run[k] = (run[k]||0) + (e.type === "JOMA" ? Number(e.qty)||0 : -(Number(e.qty)||0)); after[e.id] = run[k]; });
-  return after;
-}
-function lgMatch(e, f, ignoreType){
-  if(f.client && e.clientId !== f.client) return false;
-  if(f.item && e.itemId !== f.item) return false;
-  if(!ignoreType && f.type && e.type !== f.type) return false;
-  if(f.from && e.date < f.from) return false;
-  if(f.to && e.date > f.to) return false;
-  if(f.q){
-    const it = itemById(e.itemId);
-    const hay = (clientName(e.clientId) + " " + (e.jobNo||"") + " " + (it?it.desc:"") + " " + itemCode(it) + " " + (e.note||"") + " " + (e.user||"")).toLowerCase();
-    if(!hay.includes(f.q)) return false;
-  }
-  return true;
-}
-function lgBadge(t){ return t === "JOMA" ? `<span class="badge" style="background:#E5F0E9;color:#3F7D5A">JOMA (IN)</span>` : `<span class="badge" style="background:#F9E8E5;color:#C7402E">SOLD (OUT)</span>`; }
-function renderLedger(){
-  ensureCL();
-  const f = LG_F;
-  const rows = DB.ledger.filter(e => lgMatch(e, f)).sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date)));
-  const after = ledgerBalances();
-  const map = {};
-  DB.ledger.filter(e => lgMatch(e, f, true)).forEach(e => {
-    const k = e.clientId + "|" + e.itemId;
-    const m = map[k] || (map[k] = { clientId: e.clientId, itemId: e.itemId, joma: 0, sold: 0 });
-    if(e.type === "JOMA") m.joma += Number(e.qty)||0; else m.sold += Number(e.qty)||0;
-  });
-  const sums = Object.values(map).sort((a,b) => clientName(a.clientId).localeCompare(clientName(b.clientId)));
-  const itemOpts = sel => DB.items.map(i => `<option value="${i.id}" ${i.id===sel?"selected":""}>${itemCode(i)} \u00b7 ${esc(i.desc)}</option>`).join("");
-  const clientOpts = sel => DB.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}</option>`).join("");
-  $("#view-ledger").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Clients / <b>Client Ledger</b></div><h1>Client Ledger</h1><p>Joma (In) \u2212 Sold (Out) = Balance \u00b7 per client &amp; item</p></div>
-    <div class="page-actions"><button class="btn" onclick="exportBalance()">\u2913 Balance Excel</button><button class="btn" onclick="exportLedger()">\u2913 Ledger Excel</button><button class="btn btn-primary" onclick="ledgerModal()">+ New Entry</button></div></div>
-  ${DB.ledger.length ? "" : `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>Purber joma first:</b> add each client's previous stock as a <b>Joma (In)</b> entry \u2014 balance then stays automatic.</div></div>`}
-  <div class="filter-bar">
-    <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search client, job, item, note\u2026" value="${esc(f.q)}" oninput="LG_F.q=this.value.toLowerCase();renderLedger();document.querySelector('#view-ledger .input').focus()"></div>
-    <select class="select" onchange="LG_F.client=this.value;renderLedger()"><option value="">All Clients</option>${clientOpts(f.client)}</select>
-    <select class="select" onchange="LG_F.item=this.value;renderLedger()"><option value="">All Items</option>${itemOpts(f.item)}</select>
-    <select class="select" onchange="LG_F.type=this.value;renderLedger()"><option value="">All Types</option><option value="JOMA" ${f.type==="JOMA"?"selected":""}>Joma (In)</option><option value="SOLD" ${f.type==="SOLD"?"selected":""}>Sold (Out)</option></select>
-    <input type="date" class="input" style="max-width:150px" value="${f.from}" onchange="LG_F.from=this.value;renderLedger()" title="From date">
-    <input type="date" class="input" style="max-width:150px" value="${f.to}" onchange="LG_F.to=this.value;renderLedger()" title="To date">
-  </div>
-  <h3 style="margin:18px 2px 8px;font-size:14px">Balance Summary ${f.client||f.item||f.q||f.from||f.to ? `<span style="color:var(--faint);font-weight:400">(filtered)</span>` : ""}</h3>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Client</th><th>Item</th><th class="num">Total Joma</th><th class="num">Total Sold</th><th class="num">Balance</th></tr></thead><tbody>
-  ${sums.map(s => { const it = itemById(s.itemId); const bal = r2(s.joma - s.sold); return `<tr><td class="type-cell">${esc(clientName(s.clientId))}</td><td>${esc(itemName(it))}</td><td class="num">${r2(s.joma)} ${it?esc(it.uomOut):""}</td><td class="num">${r2(s.sold)} ${it?esc(it.uomOut):""}</td><td class="num"><b style="color:${bal < 0 ? "#C7402E" : bal === 0 ? "var(--faint)" : "#3F7D5A"}">${bal}</b> ${it?esc(it.uomOut):""}</td></tr>`; }).join("") || `<tr><td colspan="5" style="text-align:center;color:var(--faint);padding:24px">No data yet</td></tr>`}
-  </tbody></table></div></div>
-  <h3 style="margin:18px 2px 8px;font-size:14px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Client</th><th>Job No</th><th>Item</th><th>Type</th><th class="num">Qty</th><th class="num">Balance After</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(e => { const it = itemById(e.itemId); return `<tr><td class="muted">${fmtD(e.date)}</td><td class="type-cell">${esc(clientName(e.clientId))}</td><td class="muted">${esc(e.jobNo||"\u2014")}</td><td>${esc(itemName(it))}</td><td>${lgBadge(e.type)}</td><td class="num"><b>${r2(e.qty)}</b> ${it?esc(it.uomOut):""}</td><td class="num">${after[e.id] !== undefined ? r2(after[e.id]) : "\u2014"}</td><td class="muted">${esc(e.note||"")}</td><td class="muted">${esc(e.user||"")}</td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="ledgerModal('${e.id}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delLedger('${e.id}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No entries found</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function ledgerModal(id){
-  if(!canWrite()) return;
-  ensureCL();
-  if(!DB.clients.length) return toast("Add a client first (Clients section)");
-  if(!DB.items.length) return toast("Add items first (Items section)");
-  const e = id ? byId(DB.ledger, id) : null;
-  const clientOpts = DB.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<option value="${c.id}" ${e&&e.clientId===c.id?"selected":""}>${esc(c.name)}</option>`).join("");
-  const itemOpts = DB.items.map(i => `<option value="${i.id}" ${e&&e.itemId===i.id?"selected":""}>${itemCode(i)} \u00b7 ${esc(i.desc)}</option>`).join("");
-  openModal(`<h3>${e ? "Edit" : "New"} Ledger Entry</h3><div class="sub">Joma = client's material in \u00b7 Sold = delivered / used out</div>
-  <div class="field"><label>Date *</label><input class="input" id="leDate" type="date" value="${e?e.date:todayISO()}"></div>
-  <div class="field"><label>Client *</label><select class="select" id="leClient" onchange="fillJobNos()" style="width:100%">${e?"":`<option value="">\u2014 Select client \u2014</option>`}${clientOpts}</select></div>
-  <div class="field"><label>Job Number</label><input class="input" id="leJob" list="jobNosDl" placeholder="Pick previous or type new" value="${e?esc(e.jobNo||""):""}"><datalist id="jobNosDl"></datalist></div>
-  <div class="field"><label>Item *</label><select class="select" id="leItem" style="width:100%">${e?"":`<option value="">\u2014 Select item \u2014</option>`}${itemOpts}</select></div>
-  <div class="field"><label>Type *</label><select class="select" id="leType" style="width:100%"><option value="JOMA" ${e&&e.type==="JOMA"?"selected":""}>Joma (In) \u2014 purber joma / new deposit</option><option value="SOLD" ${e&&e.type==="SOLD"?"selected":""}>Sold (Out)</option></select></div>
-  <div class="field"><label>Quantity *</label><input class="input" id="leQty" type="number" min="0" step="any" value="${e?e.qty:""}"></div>
-  <div class="field"><label>Note</label><input class="input" id="leNote" value="${e?esc(e.note||""):""}" placeholder="optional"></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitLedger('${e?e.id:""}')">Save Entry</button></div>`);
-  fillJobNos();
-}
-function fillJobNos(){
-  const c = byId(DB.clients, $("#leClient").value);
-  const dl = $("#jobNosDl"); if(dl) dl.innerHTML = ((c && c.jobs) || []).map(j => `<option value="${esc(j)}">`).join("");
-}
-function submitLedger(id){
-  ensureCL();
-  const clientId = $("#leClient").value, itemId = $("#leItem").value;
-  const date = $("#leDate").value, qty = Number($("#leQty").value);
-  if(!date) return toast("Date is required");
-  if(!clientId) return toast("Select a client");
-  if(!itemId) return toast("Select an item");
-  if(!(qty > 0)) return toast("Quantity must be more than 0");
-  const jobNo = $("#leJob").value.trim(), type = $("#leType").value, note = $("#leNote").value.trim();
-  if(jobNo){ const c = byId(DB.clients, clientId); c.jobs = c.jobs || []; if(!c.jobs.includes(jobNo)) c.jobs.push(jobNo); }
-  if(id){
-    Object.assign(byId(DB.ledger, id), { date, clientId, jobNo, itemId, type, qty, note });
-    audit("Edited ledger entry for " + clientName(clientId));
-  } else {
-    DB.ledger.push({ id: "le" + Date.now().toString(36) + Math.random().toString(36).slice(2,6), date, clientId, jobNo, itemId, type, qty, note, user: currentUser ? currentUser.username : "" });
-    audit((type === "JOMA" ? "Joma" : "Sold") + " " + qty + " \u00d7 " + itemName(itemById(itemId)) + " \u2014 " + clientName(clientId));
-  }
-  save(); closeModal(); renderAll(); toast("Entry saved");
-}
-function delLedger(id){
-  if(!canWrite()) return;
-  const e = byId(DB.ledger, id); if(!e) return;
-  if(!confirm("Delete this ledger entry?")) return;
-  DB.ledger = DB.ledger.filter(x => x.id !== id);
-  audit("Deleted ledger entry for " + clientName(e.clientId));
-  save(); renderAll(); toast("Entry deleted");
-}
-function exportLedger(){
-  const f = LG_F, after = ledgerBalances();
-  const rows = DB.ledger.filter(e => lgMatch(e, f)).sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)));
-  exportCSV("client-ledger.csv", ["Date","Client","Job No","Item Code","Item","Type","Qty","UOM","Balance After","Note","By"],
-    rows.map(e => { const it = itemById(e.itemId); return [e.date, clientName(e.clientId), e.jobNo||"", itemCode(it), itemName(it), e.type === "JOMA" ? "Joma (In)" : "Sold (Out)", e.qty, it?it.uomOut:"", after[e.id] !== undefined ? r2(after[e.id]) : "", e.note||"", e.user||""]; }));
-}
-function exportBalance(){
-  const f = LG_F, map = {};
-  DB.ledger.filter(e => lgMatch(e, f, true)).forEach(e => {
-    const k = e.clientId + "|" + e.itemId;
-    const m = map[k] || (map[k] = { clientId: e.clientId, itemId: e.itemId, joma: 0, sold: 0 });
-    if(e.type === "JOMA") m.joma += Number(e.qty)||0; else m.sold += Number(e.qty)||0;
-  });
-  exportCSV("client-balance.csv", ["Client","Item Code","Item","Total Joma","Total Sold","Balance","UOM"],
-    Object.values(map).sort((a,b) => clientName(a.clientId).localeCompare(clientName(b.clientId))).map(s => { const it = itemById(s.itemId); return [clientName(s.clientId), itemCode(it), itemName(it), r2(s.joma), r2(s.sold), r2(s.joma - s.sold), it?it.uomOut:""]; }));
 }
 
 /* ---------- users (Firebase roles) ---------- */
@@ -1716,7 +1055,7 @@ function renderSettings(){
         <button class="btn" onclick="resetData()">Reset to Demo Data</button>
         <button class="btn btn-danger-soft" onclick="clearData()">Clear All Data (fresh start)</button>
       </div>
-      <div class="hint" style="margin-top:12px">Backup file contains everything: items, transactions, jobs, requisitions, audit log. Logins &amp; roles are managed in Firebase Console.</div></div>
+      <div class="hint" style="margin-top:12px">Backup file contains everything: items, stock transactions, settings and audit log. Logins &amp; roles are managed in Firebase Console.</div></div>
   </div>`;
 }
 function saveSettings(){
@@ -1760,11 +1099,11 @@ async function resetData(){
   await doSave(); renderAll(); toast("Demo data restored");
 }
 async function clearData(){
-  if(!confirm("Delete ALL items, transactions, jobs \u2014 everything? Start completely fresh? This affects everyone.")) return;
+  if(!confirm("Delete ALL items and stock transactions \u2014 everything? Start completely fresh? This affects everyone.")) return;
   toast("Clearing\u2026 please wait");
   await wipeColl("erp_txns"); await wipeColl("erp_audit");
   const st = DB.settings;
-  DB = { settings: st, seq:{si:0,so:0,rt:0,ad:0,req:0,job:0}, categories:[], groups:[], items:[], suppliers:[], procurers:[], requisitors:[], jobs:[], clients:[], ledger:[], requisitions:[], txns:[], audit:[] };
+  DB = { settings: st, seq:{si:0,so:0}, categories:[], groups:[], items:[], txns:[], audit:[] };
   SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
   audit("Cleared all data \u2014 fresh start");
   await doSave(); renderAll(); toast("All clear \u2014 fresh start!");
@@ -1772,9 +1111,8 @@ async function clearData(){
 
 /* ---------- router & init ---------- */
 const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, catalog:renderCatalog,
-  clients:renderClients, ledger:renderLedger, reports:renderReports,
-  users:renderUsers, audit:renderAudit, settings:renderSettings
+  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut,
+  reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings
 };
 function show(view){
   if(!VIEWS[view]) view = "dashboard";
