@@ -888,16 +888,16 @@ function txnModal(kind){
   const fin = kind === "IN";
   openModal(`<h2>${fin?"New Stock In":"New Stock Out"}</h2><div class="hint" style="margin-bottom:14px">${fin?"Add received material to stock":"Issue material from stock"}</div>
   <form onsubmit="submitTxn(event,'${kind}')">
-    <div class="field"><label>Item *</label><select class="select" id="txItem" required><option value="">Select item\u2026</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}">${esc(itemLabel(it))} \u2014 ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select></div>
+    <div class="field"><label>Item *</label><input class="input" type="text" id="txItemSearch" placeholder="Search item..." autocomplete="off" oninput="filterTxItemOptions()"><select class="select" id="txItem" required><option value="">Select item\u2026</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}">${esc(itemLabel(it))} \u2014 ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select></div>
     <div class="row-2">
-      <div class="field"><label>Date</label><input class="input" type="date" id="txDate" value="${todayISO()}" required></div>
+      <div class="field"><label>Date</label><input class="input" type="date" <div class="field"><label>Item *</label><input class="input" type="text" id="txItemSearch" placeholder="Search item..." autocomplete="off" oninput="filterTxItemOptions()"><select class="select" id="txItem" required> required></div>
       <div class="field"><label>Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
     </div>
     <div class="field"><label>Note (optional)</label><input class="input" id="txNote" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}"></div>
     <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn ${fin?"btn-green":"btn-primary"}">Save Entry</button></div>
   </form>`);
 }
-function submitTxn(e, kind){
+function filterTxItemOptions(){   const q = (document.getElementById('txItemSearch').value || '').toLowerCase().trim();   const sel = document.getElementById('txItem');   if(!sel) return;   Array.from(sel.options).forEach(function(o){     if(o.value) o.hidden = q && o.textContent.toLowerCase().indexOf(q) === -1;   }); }  function saveLastTxDate(kind, date){   try{ localStorage.setItem('sml_last_tx_date_'+kind, date); }catch(e){} }(e, kind){
   e.preventDefault(); if(!canWrite()) return;
   const fin = kind === "IN";
   const it = itemById($("#txItem").value); if(!it){ toast("Please select an item"); return; }
@@ -905,6 +905,7 @@ function submitTxn(e, kind){
   if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
   if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
   const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date: $("#txDate").value || todayISO(), itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
+  saveLastTxDate(kind, t.date);
   DB.txns.push(t); sortTxns();
   it.stock += t.qty;
   audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
