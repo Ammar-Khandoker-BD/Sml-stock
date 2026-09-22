@@ -921,6 +921,21 @@ function txnNoteSuggestions(kind){
     })
     .slice(0, 50);
 }
+function rememberTxnMeta(kind,key,value){
+  const v=String(value||"").trim(); if(!v) return;
+  try{
+    const storageKey="sml-stock-meta-"+kind+"-"+key;
+    const arr=JSON.parse(localStorage.getItem(storageKey)||"[]");
+    const next=[v,...arr.filter(x=>String(x).toLowerCase()!==v.toLowerCase())].slice(0,30);
+    localStorage.setItem(storageKey,JSON.stringify(next));
+  }catch(err){}
+}
+function getRememberedTxnMeta(kind,key){
+  try{
+    const arr=JSON.parse(localStorage.getItem("sml-stock-meta-"+kind+"-"+key)||"[]");
+    return Array.isArray(arr)?arr.slice(0,30):[];
+  }catch(err){ return []; }
+}
 function rememberTxnNote(kind, note){
   const value = String(note||"").trim();
   if(!value) return;
@@ -1042,6 +1057,14 @@ function txnModal(kind){
         <input class="input" id="txRef" placeholder="${fin?"e.g. CH-1025":"e.g. ISSUE-2026-014"}" autocomplete="off">
       </div>
     </div>`:`<div class="field"><label for="txRef">Issue / Reference No.</label><input class="input" id="txRef" placeholder="e.g. ISSUE-2026-014" autocomplete="off"></div>`}
+    ${fin?"":`<div class="row-2">
+      <div class="field"><label for="txDepartment">Department / Project</label><input class="input" id="txDepartment" list="txDepartmentSuggestions" placeholder="e.g. Production / Project A" autocomplete="off"></div>
+      <div class="field"><label for="txIssuedTo">Issued To</label><input class="input" id="txIssuedTo" list="txIssuedToSuggestions" placeholder="Person / Team / Section" autocomplete="off"></div>
+    </div>
+    <div class="field"><label for="txPurpose">Purpose</label><input class="input" id="txPurpose" list="txPurposeSuggestions" placeholder="e.g. Panel production / Office use" autocomplete="off"></div>
+    <datalist id="txDepartmentSuggestions">${getRememberedTxnMeta("OUT","department").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <datalist id="txIssuedToSuggestions">${getRememberedTxnMeta("OUT","issuedTo").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+    <datalist id="txPurposeSuggestions">${getRememberedTxnMeta("OUT","purpose").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`}
     <div class="field">
       <label for="txNote">Note (optional)</label>
       <input class="input" id="txNote" list="txNoteSuggestions" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}" autocomplete="off">
@@ -1055,7 +1078,7 @@ function txnModal(kind){
   </form>`);
 }
 
-async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId="",supplierId="",referenceNo=""}){
+async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId="",supplierId="",referenceNo="",department="",issuedTo="",purpose=""}){
   const mainRef=fdb.collection("erp").doc("main");
   const auditRef=fdb.collection("erp_audit").doc();
   let result=null;
@@ -1076,7 +1099,7 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORM
     const prefix=subtype==="ADJUSTMENT"?"ADJ-":subtype==="REVERSAL"?"RV-":(type==="IN"?"SI-":"SO-");
     const txId=prefix+String(seq[key]).padStart(4,"0");
     const now=Date.now();
-    const txn={id:txId,type,subtype,referenceId:referenceId||"",supplierId:supplierId||"",referenceNo:referenceNo||"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
+    const txn={id:txId,type,subtype,referenceId:referenceId||"",supplierId:supplierId||"",referenceNo:referenceNo||"",department:department||"",issuedTo:issuedTo||"",purpose:purpose||"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
     const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(subtype==="ADJUSTMENT"?"Stock Adjustment: ":subtype==="REVERSAL"?"Reversal: ":(type==="IN"?"Stock In: ":"Stock Out: "))+((delta>0)?"+":"")+delta+" "+itemName(item)};
     transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
     transaction.set(fdb.collection("erp_txns").doc(txId),txn);
@@ -1105,8 +1128,13 @@ async function submitTxn(e,kind){
   const date=$("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind,date);
   const note=$("#txNote").value.trim(); rememberTxnNote(kind,note);
   try{
-    const supplierId=fin ? (($("#txSupplier") && $("#txSupplier").value) || "") : ""; const referenceNo=(($("#txRef") && $("#txRef").value)||"").trim();
-    const result=await commitStockMovement({type:kind,qtyDelta:fin?qty:-qty,date,itemId:it.id,note,supplierId,referenceNo});
+    const supplierId=fin ? (($("#txSupplier") && $("#txSupplier").value) || "") : "";
+    const referenceNo=(($("#txRef") && $("#txRef").value)||"").trim();
+    const department=(!fin && $("#txDepartment") ? $("#txDepartment").value.trim() : "");
+    const issuedTo=(!fin && $("#txIssuedTo") ? $("#txIssuedTo").value.trim() : "");
+    const purpose=(!fin && $("#txPurpose") ? $("#txPurpose").value.trim() : "");
+    rememberTxnMeta(kind,"department",department); rememberTxnMeta(kind,"issuedTo",issuedTo); rememberTxnMeta(kind,"purpose",purpose);
+    const result=await commitStockMovement({type:kind,qtyDelta:fin?qty:-qty,date,itemId:it.id,note,supplierId,referenceNo,department,issuedTo,purpose});
     closeModal();
     applyCommittedMovement(result,fin?"Stock In saved safely":"Stock Out saved safely");
   }catch(err){
@@ -1208,8 +1236,8 @@ function exportTxns(kind){
   const fin = kind === "IN";
   const rows = txnRows(kind, fin ? SI_F : SO_F);
   exportCSV(fin ? "stock-in.csv" : "stock-out.csv",
-    ["ID","Date","Category","Type","Color","Thickness","Item","Qty","Unit","Supplier","Reference","Note","By"],
-    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.note||"", t.by||""]; }));
+    ["ID","Date","Category","Type","Color","Thickness","Item","Qty","Unit","Supplier","Reference","Department / Project","Issued To","Purpose","Note","By"],
+    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; }));
 }
 
 function movementTotals(rows){
@@ -1258,9 +1286,9 @@ function runReport(){
   let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","valuation","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
   let head = [], rows = [];
   if(REP.type==="txns"){
-    head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Reference","Note","By"];
+    head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Reference","Department / Project","Issued To","Purpose","Note","By"];
     rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.note||"", t.by||""]; });
+      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
     head = ["Item","Category","Type","Thickness","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock","Unit"];
     const map = {};
@@ -1445,7 +1473,7 @@ async function exportReportXlsx(){
       "id":13,"date":14,"sl":8,"page":10,"category":22,"item":30,"type":18,
       "color":18,"thickness":14,"stock in":13,"stock out":14,"net":13,
       "current stock":16,"unit":12,"qty":12,"note":28,"by":24,"status":16,
-      "alarm qty":13,"shortage":13,"unit price (tk)":16,"value (tk)":18,"supplier":24,"reference":20
+      "alarm qty":13,"shortage":13,"unit price (tk)":16,"value (tk)":18,"supplier":24,"reference":20,"department / project":24,"issued to":20,"purpose":28
     };
     REP_OUT.head.forEach((h, idx) => {
       const key = String(h).toLowerCase();
