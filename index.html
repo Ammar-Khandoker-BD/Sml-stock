@@ -848,6 +848,44 @@ function exportItems(){
 
 /* ---------- stock in / out ---------- */
 let SI_F = { q:"", cat:"", item:"", from:"", to:"" }, SO_F = { q:"", cat:"", item:"", from:"", to:"" };
+const TXN_DATE_KEYS = { IN:"sml-stock-last-date-in", OUT:"sml-stock-last-date-out" };
+let TXN_MODAL_KIND = "IN";
+let TXN_ITEM_SEARCH = "";
+
+function getRememberedTxnDate(kind){
+  const fallback = todayISO();
+  try {
+    const saved = localStorage.getItem(TXN_DATE_KEYS[kind]);
+    return saved || fallback;
+  } catch(err) {
+    return fallback;
+  }
+}
+function rememberTxnDate(kind, date){
+  if(!date) return;
+  try { localStorage.setItem(TXN_DATE_KEYS[kind], date); } catch(err) {}
+}
+function txnItemMatches(it, query){
+  if(!query) return true;
+  const hay = [
+    itemName(it), it.category||"", it.type||"", it.color||"",
+    it.thickness||"", it.page||"", it.sl||""
+  ].join(" ").toLowerCase();
+  return hay.includes(query.trim().toLowerCase());
+}
+function renderTxnItemOptions(){
+  const sel = $("#txItem");
+  if(!sel) return;
+  const current = sel.value;
+  const query = TXN_ITEM_SEARCH.trim().toLowerCase();
+  const items = DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b)))
+    .filter(it=>txnItemMatches(it, query));
+  sel.innerHTML = '<option value="">Select item…</option>' + items.map(it =>
+    '<option value="' + esc(it.id) + '">' + esc(itemLabel(it)) + ' — ' + it.stock + ' ' + esc(it.uom||"Pcs") + ' in stock</option>'
+  ).join("");
+  if(current && items.some(it=>it.id===current)) sel.value = current;
+}
+
 function txnRows(kind, f){
   return DB.txns.filter(t => {
     if(t.type !== kind) return false;
@@ -886,17 +924,33 @@ function renderTxns(kind){
 function txnModal(kind){
   if(!canWrite()) return;
   const fin = kind === "IN";
+  TXN_MODAL_KIND = kind;
+  TXN_ITEM_SEARCH = "";
+  const rememberedDate = getRememberedTxnDate(kind);
   openModal(`<h2>${fin?"New Stock In":"New Stock Out"}</h2><div class="hint" style="margin-bottom:14px">${fin?"Add received material to stock":"Issue material from stock"}</div>
   <form onsubmit="submitTxn(event,'${kind}')">
-    <div class="field"><label>Item *</label><select class="select" id="txItem" required><option value="">Select item\u2026</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}">${esc(itemLabel(it))} \u2014 ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select></div>
+    <div class="field">
+      <label for="txItemSearch">Search Item</label>
+      <input class="input" id="txItemSearch" type="search" placeholder="Search item, category, type, color, thickness…" autocomplete="off" oninput="TXN_ITEM_SEARCH=this.value;renderTxnItemOptions()">
+      <div class="hint">Type to quickly find the item you need.</div>
+    </div>
+    <div class="field">
+      <label for="txItem">Item *</label>
+      <select class="select" id="txItem" required><option value="">Select item…</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(b)).map(it=>`<option value="${esc(it.id)}">${esc(itemLabel(it))} — ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select>
+    </div>
     <div class="row-2">
-      <div class="field"><label>Date</label><input class="input" type="date" id="txDate" value="${todayISO()}" required></div>
-      <div class="field"><label>Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
+      <div class="field">
+        <label for="txDate">Date</label>
+        <input class="input" type="date" id="txDate" value="${rememberedDate}" onchange="rememberTxnDate(TXN_MODAL_KIND,this.value)" required>
+        <div class="hint">Last used date is remembered in this browser.</div>
+      </div>
+      <div class="field"><label for="txQty">Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
     </div>
     <div class="field"><label>Note (optional)</label><input class="input" id="txNote" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}"></div>
     <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn ${fin?"btn-green":"btn-primary"}">Save Entry</button></div>
   </form>`);
 }
+
 function submitTxn(e, kind){
   e.preventDefault(); if(!canWrite()) return;
   const fin = kind === "IN";
@@ -904,7 +958,7 @@ function submitTxn(e, kind){
   const qty = Number($("#txQty").value);
   if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
   if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
-  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date: $("#txDate").value || todayISO(), itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
+  const date = $("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind, date);\n  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
   DB.txns.push(t); sortTxns();
   it.stock += t.qty;
   audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
