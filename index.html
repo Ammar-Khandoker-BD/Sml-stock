@@ -441,6 +441,12 @@ function attachListeners(){
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
     renderAll();
   });
+  fdb.collection("erp_audit").orderBy("ts","desc").limit(500).onSnapshot(snap => {
+    if(!currentUser || snap.metadata.hasPendingWrites) return;
+    DB.audit=snap.docs.map(d=>d.data());
+    SAVED_AUDIT=new Set(DB.audit.map(a=>a.id));
+    renderAll();
+  });
   fdb.collection("erp_txns").onSnapshot(snap => {
     if(!currentUser || snap.metadata.hasPendingWrites) return;
     let changed = false;
@@ -667,6 +673,19 @@ function opts(arr, sel, lab){
 function typeBadge(t){
   return { IN:'<span class="badge in">IN</span>', OUT:'<span class="badge outt">OUT</span>', RET:'<span class="badge ret">RETURN</span>', ADJ:'<span class="badge adj">ADJUST</span>' }[t] || t;
 }
+function movementLabel(t){
+  if(!t) return "";
+  if(t.subtype === "REVERSAL") return "Reversal";
+  return t.type === "IN" ? "Stock In" : t.type === "OUT" ? "Stock Out" : String(t.type||"");
+}
+function movementTotals(rows){
+  return rows.reduce((acc,t)=>{
+    const q=Number(t.qty)||0;
+    if(t.type==="IN") acc.in+=q;
+    else if(t.type==="OUT") acc.out+=-q;
+    return acc;
+  },{in:0,out:0});
+}
 function exportCSV(name, head, rows){
   const csv = [head].concat(rows).map(r => r.map(c => `"${String(c ?? "").replace(/"/g,'""')}"`).join(",")).join("\n");
   const a = document.createElement("a");
@@ -678,8 +697,8 @@ function exportCSV(name, head, rows){
 /* ---------- dashboard ---------- */
 function renderDashboard(){
   const month = todayISO().slice(0,7);
-  const inMonth = DB.txns.filter(t => t.type==="IN" && String(t.date).slice(0,7)===month).reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0);
-  const outMonth = DB.txns.filter(t => t.type==="OUT" && String(t.date).slice(0,7)===month).reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0);
+  const inMonth = movementTotals(DB.txns.filter(t => t.type==="IN" && String(t.date).slice(0,7)===month)).in;
+  const outMonth = movementTotals(DB.txns.filter(t => t.type==="OUT" && String(t.date).slice(0,7)===month)).out;
   const low = lowItems();
   const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
   const recent = DB.txns.slice(0,8);
@@ -756,7 +775,7 @@ function renderItems(){
   </tbody></table></div></div>`;
 }
 function itemModal(id){
-  if(!canWrite()) return;
+  if(!isAdmin()){ toast("Only Admin can manage items"); return; }
   const it = id ? itemById(id) : null;
   openModal(`<h2>${it?"Edit Item":"Add Item"}</h2><div class="hint" style="margin-bottom:14px">Category groups items \u00b7 Type + Color + Thickness make the item name</div>
   <form onsubmit="submitItem(event${it?`,'${it.id}'`:""})">
@@ -779,7 +798,7 @@ function itemModal(id){
   $("#itType").focus();
 }
 function submitItem(e, id){
-  e.preventDefault(); if(!canWrite()) return;
+  e.preventDefault(); if(!isAdmin()){ toast("Only Admin can manage items"); return; }
   const type = $("#itType").value.trim(); if(!type){ toast("Type is required"); return; }
   const data = { category: ($("#itCat").value.trim() || "Board"), type, color: $("#itColor").value.trim(), thickness: $("#itThick").value.trim(), page: $("#itPage").value.trim(), uom: $("#itUom").value.trim() || "Pcs", alarm: Math.max(0, Number($("#itAlarm").value)||0) };
   if(id){
@@ -795,7 +814,7 @@ function submitItem(e, id){
   save(); closeModal(); renderItems(); toast(id?"Item updated":"Item added");
 }
 function delItem(id){
-  if(!canWrite()) return;
+  if(!isAdmin()){ toast("Only Admin can manage items"); return; }
   const it = itemById(id); if(!it) return;
   if(DB.txns.some(t => t.itemId === id)){ toast("Cannot delete \u2014 this item has stock transactions"); return; }
   if(!confirm("Delete item \""+itemName(it)+"\"?")) return;
@@ -987,502 +1006,4 @@ function renderTxns(kind){
   </div>
   <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
   <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="delTxn('${t.id}')">Delete</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="8" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
-  </tbody></table></div></div>`;
-}
-function txnModal(kind){
-  if(!canWrite()) return;
-  const fin = kind === "IN";
-  TXN_MODAL_KIND = kind;
-  TXN_ITEM_SEARCH = "";
-  const rememberedDate = getRememberedTxnDate(kind);
-  openModal(`<h2>${fin?"New Stock In":"New Stock Out"}</h2><div class="hint" style="margin-bottom:14px">${fin?"Add received material to stock":"Issue material from stock"}</div>
-  <form onsubmit="submitTxn(event,'${kind}')">
-    <div class="field">
-      <label for="txItemSearch">Item *</label>
-      <div class="searchable-item">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-        <input class="input" id="txItemSearch" type="search" placeholder="Search item…" autocomplete="off"
-          onfocus="renderTxnItemOptions(true)"
-          oninput="TXN_ITEM_SEARCH=this.value;renderTxnItemOptions(true)">
-        <input id="txItem" type="hidden" value="">
-        <div id="txItemResults" class="searchable-options"></div>
-      </div>
-      <div class="hint">Search by item, category, type, color, thickness, page or SL.</div>
-    </div>
-    <div class="row-2">
-      <div class="field">
-        <label for="txDate">Date</label>
-        <input class="input" type="date" id="txDate" value="${rememberedDate}" onchange="rememberTxnDate(TXN_MODAL_KIND,this.value)" required>
-        <div class="hint">Last used date is remembered in this browser.</div>
-      </div>
-      <div class="field"><label for="txQty">Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
-    </div>
-    <div class="field">
-      <label for="txNote">Note (optional)</label>
-      <input class="input" id="txNote" list="txNoteSuggestions" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}" autocomplete="off">
-      <datalist id="txNoteSuggestions">${[...getRememberedTxnNotes(kind), ...txnNoteSuggestions(kind)]
-        .filter((note, idx, arr) => arr.findIndex(x => String(x).toLowerCase() === String(note).toLowerCase()) === idx)
-        .map(note => `<option value="${esc(note)}">`)
-        .join("")}</datalist>
-      <div class="hint">Previous notes are suggested as you type.</div>
-    </div>
-    <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn ${fin?"btn-green":"btn-primary"}">Save Entry</button></div>
-  </form>`);
-}
-
-function submitTxn(e, kind){
-  e.preventDefault(); if(!canWrite()) return;
-  const fin = kind === "IN";
-  const it = itemById($("#txItem").value); if(!it){ toast("Please search and select an item"); return; }
-  const qty = Number($("#txQty").value);
-  if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
-  if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
-  const date = $("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind, date);
-  const note = $("#txNote").value.trim(); rememberTxnNote(kind, note);
-  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note, by: currentUser ? currentUser.username : "system" };
-  DB.txns.push(t); sortTxns();
-  it.stock += t.qty;
-  audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
-  save(); closeModal(); renderAll(); toast(fin?"Stock In saved":"Stock Out saved");
-}
-async function delTxn(id){
-  if(!isAdmin()){ toast("Only admin can delete entries"); return; }
-  const t = DB.txns.find(x => x.id === id); if(!t) return;
-  if(!confirm("Delete entry "+id+"? Stock will be adjusted back.")) return;
-  const it = itemById(t.itemId);
-  if(it) it.stock -= Number(t.qty)||0;
-  DB.txns = DB.txns.filter(x => x.id !== id);
-  SAVED_TXN.delete(id);
-  try{ await fdb.collection("erp_txns").doc(id).delete(); }catch(err){ console.error(err); }
-  audit("Deleted entry "+id);
-  save(); renderAll(); toast("Entry deleted");
-}
-function exportTxns(kind){
-  const fin = kind === "IN";
-  const rows = txnRows(kind, fin ? SI_F : SO_F);
-  exportCSV(fin ? "stock-in.csv" : "stock-out.csv",
-    ["ID","Date","Category","Type","Color","Thickness","Item","Qty","Unit","Note","By"],
-    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
-}
-
-/* ---------- reports ---------- */
-let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"" }, REP_OUT = null;
-const REP_TYPES = [
-  ["txns","All Transactions (date range)"],
-  ["itemwise","Item-wise In / Out / Net"],
-  ["catwise","Category-wise Summary"],
-  ["typewise","Type-wise Summary"],
-  ["stock","Current Stock List"],
-  ["low","Low Stock Report"]
-];
-function runReport(){
-  const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
-  const inRange = t => t.date >= from && t.date <= to;
-  const hay = t => { const it = itemById(t.itemId); return (itemName(it)+" "+(it?it.category||"":"")+" "+(it?it.page||"":"")+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); };
-  const ihay = it => (itemName(it)+" "+(it.page||"")+" "+(it.category||"")+" "+(it.type||"")).toLowerCase();
-  const catOk = it => !REP.cat || ((it ? (it.category||"Board") : "") === REP.cat);
-  const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && (!q || hay(t).includes(q)));
-  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
-  let head = [], rows = [];
-  if(REP.type==="txns"){
-    head = ["ID","Date","Category","Item","Type","Qty","Unit","Note","By"];
-    rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", itemName(it), t.type==="IN"?"Stock In":"Stock Out", Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
-  } else if(REP.type==="itemwise"){
-    head = ["Item","Category","Type","Thickness","Stock In","Stock Out","Net","Current Stock","Unit"];
-    const map = {};
-    T.forEach(t => { const m = map[t.itemId]||(map[t.itemId]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemName(it), it?it.category||"":"", it?it.type||"":"", it?it.thickness||"":"", m.i, m.o, m.i-m.o, it?it.stock:"", it?it.uom||"Pcs":""]; })
-      .sort((a,b) => String(a[0]).localeCompare(String(b[0])));
-  } else if(REP.type==="catwise"){
-    head = ["Category","Stock In","Stock Out","Net","Current Stock"];
-    const map = {};
-    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.category||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.category||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
-  } else if(REP.type==="typewise"){
-    head = ["Type","Stock In","Stock Out","Net","Current Stock"];
-    const map = {};
-    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.type||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.type||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
-  } else if(REP.type==="stock"){
-    head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
-    rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [it.sl, it.page||"", it.category||"Board", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
-  } else if(REP.type==="low"){
-    head = ["Item","Category","Type","Thickness","Current Stock","Alarm Qty","Shortage","Unit"];
-    rows = lowItems().filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [itemName(it), it.category||"Board", it.type||"", it.thickness||"", it.stock, it.alarm, Math.max(0, it.alarm-it.stock), it.uom||"Pcs"]);
-  }
-  REP_OUT = { title, head, rows };
-  renderReports();
-}
-async function exportReportXlsx(){
-  if(!REP_OUT){ toast("Run the report first"); return; }
-  if(typeof ExcelJS === "undefined"){ toast("Excel export library is still loading — please try again"); return; }
-
-  const btn = document.getElementById("reportExcelBtn");
-  if(btn){ btn.disabled = true; btn.textContent = "Preparing…"; }
-
-  try{
-    const wb = new ExcelJS.Workbook();
-    wb.creator = "SML Inventory ERP";
-    wb.lastModifiedBy = currentUser ? (currentUser.username || "system") : "system";
-    wb.created = new Date();
-    wb.modified = new Date();
-    wb.company = (DB.settings && DB.settings.company) || "Step Media Ltd";
-    wb.subject = REP_OUT.title;
-    wb.title = REP_OUT.title;
-
-    const ws = wb.addWorksheet("Management Report", {
-      views: [{state:"frozen", ySplit:6}],
-      pageSetup: {
-        orientation: "landscape",
-        fitToPage: true,
-        fitToWidth: 1,
-        fitToHeight: 0,
-        paperSize: 9,
-        margins: {left:0.3,right:0.3,top:0.5,bottom:0.5,header:0.2,footer:0.2}
-      }
-    });
-
-    const company = (DB.settings && DB.settings.company) || "Step Media Ltd";
-    const generated = new Date().toLocaleString("en-GB", {
-      day:"2-digit", month:"short", year:"numeric",
-      hour:"2-digit", minute:"2-digit"
-    });
-    const filterParts = [];
-    if(REP.from && REP.to) filterParts.push("Period: " + fmtD(REP.from) + " – " + fmtD(REP.to));
-    if(REP.cat) filterParts.push("Category: " + REP.cat);
-    if(REP.q) filterParts.push("Search: " + REP.q);
-
-    const lastCol = Math.max(REP_OUT.head.length, 1);
-
-    ws.mergeCells(1,1,1,lastCol);
-    const titleCell = ws.getCell(1,1);
-    titleCell.value = company;
-    titleCell.font = {name:"Aptos Display",size:16,bold:true,color:{argb:"FFFFFFFF"}};
-    titleCell.alignment = {horizontal:"left",vertical:"middle"};
-    titleCell.fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
-    ws.getRow(1).height = 28;
-
-    ws.mergeCells(2,1,2,lastCol);
-    const reportCell = ws.getCell(2,1);
-    reportCell.value = REP_OUT.title;
-    reportCell.font = {name:"Aptos",size:12,bold:true,color:{argb:"FF211E1C"}};
-    reportCell.alignment = {horizontal:"left",vertical:"middle"};
-    ws.getRow(2).height = 22;
-
-    ws.mergeCells(3,1,3,lastCol);
-    const filterCell = ws.getCell(3,1);
-    filterCell.value = filterParts.length ? filterParts.join("  |  ") : "All records";
-    filterCell.font = {name:"Aptos",size:10,color:{argb:"FF6E6A63"}};
-    filterCell.alignment = {horizontal:"left",vertical:"middle",wrapText:true};
-    ws.getRow(3).height = 20;
-
-    ws.mergeCells(4,1,4,lastCol);
-    const generatedCell = ws.getCell(4,1);
-    generatedCell.value = "Generated: " + generated + "  |  Records: " + REP_OUT.rows.length;
-    generatedCell.font = {name:"Aptos",size:9.5,italic:true,color:{argb:"FF8B8780"}};
-    generatedCell.alignment = {horizontal:"left",vertical:"middle"};
-    ws.getRow(4).height = 18;
-
-    ws.addRow([]);
-    const headerRow = ws.addRow(REP_OUT.head);
-    headerRow.height = 22;
-    headerRow.eachCell((cell) => {
-      cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};
-      cell.fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};
-      cell.alignment = {horizontal:"center",vertical:"middle",wrapText:true};
-      cell.border = {
-        top:{style:"thin",color:{argb:"FFD8DDD8"}},
-        bottom:{style:"thin",color:{argb:"FFD8DDD8"}},
-        left:{style:"thin",color:{argb:"FFE7E9E6"}},
-        right:{style:"thin",color:{argb:"FFE7E9E6"}}
-      };
-    });
-
-    REP_OUT.rows.forEach((rawRow, rowIndex) => {
-      const excelRow = ws.addRow(rawRow);
-      excelRow.height = 20;
-      excelRow.eachCell((cell, colNumber) => {
-        cell.font = {name:"Aptos",size:10,color:{argb:"FF161513"}};
-        cell.alignment = {vertical:"middle",horizontal:"left",wrapText:true};
-        cell.border = {
-          bottom:{style:"hair",color:{argb:"FFE9E7E3"}}
-        };
-        if(rowIndex % 2 === 1){
-          cell.fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FFF8F7F5"}};
-        }
-
-        const head = String(REP_OUT.head[colNumber-1] || "").toLowerCase();
-        const numericHead = /qty|stock in|stock out|net|current stock|alarm qty|shortage|total|value|price/.test(head);
-        if(numericHead && cell.value !== "" && cell.value !== null && !isNaN(Number(cell.value))){
-          cell.value = Number(cell.value);
-          cell.numFmt = Number.isInteger(cell.value) ? '#,##0;[Red]-#,##0' : '#,##0.00;[Red]-#,##0.00';
-          cell.alignment = {vertical:"middle",horizontal:"right"};
-        }
-        if(head === "unit"){
-          cell.alignment = {vertical:"middle",horizontal:"center"};
-        }
-        if(head === "status"){
-          cell.alignment = {vertical:"middle",horizontal:"center"};
-          const val = String(cell.value||"").toLowerCase();
-          if(val === "ok"){
-            cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FF3F7D5A"}};
-          } else if(val.includes("low")){
-            cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FFB7770D"}};
-          } else if(val.includes("out")){
-            cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FFC7402E"}};
-          }
-        }
-      });
-    });
-
-    const headerExcelRow = 6;
-    ws.autoFilter = {from:{row:headerExcelRow,column:1},to:{row:headerExcelRow,column:lastCol}};
-
-    // Sensible management-report column widths.
-    const widthByHead = {
-      "id":13,"date":14,"sl":8,"page":10,"category":22,"item":30,"type":18,
-      "color":18,"thickness":14,"stock in":13,"stock out":14,"net":13,
-      "current stock":16,"unit":12,"qty":12,"note":28,"by":24,"status":16,
-      "alarm qty":13,"shortage":13,"unit price (tk)":16,"value (tk)":18
-    };
-    REP_OUT.head.forEach((h, idx) => {
-      const key = String(h).toLowerCase();
-      ws.getColumn(idx+1).width = widthByHead[key] || Math.min(32, Math.max(12, key.length + 4));
-    });
-
-    ws.headerFooter.oddFooter = "&LGenerated by SML Inventory ERP&R&Page &P of &N";
-    ws.headerFooter.oddHeader = "&R&F";
-    ws.views = [{state:"frozen", ySplit:6}];
-
-    const safeName = company.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"") || "SML";
-    const reportSlug = REP_OUT.title.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,70) || "Report";
-    const dateSlug = todayISO();
-    const filename = safeName + "_" + reportSlug + "_" + dateSlug + ".xlsx";
-
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-    toast("Professional Excel report downloaded");
-  }catch(err){
-    console.error(err);
-    toast("Could not create the Excel report");
-  }finally{
-    if(btn){ btn.disabled = false; btn.textContent = "↧ Excel"; }
-  }
-}
-
-function renderReports(){
-  $("#view-reports").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Insight / <b>Reports</b></div><h1>Reports</h1><p>Run, search, print or export to Excel</p></div></div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="filter-bar" style="margin-bottom:0">
-      <select class="select" onchange="REP.type=this.value;runReport()">${REP_TYPES.map(x=>`<option value="${x[0]}" ${REP.type===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select>
-      <select class="select" onchange="REP.cat=this.value;runReport()"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${REP.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
-      <input class="input" type="date" style="width:auto" value="${REP.from}" onchange="REP.from=this.value;runReport()">
-      <span style="color:var(--faint)">to</span>
-      <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
-      <input class="input" style="max-width:220px" placeholder="Search item, note, user\u2026" value="${esc(REP.q||"")}" onchange="REP.q=this.value;runReport()">
-      <button class="btn btn-primary" onclick="runReport()">Run Report</button>
-      ${REP_OUT?`<button class="btn" id="reportExcelBtn" onclick="exportReportXlsx()">\u2913 Excel</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
-    </div>
-  </div>
-  ${REP_OUT?`<div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">${esc(REP_OUT.title)}</h3><div class="sub">${REP_OUT.rows.length} rows</div></div>
-  <div class="table-scroll"><table><thead><tr>${REP_OUT.head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
-  ${REP_OUT.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${REP_OUT.head.length}" style="text-align:center;color:var(--faint);padding:30px">No data in this range</td></tr>`}
-  </tbody></table></div></div>`:`<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Select a report and press <b>Run Report</b></div>`}`;
-}
-
-/* ---------- users (Firebase roles) ---------- */
-let ROLES = [];
-function accessOf(role){ role = String(role||"").toLowerCase(); return role==="admin" ? "Admin" : (role==="staff"||role==="store") ? "Store" : "Viewer"; }
-function renderUsers(){
-  $("#view-users").innerHTML = `<div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Loading\u2026</p></div></div>`;
-  fdb.collection("roles").get().then(s => {
-    if(CURRENT_VIEW !== "users") return;
-    ROLES = s.docs.map(d => Object.assign({ email: d.id }, d.data()));
-    $("#view-users").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Admin: full access \u00b7 Store: daily operations \u00b7 Viewer: read-only</p></div>
-    <div class="page-actions"><button class="btn btn-primary" onclick="userModal()">+ Add User</button></div></div>
-  <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>New user = 2 steps:</b> 1) Firebase Console \u2192 Authentication \u2192 Add user (email + password) &nbsp;2) Ekhane same email add kore role din.</div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Access</th><th></th></tr></thead><tbody>
-  ${ROLES.map(r => { const acc = accessOf(r.role); return `<tr><td class="type-cell">${esc(r.email)}${r.email===currentUser.id?' <span style="color:var(--faint);font-size:11px">(you)</span>':""}</td><td>${esc(r.name||"\u2014")}</td><td><span class="badge ${acc.toLowerCase()}">${acc.toUpperCase()}</span></td>
-    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="userModal('${esc(r.email)}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delUser('${esc(r.email)}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No users yet \u2014 add your team</td></tr>`}
-  </tbody></table></div></div>`;
-  }).catch(() => { if(CURRENT_VIEW==="users") toast("Could not load users"); });
-}
-function userModal(email){
-  const r = email ? ROLES.find(x => x.email === email) : null;
-  openModal(`<h3>${r ? "Edit" : "Add"} User</h3><div class="sub">${r ? esc(r.email) : "Step 1: create this login in Firebase Console \u2192 Authentication first"}</div>
-  ${r ? "" : `<div class="field"><label>Email *</label><input class="input" id="fEmail" placeholder="name@sml.com"></div>`}
-  <div class="field"><label>Full Name</label><input class="input" id="fName" value="${r?esc(r.name||""):""}"></div>
-  <div class="field"><label>Access Type</label><select class="select" id="fAccess">${["Admin","Store","Viewer"].map(a=>`<option ${r&&accessOf(r.role)===a?"selected":""}>${a}</option>`).join("")}</select></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitUser('${r?esc(r.email):""}')">Save</button></div>`);
-}
-function submitUser(email){
-  const em = (email || $("#fEmail").value.trim()).toLowerCase();
-  if(!em || em.indexOf("@") === -1) return toast("Valid email is required");
-  const acc = $("#fAccess").value;
-  if(em === currentUser.id && acc !== "Admin") return toast("You cannot remove your own Admin access");
-  const role = acc === "Admin" ? "admin" : acc === "Store" ? "staff" : "viewer";
-  fdb.collection("roles").doc(em).set({ role, name: $("#fName").value.trim() }, { merge: true }).then(() => {
-    audit((email ? "Edited" : "Added") + " user: " + em); save();
-    closeModal(); toast("User saved"); renderUsers();
-  }).catch(() => toast("Could not save user \u2014 check permission"));
-}
-function delUser(email){
-  if(email === currentUser.id) return toast("You cannot delete your own account");
-  if(!confirm(`Remove access for "${email}"?\nAlso delete the login from Firebase Console \u2192 Authentication.`)) return;
-  fdb.collection("roles").doc(email).delete().then(() => {
-    audit("Removed user: " + email); save(); toast("User removed"); renderUsers();
-  }).catch(() => toast("Could not remove user"));
-}
-
-/* ---------- audit trail ---------- */
-let AUDIT_Q = "";
-function renderAudit(){
-  const rows = DB.audit.filter(a => !AUDIT_Q || a.action.toLowerCase().includes(AUDIT_Q) || a.user.toLowerCase().includes(AUDIT_Q)).slice(0,300);
-  $("#view-audit").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Administration / <b>Audit Trail</b></div><h1>Audit Trail</h1><p>Who did what, and when</p></div>
-    <div class="page-actions"><button class="btn" onclick="exportCSV('audit-trail.csv',['Date','Time','User','Action'],DB.audit.map(a=>[a.date,a.time,a.user,a.action]))">\u2913 Export CSV</button></div></div>
-  <div class="filter-bar"><div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="input" placeholder="Search action or user\u2026" value="${esc(AUDIT_Q)}" oninput="AUDIT_Q=this.value.toLowerCase();renderAudit();document.querySelector('#view-audit .input').focus()"></div></div>
-  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Date</th><th>Time</th><th>User</th><th>Action</th></tr></thead><tbody>
-  ${rows.map(a=>`<tr><td>${fmtD(a.date)}</td><td class="muted">${esc(a.time)}</td><td class="type-cell">${esc(a.user)}</td><td>${esc(a.action)}</td></tr>`).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No log entries</td></tr>`}
-  </tbody></table></div></div>`;
-}
-
-/* ---------- settings ---------- */
-function renderSettings(){
-  $("#view-settings").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Administration / <b>Settings</b></div><h1>Settings</h1><p>Company info &amp; data management</p></div></div>
-  <div class="grid-2">
-    <div class="card"><h3>Company</h3><div class="sub">Shown on slips and reports</div>
-      <div class="field"><label>Company Name</label><input class="input" id="stCompany" value="${esc(DB.settings.company)}"></div>
-      <div class="field"><label>Address</label><input class="input" id="stAddress" value="${esc(DB.settings.address)}"></div>
-      <div class="field"><label>Default Alarm Qty (new items)</label><input class="input" id="stAlarm" type="number" min="0" value="${DB.settings.alarmDefault}"></div>
-      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
-    <div class="card"><h3>Data Backup</h3><div class="sub">All data is saved in Firebase cloud \u2014 still, regular backups are a good habit</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-green" onclick="backupData()">\u2913 Download Backup (JSON)</button>
-        <label class="btn" style="cursor:pointer">\u2912 Restore Backup<input type="file" accept=".json" style="display:none" onchange="restoreData(this)"></label>
-        <button class="btn" onclick="resetData()">Reset to Demo Data</button>
-        <button class="btn btn-danger-soft" onclick="clearData()">Clear All Data (fresh start)</button>
-      </div>
-      <div class="hint" style="margin-top:12px">Backup file contains everything: items, stock transactions, settings and audit log. Logins &amp; roles are managed in Firebase Console.</div></div>
-  </div>`;
-}
-function saveSettings(){
-  DB.settings.company = $("#stCompany").value.trim() || "Step Media Ltd";
-  DB.settings.address = $("#stAddress").value.trim();
-  DB.settings.alarmDefault = Math.max(0, Number($("#stAlarm").value)||5);
-  audit("Updated settings"); save();
-  $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
-  toast("Settings saved");
-}
-function backupData(){
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)], {type:"application/json"}));
-  a.download = "sml-inventory-backup-"+todayISO()+".json"; a.click(); URL.revokeObjectURL(a.href);
-  audit("Downloaded backup"); save(); toast("Backup downloaded");
-}
-function restoreData(inp){
-  const f = inp.files[0]; if(!f) return;
-  const rd = new FileReader();
-  rd.onload = async () => {
-    try{
-      const d = JSON.parse(rd.result);
-      if(!d.items || !d.txns || !d.settings) throw new Error("bad file");
-      if(!confirm("Restore this backup? Current cloud data will be replaced for everyone.")) return;
-      toast("Restoring\u2026 please wait");
-      await wipeColl("erp_txns"); await wipeColl("erp_audit");
-      DB = d; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
-      SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
-      audit("Restored from backup");
-      await doSave(); renderAll(); toast("Backup restored");
-    }catch(e){ console.error(e); toast("Invalid backup file"); }
-  };
-  rd.readAsText(f);
-}
-async function resetData(){
-  if(!confirm("Reset ALL data back to demo data? This cannot be undone and affects everyone.")) return;
-  toast("Resetting\u2026 please wait");
-  await wipeColl("erp_txns"); await wipeColl("erp_audit");
-  DB = seedData();
-  SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
-  await doSave(); renderAll(); toast("Demo data restored");
-}
-async function clearData(){
-  if(!confirm("Delete ALL items and stock transactions \u2014 everything? Start completely fresh? This affects everyone.")) return;
-  toast("Clearing\u2026 please wait");
-  await wipeColl("erp_txns"); await wipeColl("erp_audit");
-  const st = DB.settings;
-  DB = { settings: st, seq:{si:0,so:0}, categories:[], groups:[], items:[], txns:[], audit:[] };
-  SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
-  audit("Cleared all data \u2014 fresh start");
-  await doSave(); renderAll(); toast("All clear \u2014 fresh start!");
-}
-
-/* ---------- router & init ---------- */
-const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut,
-  reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings
-};
-function show(view){
-  if(!VIEWS[view]) view = "dashboard";
-  if(!isAdmin() && ["users","audit","settings"].includes(view)) view = "dashboard";
-  CURRENT_VIEW = view;
-  if(location.hash.slice(1) !== view){ try{ history.replaceState(null,"","#"+view); }catch(e){} }
-  document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
-  $("#view-"+view).classList.add("active");
-  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.view===view));
-  VIEWS[view]();
-  $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open");
-  window.scrollTo(0,0);
-}
-function renderAll(){
-  if(currentUser && VIEWS[CURRENT_VIEW]) VIEWS[CURRENT_VIEW]();
-}
-document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
-window.addEventListener("hashchange", () => { if(currentUser) show(location.hash.slice(1) || "dashboard"); });
-$("#hamburger").addEventListener("click", () => { $("#sidebar").classList.toggle("open"); $("#scrim").classList.toggle("open"); });
-$("#scrim").addEventListener("click", () => { $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open"); });
-let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if(currentUser && CURRENT_VIEW==="dashboard") renderDashboard(); }, 200); });
-function tick(){
-  $("#clock").textContent = new Date().toLocaleString("en-GB",{weekday:"short",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
-}
-setInterval(tick, 30000); tick();
-
-$("#lgUser").focus();
-fauth.onAuthStateChanged(async fu => {
-  if(!fu){ $("#loginWrap").style.display = ""; currentUser = null; return; }
-  try{
-    const rs = await fdb.collection("roles").doc(fu.email).get();
-    const rd = rs.exists ? rs.data() : {};
-    const role = String(rd.role || "").toLowerCase();
-    const access = role === "admin" ? "Admin" : (role === "staff" || role === "store") ? "Store" : "Viewer";
-    await loadData();
-    enterApp({ id: fu.email, email: fu.email, name: rd.name || fu.email.split("@")[0], username: fu.email.split("@")[0], access });
-    attachListeners();
-    if(!rs.exists) toast("No role assigned \u2014 view-only. Ask admin to add you in Users.");
-    audit("Logged in"); save();
-  }catch(err){
-    console.error(err);
-    const el = $("#loginErr"); el.style.display = "block";
-    el.textContent = "Could not load data. Check internet and try again.";
-    fauth.signOut();
-  }
-  const btn = document.querySelector("#loginForm button");
-  if(btn){ btn.disabled = false; btn.textContent = "Sign in"; }
-});
-
-</script>
-</body>
-</html>
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" 
