@@ -937,7 +937,7 @@ body{position:relative}
 .table-scroll td:last-child{
   text-align:right;
 }
-<style id="sml-txn-selection-ui">/* ---------- compact transaction selection ---------- */.txn-bulk-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin:0 12px 12px;border:1px solid #E2E8F0;border-radius:10px;background:#F8FAFC}.txn-bulk-bar .count{font-size:12px;font-weight:700;color:#475467;margin-right:auto}.txn-select{width:17px;height:17px;accent-color:#FF6B4A;cursor:pointer}.txn-check-head{width:48px;min-width:48px}.txn-bulk-bar .btn{white-space:nowrap}@media(max-width:720px){.txn-bulk-bar .count{width:100%;margin-right:0}}</style></style>>
+</style>>
 </head>
 <body>
 
@@ -979,6 +979,7 @@ body{position:relative}
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
     <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
     <div class="nav-label">Purchasing</div>
+    <button class="nav-item" data-view="pos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>Purchase Orders</button>
     <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="M6 13l6-6 6 6"/><path d="M4 3h16"/></svg>Stock Out</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
@@ -996,6 +997,7 @@ body{position:relative}
     <div class="view" id="view-items"></div>
     <div class="view" id="view-stockin"></div>
     <div class="view" id="view-stockout"></div>
+    <div class="view" id="view-pos"></div>
     <div class="view" id="view-suppliers"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
@@ -1738,134 +1740,25 @@ function renderStockOut(){ renderTxns("OUT"); }
 function renderTxns(kind){
   const fin = kind === "IN", f = fin ? SI_F : SO_F, F = fin ? "SI_F" : "SO_F";
   const rows = txnRows(kind, f);
-  const selected = TXN_SELECTED[kind] || new Set();
-  const visibleIds = rows.map(t => t.id);
-  const selectedVisible = visibleIds.filter(id => selected.has(id));
   const total = rows.reduce((s,t) => s + (fin ? (Number(t.qty)||0) : -(Number(t.qty)||0)), 0);
-  const allVisible = rows.length > 0 && selectedVisible.length === rows.length;
-  const root = fin ? "#view-stockin" : "#view-stockout";
-
-  $(root).innerHTML =
-    "<div class=\"page-head\"><div><div class=\"crumb\">Inventory / <b>"+(fin?"Stock In":"Stock Out")+"</b></div><h1>"+(fin?"Stock In":"Stock Out")+"</h1><p>"+(fin?"Material received into store":"Material issued / delivered from store")+"</p></div>"+
-    "<div class=\"page-actions\"><button class=\"btn\" onclick=\"exportTxnXlsx('"+kind+"')\">⇩ Excel</button><button class=\"btn "+(fin?"btn-green":"btn-primary")+" \" onclick=\"txnModal('"+kind+"')\">+ New "+(fin?"Stock In":"Stock Out")+"</button></div></div>"+
-    "<div class=\"filter-bar\">"+
-      "<div class=\"search-wrap\"><input class=\"input\" placeholder=\"Search item, note, user…\" value=\""+esc(f.q)+"\" oninput=\""+F+".q=this.value;renderTxns('"+kind+"')\"></div>"+
-      "<select class=\"select\" onchange=\""+F+".cat=this.value;renderTxns('"+kind+"')\"><option value=\"\">All Categories</option>"+itemCats().map(cat => "<option value=\""+esc(cat)+"\" "+(f.cat===cat?"selected":"")+">"+esc(cat)+"</option>").join("")+"</select>"+
-      "<select class=\"select\" onchange=\""+F+".item=this.value;renderTxns('"+kind+"')\"><option value=\"\">All Items</option>"+DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it => "<option value=\""+it.id+"\" "+(f.item===it.id?"selected":"")+">"+esc(itemLabel(it))+"</option>").join("")+"</select>"+
-      "<input type=\"date\" class=\"input\" style=\"max-width:160px\" value=\""+f.from+"\" onchange=\""+F+".from=this.value;renderTxns('"+kind+"')\">"+
-      "<input type=\"date\" class=\"input\" style=\"max-width:160px\" value=\""+f.to+"\" onchange=\""+F+".to=this.value;renderTxns('"+kind+"')">"+
-    "</div>"+
-    "<div class=\"table-card\">"+
-      "<div style=\"padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px\"><h3 style=\"font-size:14.5px\">Entries <span style=\"color:var(--faint);font-weight:400\">("+rows.length+")</span></h3><span style=\"color:var(--muted);font-size:12.5px\">Total "+(fin?"received":"issued")+": <b>"+total+"</b></span></div>"+
-      "<div id=\"txnSelectionTools-"+kind+"\" class=\"txn-bulk-bar\" style=\""+(selectedVisible.length?"":"display:none")+"\">"+
-        "<span class=\"count\"><span id=\"txnSelectedCount-"+kind+"\">"+selectedVisible.length+"</span> selected</span>"+
-        "<button class=\"btn btn-sm\" onclick=\"printSelectedTxnSlips('"+kind+"')\">Print Selected</button>"+
-        (isAdmin() ? "<button class=\"btn btn-sm btn-danger-soft\" onclick=\"reverseSelectedTxns('"+kind+"')\">Reverse Selected</button>" : "")+
-        "<button class=\"btn btn-sm\" onclick=\"clearTxnSelection('"+kind+"')\">Clear</button>"+
-      "</div>"+
-      "<div class=\"table-scroll\"><table><thead><tr>"+
-        "<th class=\"txn-check-head\"><input class=\"txn-select\" type=\"checkbox\" title=\"Select all visible\" aria-label=\"Select all visible\" "+(allVisible?"checked":"")+" onchange=\"toggleAllTxnSelection('"+kind+"',this.checked)\"></th>"+
-        "<th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class=\"num\">Qty</th><th>Supplier</th><th>Reference</th><th>Note</th><th>By</th>"+
-      "</tr></thead><tbody>"+
-        (rows.map(t => {
-          const it=itemById(t.itemId), checked=selected.has(t.id);
-          return "<tr>"+
-            "<td class=\"txn-check-head\"><input class=\"txn-select\" type=\"checkbox\" aria-label=\"Select "+esc(t.id)+"\" "+(checked?"checked":"")+" onchange=\"toggleTxnSelection('"+kind+"','"+esc(t.id)+"',this.checked)\"></td>"+
-            "<td class=\"muted\">"+esc(t.id)+"</td><td>"+fmtD(t.date)+"</td><td>"+(it?"<span class=\"cat-chip\">"+esc(it.category||"Board")+"</span>":"")+"</td>"+
-            "<td><b>"+esc(itemName(it))+"</b></td><td class=\"num\"><b>"+Math.abs(t.qty)+"</b> "+(it?esc(it.uom||"Pcs"):"")+"</td>"+
-            "<td class=\"muted\">"+esc(supplierName(t.supplierId)||"")+"</td><td class=\"muted\">"+esc(t.referenceNo||"")+"</td><td class=\"muted\">"+esc(t.note||"")+"</td><td class=\"muted\">"+esc(t.by||"")+"</td>"+
-          "</tr>";
-        }).join("") || "<tr><td colspan=\"10\" style=\"text-align:center;color:var(--faint);padding:28px\">No entries found</td></tr>")+
-      "</tbody></table></div></div>";
+  $(fin ? "#view-stockin" : "#view-stockout").innerHTML = `
+  <div class="page-head"><div><div class="crumb">Inventory / <b>${fin?"Stock In":"Stock Out"}</b></div><h1>${fin?"Stock In":"Stock Out"}</h1><p>${fin?"Material received into store":"Material issued / delivered from store"}</p></div>
+    <div class="page-actions">
+      <button class="btn" onclick="exportTxnXlsx('${kind}')">\u2913 Excel</button>
+      <button class="btn ${fin?"btn-green":"btn-primary"}" onclick="txnModal('${kind}')">+ New ${fin?"Stock In":"Stock Out"}</button>
+    </div></div>
+  <div class="filter-bar">
+    <div class="search-wrap"><input class="input" placeholder="Search item, note, user\u2026" value="${esc(f.q)}" oninput="${F}.q=this.value;renderTxns('${kind}')"></div>
+    <select class="select" onchange="${F}.cat=this.value;renderTxns('${kind}')"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
+    <select class="select" onchange="${F}.item=this.value;renderTxns('${kind}')"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemLabel(it))}</option>`).join("")}</select>
+    <input type="date" class="input" style="max-width:160px" value="${f.from}" onchange="${F}.from=this.value;renderTxns('${kind}')">
+    <input type="date" class="input" style="max-width:160px" value="${f.to}" onchange="${F}.to=this.value;renderTxns('${kind}')">
+  </div>
+  <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
+  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Supplier</th><th>Reference</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(supplierName(t.supplierId)||"")}</td><td class="muted">${esc(t.referenceNo||"")}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="printTxnSlip('${t.id}')">Print</button>`}${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn('${t.id}')">Reverse</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
+  </tbody></table></div></div>`;
 }
-
-let TXN_SELECTED = { IN:new Set(), OUT:new Set() };
-
-function updateTxnSelectionUI(kind){
-  const selected=TXN_SELECTED[kind]||new Set();
-  const root="#view-"+(kind==="IN"?"stockin":"stockout");
-  const box=document.querySelector("#txnSelectionTools-"+kind);
-  const count=document.querySelector("#txnSelectedCount-"+kind);
-  if(box) box.style.display=selected.size ? "flex" : "none";
-  if(count) count.textContent=selected.size;
-  const rows=txnRows(kind,kind==="IN"?SI_F:SO_F);
-  const visibleIds=new Set(rows.map(t=>t.id));
-  document.querySelectorAll(root+" tbody .txn-select").forEach(cb=>{
-    const tr=cb.closest("tr");
-    const id=tr&&tr.cells&&tr.cells[1]?tr.cells[1].textContent.trim():"";
-    if(id) cb.checked=selected.has(id);
-  });
-  const visibleSelected=rows.filter(t=>selected.has(t.id)).length;
-  const head=document.querySelector(root+" thead .txn-select");
-  if(head){
-    head.checked=rows.length>0 && visibleSelected===rows.length;
-    head.indeterminate=visibleSelected>0 && visibleSelected<rows.length;
-  }
-}
-
-function toggleTxnSelection(kind,id,checked){
-  const set=TXN_SELECTED[kind]||new Set();
-  if(checked) set.add(id); else set.delete(id);
-  TXN_SELECTED[kind]=set;
-  updateTxnSelectionUI(kind);
-}
-
-function toggleAllTxnSelection(kind,checked){
-  const set=TXN_SELECTED[kind]||new Set();
-  const rows=txnRows(kind,kind==="IN"?SI_F:SO_F);
-  rows.forEach(t => checked ? set.add(t.id) : set.delete(t.id));
-  TXN_SELECTED[kind]=set;
-  renderTxns(kind);
-}
-
-function clearTxnSelection(kind){
-  TXN_SELECTED[kind]=new Set();
-  renderTxns(kind);
-}
-
-function printSelectedTxnSlips(kind){
-  const ids=Array.from(TXN_SELECTED[kind]||[]);
-  if(!ids.length){ toast("Select at least one entry"); return; }
-  const rows=ids.map(id=>DB.txns.find(t=>t.id===id)).filter(Boolean);
-  if(!rows.length){ toast("Selected entries are no longer available"); return; }
-  const company=(DB.settings&&DB.settings.company)||"Step Media Ltd";
-  const address=DB.settings.address||"";
-  const kindTitle=kind==="IN"?"STOCK IN — SELECTED ENTRIES":"STOCK OUT — SELECTED ENTRIES";
-  const supplierHead=kind==="IN"?"Supplier":"Department / Project";
-  const refHead=kind==="IN"?"Reference":"Issued To";
-  const body=rows.map(t=>{
-    const it=itemById(t.itemId);
-    return "<tr><td>"+esc(t.id)+"</td><td>"+esc(t.date||"")+"</td><td>"+esc(itemName(it))+"</td><td style=\"text-align:right\">"+Math.abs(Number(t.qty)||0)+" "+esc(it?(it.uom||"Pcs"):"Pcs")+"</td><td>"+esc(kind==="IN"?supplierName(t.supplierId)||"":t.department||"")+"</td><td>"+esc(kind==="IN"?t.referenceNo||"":t.issuedTo||"")+"</td><td>"+esc(t.note||"")+"</td><td>"+esc(t.by||"")+"</td></tr>";
-  }).join("");
-  $("#slipPrint").innerHTML=
-    "<div style=\"max-width:1100px;margin:0 auto;padding:28px;font-family:Arial,sans-serif;color:#111\">"+
-      "<div style=\"display:flex;justify-content:space-between;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:14px\">"+
-        "<div><div style=\"font-size:21px;font-weight:700\">"+esc(company)+"</div><div style=\"font-size:11px;color:#666;margin-top:4px\">"+esc(address)+"</div></div>"+
-        "<div style=\"text-align:right\"><div style=\"font-size:16px;font-weight:700\">"+kindTitle+"</div><div style=\"font-size:11px;color:#666;margin-top:4px\">Records: "+rows.length+" · Printed: "+esc(todayISO())+"</div></div>"+
-      "</div>"+
-      "<table style=\"width:100%;border-collapse:collapse;font-size:11.5px\"><thead><tr><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">ID</th><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">Date</th><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">Item</th><th style=\"padding:7px;border:1px solid #ddd;text-align:right\">Qty</th><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">"+supplierHead+"</th><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">"+refHead+"</th><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">Note</th><th style=\"padding:7px;border:1px solid #ddd;text-align:left\">By</th></tr></thead><tbody>"+body+"</tbody></table>"+
-      "<div style=\"margin-top:36px;font-size:11px;color:#666;display:flex;justify-content:space-between\"><span>Prepared By: __________________</span><span>Signature: __________________</span></div>"+
-      "<div style=\"margin-top:20px;text-align:center;font-size:9px;color:#888\">Generated by SML Inventory ERP</div>"+
-    "</div>";
-  document.body.classList.add("slip-mode");
-  setTimeout(()=>window.print(),60);
-}
-
-async function reverseSelectedTxns(kind){
-  if(!isAdmin()){ toast("Only Admin can reverse entries"); return; }
-  const ids=Array.from(TXN_SELECTED[kind]||[]);
-  if(!ids.length){ toast("Select at least one entry"); return; }
-  if(!confirm("Reverse "+ids.length+" selected entr"+(ids.length===1?"y":"ies")+"? Original entries will remain in history.")) return;
-  let ok=0,fail=0;
-  for(const id of ids){
-    const result=await reverseTxn(id,{skipConfirm:true,silent:true});
-    if(result) ok++; else fail++;
-  }
-  TXN_SELECTED[kind]=new Set();
-  renderTxns(kind);
-  toast(ok+" entr"+(ok===1?"y":"ies")+" reversed"+(fail?" · "+fail+" failed":""));
-}
-
 function txnModal(kind){
   if(!canWrite()) return;
   const fin = kind === "IN";
@@ -1991,16 +1884,15 @@ async function submitTxn(e,kind){
 }
 
 
-async function reverseTxn(id, options){
-  const opts=options||{};
-  if(!isAdmin()){ if(!opts.silent) toast("Only Admin can reverse entries"); return false; }
+async function reverseTxn(id){
+  if(!isAdmin()){ toast("Only Admin can reverse entries"); return; }
   const original=DB.txns.find(x=>x.id===id);
-  if(!original) return false;
-  if(original.subtype==="REVERSAL"){ if(!opts.silent) toast("This entry is already a reversal"); return false; }
-  if(DB.txns.some(x=>x.subtype==="REVERSAL" && x.referenceId===id)){ if(!opts.silent) toast("This entry has already been reversed"); return false; }
-  if(!opts.skipConfirm && !confirm("Reverse "+id+"? The original entry will remain in history.")) return false;
+  if(!original) return;
+  if(original.subtype==="REVERSAL"){ toast("This entry is already a reversal"); return; }
+  if(DB.txns.some(x=>x.subtype==="REVERSAL" && x.referenceId===id)){ toast("This entry has already been reversed"); return; }
+  if(!confirm("Reverse "+id+"? The original entry will remain in history.")) return;
   const item=itemById(original.itemId);
-  if(!item) return false;
+  if(!item) return;
   try{
     const result=await fdb.runTransaction(async transaction=>{
       const mainRef=fdb.collection("erp").doc("main");
@@ -2026,13 +1918,8 @@ async function reverseTxn(id, options){
       transaction.set(auditRef,audit);
       return {items,seq,txn,audit};
     });
-    applyCommittedMovement(result,opts.silent?"":id+" reversed");
-    return result;
-  }catch(err){
-    console.error(err);
-    if(!opts.silent) toast(err.message||"Could not reverse entry");
-    return false;
-  }
+    applyCommittedMovement(result,id+" reversed");
+  }catch(err){ console.error(err); toast(err.message||"Could not reverse entry"); }
 }
 
 async function delTxn(id){ return reverseTxn(id); }
@@ -2998,7 +2885,7 @@ document.addEventListener("keydown",e=>{
 });
 /* ---------- router & init ---------- */
 const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers,
+  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers, pos:renderPOs,
   reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings
 };
 function show(view){
