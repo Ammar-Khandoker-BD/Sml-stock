@@ -1527,7 +1527,7 @@ function renderItems(){
     <td><span class="cat-chip">${esc(it.category||"Board")}</span></td><td><b>${esc(it.type || itemName(it))}</b></td><td>${esc(it.color||"\u2014")}</td><td>${esc(it.thickness||"\u2014")}</td>
     <td class="num"><b>${it.stock}</b> ${esc(it.uom||"Pcs")}</td>
     <td>${levelBar(it)}</td><td>${statusBadge(it)}</td>
-    <td class="num" style="white-space:nowrap">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="itemModal(${JSON.stringify(it.id)})">Edit</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="openStockAdjustmentModal(${JSON.stringify(it.id)})">Adjust</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="delItem(${JSON.stringify(it.id)})">Delete</button>`:""}</td>
+    <td class="num" style="white-space:nowrap">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="itemModal('${esc(it.id)}')">Edit</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="openStockAdjustmentModal('${esc(it.id)}')">Adjust</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="delItem('${esc(it.id)}')">Delete</button>`:""}</td>
   </tr>`).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No items found \u2014 add or import items</td></tr>`}
   </tbody></table></div></div>`;
 }
