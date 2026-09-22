@@ -684,8 +684,8 @@ function exportCSV(name, head, rows){
 /* ---------- dashboard ---------- */
 function renderDashboard(){
   const month = todayISO().slice(0,7);
-  const inMonth = DB.txns.filter(t => t.type==="IN" && String(t.date).slice(0,7)===month).reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0);
-  const outMonth = DB.txns.filter(t => t.type==="OUT" && String(t.date).slice(0,7)===month).reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0);
+  const inMonth = movementTotals(DB.txns.filter(t => t.type==="IN" && String(t.date).slice(0,7)===month)).in;
+  const outMonth = movementTotals(DB.txns.filter(t => t.type==="OUT" && String(t.date).slice(0,7)===month)).out;
   const low = lowItems();
   const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
   const recent = DB.txns.slice(0,8);
@@ -695,10 +695,14 @@ function renderDashboard(){
   ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items \u2192</a></div></div>` : ""}
   <div class="kpi-grid">
     <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${DB.items.length}</div><div class="delta">in item master</div></div>
-    <div class="card kpi"><div class="label">Total Stock</div><div class="value">${totalStock}</div><div class="delta">all items combined</div></div>
+    <div class="card kpi"><div class="label">Total Stock</div><div class="value">${totalStock}</div><div class="delta">all items combined · Pcs</div></div>
+    <div class="card kpi k-blue"><div class="label">Stock Value</div><div class="value">Tk ${DB.items.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0).toLocaleString("en-IN",{maximumFractionDigits:0})}</div><div class="delta">current valuation</div></div>
+    <div class="card kpi k-red"><div class="label">Out of Stock</div><div class="value">${DB.items.filter(it=>(Number(it.stock)||0)<=0).length}</div><div class="delta">items at zero</div></div>
     <div class="card kpi k-green"><div class="label">Stock In \u2014 this month</div><div class="value">${inMonth}</div><div class="delta">material received</div></div>
     <div class="card kpi k-orange"><div class="label">Stock Out \u2014 this month</div><div class="value">${outMonth}</div><div class="delta">delivered / used</div></div>
     <div class="card kpi ${low.length?"k-red":"k-green"}"><div class="label">Low Stock</div><div class="value">${low.length}</div><div class="delta">at or below alarm qty</div></div>
+    <div class="card kpi k-green"><div class="label">Today In</div><div class="value">${movementTotals(DB.txns.filter(t=>t.date===todayISO())).in}</div><div class="delta">Pcs received</div></div>
+    <div class="card kpi k-orange"><div class="label">Today Out</div><div class="value">${movementTotals(DB.txns.filter(t=>t.date===todayISO())).out}</div><div class="delta">Pcs issued</div></div>
   </div>
   <div class="grid-2">
     <div class="card"><h3>Stock In vs Out \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
@@ -757,12 +761,12 @@ function renderItems(){
     <td><span class="cat-chip">${esc(it.category||"Board")}</span></td><td><b>${esc(it.type || itemName(it))}</b></td><td>${esc(it.color||"\u2014")}</td><td>${esc(it.thickness||"\u2014")}</td>
     <td class="num"><b>${it.stock}</b> ${esc(it.uom||"Pcs")}</td>
     <td>${levelBar(it)}</td><td>${statusBadge(it)}</td>
-    <td class="num" style="white-space:nowrap"><button class="btn" style="padding:3px 10px;font-size:12px" onclick="itemModal('${it.id}')">Edit</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="delItem('${it.id}')">Delete</button></td>
+    <td class="num" style="white-space:nowrap">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="itemModal(${JSON.stringify(it.id)})">Edit</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="openStockAdjustmentModal(${JSON.stringify(it.id)})">Adjust</button> <button class="btn" style="padding:3px 10px;font-size:12px" onclick="delItem(${JSON.stringify(it.id)})">Delete</button>`:""}</td>
   </tr>`).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:30px">No items found \u2014 add or import items</td></tr>`}
   </tbody></table></div></div>`;
 }
 function itemModal(id){
-  if(!canWrite()) return;
+  if(!isAdmin()){ toast("Only Admin can manage items"); return; }
   const it = id ? itemById(id) : null;
   openModal(`<h2>${it?"Edit Item":"Add Item"}</h2><div class="hint" style="margin-bottom:14px">Category groups items \u00b7 Type + Color + Thickness make the item name</div>
   <form onsubmit="submitItem(event${it?`,'${it.id}'`:""})">
@@ -785,7 +789,7 @@ function itemModal(id){
   $("#itType").focus();
 }
 function submitItem(e, id){
-  e.preventDefault(); if(!canWrite()) return;
+  e.preventDefault(); if(!isAdmin()){ toast("Only Admin can manage items"); return; }
   const type = $("#itType").value.trim(); if(!type){ toast("Type is required"); return; }
   const data = { category: ($("#itCat").value.trim() || "Board"), type, color: $("#itColor").value.trim(), thickness: $("#itThick").value.trim(), page: $("#itPage").value.trim(), uom: $("#itUom").value.trim() || "Pcs", alarm: Math.max(0, Number($("#itAlarm").value)||0) };
   if(id){
@@ -801,7 +805,7 @@ function submitItem(e, id){
   save(); closeModal(); renderItems(); toast(id?"Item updated":"Item added");
 }
 function delItem(id){
-  if(!canWrite()) return;
+  if(!isAdmin()){ toast("Only Admin can manage items"); return; }
   const it = itemById(id); if(!it) return;
   if(DB.txns.some(t => t.itemId === id)){ toast("Cannot delete \u2014 this item has stock transactions"); return; }
   if(!confirm("Delete item \""+itemName(it)+"\"?")) return;
@@ -1137,6 +1141,54 @@ async function reverseTxn(id){
 
 async function delTxn(id){ return reverseTxn(id); }
 
+function openStockAdjustmentModal(id){
+  if(!isAdmin()){ toast("Only Admin can adjust stock"); return; }
+  const it=itemById(id); if(!it) return;
+  openModal(`
+    <h2>Stock Adjustment</h2>
+    <div class="hint" style="margin-bottom:14px">Match the system balance with the physical count without deleting history.</div>
+    <form onsubmit="submitStockAdjustment(event,${JSON.stringify(id)})">
+      <div class="field"><label>Item</label><input class="input" value="${esc(itemName(it))}" disabled></div>
+      <div class="row-2">
+        <div class="field"><label>System Stock</label><input class="input" value="${formatQty(it.stock)} ${esc(it.uom||"Pcs")}" disabled></div>
+        <div class="field"><label for="adjQty">Physical Count *</label><input class="input" id="adjQty" type="number" min="0" step="any" value="${Number(it.stock)||0}" required></div>
+      </div>
+      <div class="row-2">
+        <div class="field"><label for="adjDate">Date</label><input class="input" id="adjDate" type="date" value="${todayISO()}" required></div>
+        <div class="field"><label for="adjReason">Reason *</label><input class="input" id="adjReason" class="input" placeholder="Physical count, damage, loss, correction…" required></div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Post Adjustment</button></div>
+    </form>`);
+}
+
+async function submitStockAdjustment(e,id){
+  e.preventDefault();
+  if(!isAdmin()) return;
+  const it=itemById(id); if(!it) return;
+  const physical=Number($("#adjQty").value);
+  if(!Number.isFinite(physical)||physical<0){ toast("Enter a valid physical count"); return; }
+  const current=Number(it.stock)||0;
+  const delta=physical-current;
+  if(delta===0){ toast("No adjustment needed — stock already matches"); return; }
+  const reason=$("#adjReason").value.trim();
+  if(!reason){ toast("Reason is required"); return; }
+  const date=$("#adjDate").value || todayISO();
+  try{
+    const result=await commitStockMovement({
+      type:delta>0?"IN":"OUT",
+      qtyDelta:delta,
+      date,
+      itemId:id,
+      note:"Adjustment: "+reason,
+      subtype:"ADJUSTMENT"
+    });
+    closeModal();
+    applyCommittedMovement(result,"Stock adjustment posted");
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Could not post adjustment");
+  }
+}
 function exportTxns(kind){
   const fin = kind === "IN";
   const rows = txnRows(kind, fin ? SI_F : SO_F);
@@ -1563,6 +1615,15 @@ async function clearData(){
   await doSave(); renderAll(); toast("All clear \u2014 fresh start!");
 }
 
+/* ---------- keyboard shortcuts ---------- */
+document.addEventListener("keydown",e=>{
+  if(!currentUser || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement && document.activeElement.tagName)) return;
+  if(!e.altKey) return;
+  const k=e.key.toLowerCase();
+  if(k==="i"){ e.preventDefault(); txnModal("IN"); }
+  if(k==="o"){ e.preventDefault(); txnModal("OUT"); }
+});
 /* ---------- router & init ---------- */
 const VIEWS = {
   dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut,
