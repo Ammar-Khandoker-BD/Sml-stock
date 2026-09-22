@@ -26,10 +26,6 @@ service cloud.firestore {
         );
     }
 
-    function isMainDoc() {
-      return false;
-    }
-
     function storeMainUpdateAllowed() {
       return request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['items', 'seq', 'client', 'rev']);
@@ -47,10 +43,13 @@ service cloud.firestore {
         && request.resource.data.id == txId
         && request.resource.data.type in ['IN', 'OUT']
         && request.resource.data.subtype in [
-          'NORMAL', 'OPENING', 'ADJUSTMENT', 'REVERSAL', 'PO_RECEIPT'
+          'NORMAL', 'OPENING', 'ADJUSTMENT', 'REVERSAL'
         ]
+        && request.resource.data.date is string
+        && request.resource.data.itemId is string
         && request.resource.data.qty is number
         && request.resource.data.qty != 0
+        && request.resource.data.by is string
         && request.resource.data.createdAt is number;
     }
 
@@ -62,7 +61,11 @@ service cloud.firestore {
           'id', 'ts', 'date', 'time', 'user', 'action'
         ])
         && request.resource.data.id == auditId
-        && request.resource.data.ts is number;
+        && request.resource.data.ts is number
+        && request.resource.data.date is string
+        && request.resource.data.time is string
+        && request.resource.data.user is string
+        && request.resource.data.action is string;
     }
 
     match /roles/{email} {
@@ -85,7 +88,7 @@ service cloud.firestore {
     }
 
     match /erp_audit/{auditId} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin() || isStore();
       allow create: if (isAdmin() || isStore()) && validAuditCreate(auditId);
       allow update, delete: if false;
     }
