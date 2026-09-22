@@ -749,7 +749,7 @@ function renderItems(){
   $("#view-items").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
-      <label class="btn" style="cursor:pointer">\u2912 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importItems(this)"></label>
+      <label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label><button class="btn" onclick="downloadItemTemplate()">\u2913 Template</button>
       <button class="btn" onclick="exportItems()">\u2913 Export Excel</button>
       <button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>
     </div></div>
@@ -787,7 +787,7 @@ function itemModal(id){
       <div class="field"><label>Unit</label><input class="input" id="itUom" value="${esc(it?(it.uom||"Pcs"):"Pcs")}" placeholder="Pcs"></div>
       <div class="field"><label>Alarm Qty</label><input class="input" id="itAlarm" type="number" min="0" value="${it?it.alarm:(DB.settings.alarmDefault||5)}"></div>
     </div>
-    ${it?"":`<div class="field"><label>Opening Stock</label><input class="input" id="itOpen" type="number" min="0" value="0"></div>`}
+    ${it?"":`<div class="row-2"><div class="field"><label>Opening Stock</label><input class="input" id="itOpen" type="number" min="0" value="0"></div><div class="field"><label>Opening Date</label><input class="input" id="itOpenDate" type="date" value="${todayISO()}"></div></div>`}
     <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary">${it?"Save Changes":"Add Item"}</button></div>
   </form>`);
   $("#itType").focus();
@@ -802,9 +802,14 @@ function submitItem(e, id){
     audit("Updated item: "+itemName(it));
   } else {
     const sl = DB.items.reduce((m,x) => Math.max(m, x.sl||0), 0) + 1;
-    const it = Object.assign({ id:"i"+Date.now(), sl, stock: Math.max(0, Number($("#itOpen").value)||0) }, data);
+    const opening = Math.max(0, Number($("#itOpen").value)||0);
+    const it = Object.assign({ id:"i"+Date.now(), sl, stock: opening }, data);
     DB.items.push(it);
-    audit("Added item: "+itemName(it));
+    if(opening > 0){
+      const txId = nextSeq("si","SI-");
+      DB.txns.push({id:txId,type:"IN",subtype:"OPENING",referenceId:"",supplierId:"",referenceNo:"",department:"",issuedTo:"",purpose:"",date:$("#itOpenDate").value||todayISO(),itemId:it.id,qty:opening,note:"Opening Balance",by:currentUser?currentUser.username:"system",createdAt:Date.now()});
+    }
+    audit("Added item: "+itemName(it)+(opening ? " · Opening balance "+opening+" "+it.uom : ""));
   }
   save(); closeModal(); renderItems(); toast(id?"Item updated":"Item added");
 }
@@ -831,6 +836,75 @@ function parseCSV(text){
   }
   if(cur !== "" || row.length){ row.push(cur); rows.push(row); }
   return rows.filter(r => r.some(c => String(c).trim() !== ""));
+}
+async function importItemsSmart(inp){
+  const f=inp.files[0]; if(!f) return;
+  if(!isAdmin()){ toast("Only Admin can import items"); inp.value=""; return; }
+  try{
+    if(/\.csv$/i.test(f.name)){ importItems(inp); return; }
+    if(typeof ExcelJS==="undefined") throw new Error("ExcelJS unavailable");
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(await f.arrayBuffer());
+    const ws=wb.worksheets[0];
+    if(!ws) throw new Error("Workbook has no sheet");
+    const rows=[]; ws.eachRow({includeEmpty:false},row=>rows.push(row.values.slice(1).map(v=>v==null?"":String(v))));
+    if(rows.length<2) throw new Error("Excel file is empty");
+    await importItemRows(rows);
+  }catch(err){ console.error(err); toast("Could not read Excel file — check the template"); }
+  finally{ inp.value=""; }
+}
+
+async function importItemRows(rows){
+  const head=rows[0].map(h=>String(h).trim().toLowerCase());
+  const col=name=>head.findIndex(h=>h===name || h.includes(name));
+  const cSl=col("sl"), cPage=col("page"), cCat=col("category"), cType=col("type"), cColor=col("color"), cThick=col("thickness"), cUnit=Math.max(col("unit"),col("uom")), cStock=col("opening stock")>=0?col("opening stock"):col("stock"), cAlarm=col("alarm"), cDate=col("opening date");
+  if(cType<0) throw new Error("Template needs a Type column");
+  let added=0, skipped=0, openingAdded=0;
+  let sl=DB.items.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
+  const keyOf=(cat,type,color,thick)=>(cat+"|"+type+"|"+color+"|"+thick).toLowerCase();
+  const seen=new Set(DB.items.map(it=>keyOf(it.category||"Board",it.type||"",it.color||"",it.thickness||"")));
+  rows.slice(1).forEach(r=>{
+    const type=String(cType>=0?r[cType]:"").trim(); if(!type){skipped++;return;}
+    const cat=(cCat>=0?String(r[cCat]||"").trim():"")||"Board";
+    const color=cColor>=0?String(r[cColor]||"").trim():"";
+    const thick=cThick>=0?String(r[cThick]||"").trim():"";
+    const key=keyOf(cat,type,color,thick);
+    if(seen.has(key)){skipped++;return;}
+    seen.add(key); sl++;
+    const opening=Math.max(0,Number(String(cStock>=0?r[cStock]:"").replace(/,/g,""))||0);
+    const unit=(cUnit>=0?String(r[cUnit]||"").trim():"")||"Pcs";
+    const it={id:"i"+Date.now()+"_"+sl,sl,page:cPage>=0?String(r[cPage]||"").trim():"",category:cat,type,color,thickness:thick,uom:cat==="Board"?"Pcs":unit,alarm:cAlarm>=0?Math.max(0,Number(r[cAlarm])||0):(DB.settings.alarmDefault||5),stock:opening};
+    DB.items.push(it); added++;
+    if(opening>0){
+      const txId=nextSeq("si","SI-");
+      const rawDate=cDate>=0?String(r[cDate]||"").trim():"";
+      const openDate=/^\d{4}-\d{2}-\d{2}$/.test(rawDate)?rawDate:todayISO();
+      DB.txns.push({id:txId,type:"IN",subtype:"OPENING",referenceId:"",supplierId:"",referenceNo:"",department:"",issuedTo:"",purpose:"",date:openDate,itemId:it.id,qty:opening,note:"Opening Balance",by:currentUser?currentUser.username:"system",createdAt:Date.now()});
+      openingAdded++;
+    }
+  });
+  audit("Imported "+added+" items from Excel/CSV"+(openingAdded?" · "+openingAdded+" opening balances":""));
+  save(); renderItems();
+  toast("Imported "+added+" items"+(skipped?" · skipped "+skipped+" duplicate/blank":"")+(openingAdded?" · opening balances recorded":""));
+}
+
+function downloadItemTemplate(){
+  if(!isAdmin()){ toast("Only Admin can download the item template"); return; }
+  if(typeof ExcelJS==="undefined"){ toast("Excel export library is still loading — try again"); return; }
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet("Item Import");
+  const head=["SL","Page","Category","Type","Color","Thickness","Unit","Opening Stock","Opening Date","Alarm Qty"];
+  ws.addRow(head);
+  ws.addRow([1,"521","Board","Melamine","Elegant","18 mm","Pcs",24,todayISO(),5]);
+  ws.addRow([2,"293","Board","Melamine","Antik","18 mm","Pcs",10,todayISO(),5]);
+  ws.getRow(1).eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle"}});
+  ws.views=[{state:"frozen",ySplit:1}];
+  [8,12,18,22,18,16,12,16,16,12].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  wb.xlsx.writeBuffer().then(buffer=>{
+    const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="SML_Item_Import_Template.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast("Import template downloaded");
+  });
 }
 function importItems(inp){
   const f = inp.files[0]; if(!f) return;
@@ -1290,7 +1364,7 @@ function runReport(){
   if(REP.type==="txns"){
     head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Reference","Department / Project","Issued To","Purpose","Note","By"];
     rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; });
+      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":t.subtype==="OPENING"?"Opening Balance":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
     head = ["Item","Category","Type","Thickness","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock","Unit"];
     const map = {};
