@@ -825,6 +825,22 @@ body{position:relative}
   }
 }
 </style>
+
+<style id="sml-sidebar-final-fix">
+/* ---------- sidebar final alignment ---------- */
+@media (min-width:981px){
+  .sidebar{
+    top:62px !important;
+    height:calc(100vh - 62px) !important;
+  }
+}
+@media (max-width:980px){
+  .sidebar{
+    top:58px !important;
+    height:calc(100vh - 58px) !important;
+  }
+}
+</style>
 </style>
 </head>
 <body>
@@ -1103,6 +1119,8 @@ function migrateDB(){
 
 /* ---------- auth (Firebase) ---------- */
 function enterApp(u){
+  const sidebarEl = document.querySelector("#sidebar");
+  if(sidebarEl) sidebarEl.scrollTop = 0;
   currentUser = u;
   $("#loginWrap").style.display = "none";
   $("#userName").textContent = u.name;
