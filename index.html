@@ -910,7 +910,34 @@ body{position:relative}
   .main{margin-left:0;width:100%}
 }
 </style>
-</style>
+
+<style id="sml-action-column-fix">
+/* ---------- item table: keep status + actions in distinct columns ---------- */
+.table-scroll table{
+  min-width:1080px;
+}
+.table-scroll th:last-child,
+.table-scroll td:last-child{
+  position:static !important;
+  right:auto !important;
+  box-shadow:none !important;
+  background:inherit !important;
+  white-space:nowrap;
+}
+.table-scroll th:nth-last-child(2),
+.table-scroll td:nth-last-child(2){
+  min-width:112px;
+  width:112px;
+}
+.table-scroll th:last-child,
+.table-scroll td:last-child{
+  min-width:150px;
+  width:150px;
+}
+.table-scroll td:last-child{
+  text-align:right;
+}
+</style>>
 </head>
 <body>
 
