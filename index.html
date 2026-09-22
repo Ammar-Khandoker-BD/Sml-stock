@@ -441,6 +441,12 @@ function attachListeners(){
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
     renderAll();
   });
+  fdb.collection("erp_audit").orderBy("ts","desc").limit(500).onSnapshot(snap => {
+    if(!currentUser || snap.metadata.hasPendingWrites) return;
+    DB.audit=snap.docs.map(d=>d.data());
+    SAVED_AUDIT=new Set(DB.audit.map(a=>a.id));
+    renderAll();
+  });
   fdb.collection("erp_txns").onSnapshot(snap => {
     if(!currentUser || snap.metadata.hasPendingWrites) return;
     let changed = false;
@@ -519,7 +525,7 @@ function seedData(){
 }
 function migrateDB(){
   DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
-  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0;
+  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0; DB.seq.rv = DB.seq.rv || 0;
   let changed = false;
   DB.items.forEach(it => {
     if(it.type === undefined){ it.type = ""; changed = true; }
@@ -987,7 +993,7 @@ function renderTxns(kind){
   </div>
   <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
   <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="delTxn('${t.id}')">Delete</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="8" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn('${t.id}')">Reverse</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="8" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
   </tbody></table></div></div>`;
 }
 function txnModal(kind){
@@ -1091,18 +1097,46 @@ async function submitTxn(e,kind){
 }
 
 
-async function delTxn(id){
-  if(!isAdmin()){ toast("Only admin can delete entries"); return; }
-  const t = DB.txns.find(x => x.id === id); if(!t) return;
-  if(!confirm("Delete entry "+id+"? Stock will be adjusted back.")) return;
-  const it = itemById(t.itemId);
-  if(it) it.stock -= Number(t.qty)||0;
-  DB.txns = DB.txns.filter(x => x.id !== id);
-  SAVED_TXN.delete(id);
-  try{ await fdb.collection("erp_txns").doc(id).delete(); }catch(err){ console.error(err); }
-  audit("Deleted entry "+id);
-  save(); renderAll(); toast("Entry deleted");
+async function reverseTxn(id){
+  if(!isAdmin()){ toast("Only Admin can reverse entries"); return; }
+  const original=DB.txns.find(x=>x.id===id);
+  if(!original) return;
+  if(original.subtype==="REVERSAL"){ toast("This entry is already a reversal"); return; }
+  if(DB.txns.some(x=>x.subtype==="REVERSAL" && x.referenceId===id)){ toast("This entry has already been reversed"); return; }
+  if(!confirm("Reverse "+id+"? The original entry will remain in history.")) return;
+  const item=itemById(original.itemId);
+  if(!item) return;
+  try{
+    const result=await fdb.runTransaction(async transaction=>{
+      const mainRef=fdb.collection("erp").doc("main");
+      const snap=await transaction.get(mainRef);
+      if(!snap.exists) throw new Error("Inventory database not found");
+      const data=snap.data()||{};
+      const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
+      const liveItem=items.find(it=>it.id===original.itemId);
+      if(!liveItem) throw new Error("Item not found");
+      const delta=-(Number(original.qty)||0);
+      const current=Number(liveItem.stock)||0;
+      if(delta<0 && current+delta<0) throw new Error("Cannot reverse — current stock is too low");
+      liveItem.stock=current+delta;
+      const seq=Object.assign({si:0,so:0,rv:0},data.seq||{});
+      seq.rv=(Number(seq.rv)||0)+1;
+      const txId="RV-"+String(seq.rv).padStart(4,"0");
+      const now=Date.now();
+      const txn={id:txId,type:original.type,subtype:"REVERSAL",referenceId:id,date:todayISO(),itemId:original.itemId,qty:delta,note:"Reversal of "+id+(original.note?" — "+original.note:""),by:currentUser?currentUser.username:"system",createdAt:now};
+      const auditRef=fdb.collection("erp_audit").doc();
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Reversed "+id};
+      transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
+      transaction.set(fdb.collection("erp_txns").doc(txId),txn);
+      transaction.set(auditRef,audit);
+      return {items,seq,txn,audit};
+    });
+    applyCommittedMovement(result,id+" reversed");
+  }catch(err){ console.error(err); toast(err.message||"Could not reverse entry"); }
 }
+
+async function delTxn(id){ return reverseTxn(id); }
+
 function exportTxns(kind){
   const fin = kind === "IN";
   const rows = txnRows(kind, fin ? SI_F : SO_F);
