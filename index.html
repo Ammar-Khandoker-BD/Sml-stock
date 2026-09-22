@@ -669,6 +669,9 @@ td.muted{color:#98A2B3}
   border-color:#D8E1EC;
   box-shadow:0 20px 40px rgba(15,23,42,.14);
 }
+.txn-meta-wrap{position:relative}
+.txn-meta-results{z-index:96}
+.txn-meta-wrap .input{padding-right:34px}
 .searchable-option{padding:9px 10px;border-radius:8px}
 .searchable-option:hover,.searchable-option.active{background:#F4F7FB}
 
@@ -1762,15 +1765,69 @@ function rememberTxnMeta(kind,key,value){
   try{
     const storageKey="sml-stock-meta-"+kind+"-"+key;
     const arr=JSON.parse(localStorage.getItem(storageKey)||"[]");
-    const next=[v,...arr.filter(x=>String(x).toLowerCase()!==v.toLowerCase())].slice(0,30);
+    const next=[v,...arr.filter(x=>String(x).toLowerCase()!==v.toLowerCase())].slice(0,200);
     localStorage.setItem(storageKey,JSON.stringify(next));
   }catch(err){}
 }
 function getRememberedTxnMeta(kind,key){
+  const seen=new Set(), out=[];
+  const add=function(value){
+    const v=String(value||"").trim();
+    if(!v) return;
+    const k=v.toLowerCase();
+    if(seen.has(k)) return;
+    seen.add(k); out.push(v);
+  };
   try{
     const arr=JSON.parse(localStorage.getItem("sml-stock-meta-"+kind+"-"+key)||"[]");
-    return Array.isArray(arr)?arr.slice(0,30):[];
-  }catch(err){ return []; }
+    if(Array.isArray(arr)) arr.forEach(add);
+  }catch(err){}
+  DB.txns.slice().sort(function(a,b){
+    return String(b.date||"").localeCompare(String(a.date||"")) || Number(b.createdAt||0)-Number(a.createdAt||0);
+  }).forEach(function(t){
+    if(kind==="OUT"){
+      if(key==="jobNo") add(t.referenceNo);
+      else if(key==="department") add(t.department);
+      else if(key==="issuedTo") add(t.issuedTo);
+    }else if(kind==="IN" && key==="referenceNo" && t.type==="IN"){
+      add(t.referenceNo);
+    }
+  });
+  return out.slice(0,200);
+}
+function txnMetaMatches(value,query){
+  const q=String(query||"").trim().toLowerCase();
+  return !q || String(value||"").toLowerCase().includes(q);
+}
+function hideTxnMetaResults(){
+  document.querySelectorAll(".txn-meta-results").forEach(function(box){ box.style.display="none"; });
+}
+function renderTxnMetaOptions(kind,key,show){
+  const box=$("#txnMetaResults-"+key);
+  const id=key==="jobNo"?"#txRef":key==="department"?"#txDepartment":"#txIssuedTo";
+  const input=$(id);
+  if(!box || !input) return;
+  const values=getRememberedTxnMeta(kind,key).filter(function(v){ return txnMetaMatches(v,input.value); }).slice(0,80);
+  if(!show){ box.style.display="none"; return; }
+  box.style.display="block";
+  box.innerHTML=values.length ? values.map(function(v){
+    return '<button type="button" class="searchable-option" onclick="chooseTxnMeta('+JSON.stringify(kind)+','+JSON.stringify(key)+','+JSON.stringify(v).replace(/</g,"\\u003c")+')">'+esc(v)+'</button>';
+  }).join("") : '<div class="searchable-empty">No previous entries found</div>';
+}
+function chooseTxnMeta(kind,key,value){
+  const id=key==="jobNo"?"#txRef":key==="department"?"#txDepartment":"#txIssuedTo";
+  const input=$(id);
+  if(!input) return;
+  input.value=String(value||"");
+  hideTxnMetaResults();
+  input.focus();
+}
+function setupTxnMetaOutsideClick(){
+  if(window.__smlTxnMetaOutsideClick) return;
+  window.__smlTxnMetaOutsideClick=true;
+  document.addEventListener("click",function(e){
+    if(!e.target.closest(".txn-meta-wrap")) hideTxnMetaResults();
+  });
 }
 function rememberTxnNote(kind, note){
   const value = String(note||"").trim();
@@ -1898,13 +1955,35 @@ function txnModal(kind){
         <label for="txRef">${fin?"Challan / Reference No.":"Job No"}</label>
         <input class="input" id="txRef" placeholder="${fin?"e.g. CH-1025":"e.g. JOB-2026-014"}" autocomplete="off">
       </div>
-    </div>`:`<div class="field"><label for="txRef">Job No</label><input class="input" id="txRef" placeholder="e.g. JOB-2026-014" autocomplete="off"></div>`}
+    </div>`:`<div class="field">
+        <label for="txRef">Job No</label>
+        <div class="txn-meta-wrap">
+          <input class="input" id="txRef" placeholder="e.g. JOB-2026-014" autocomplete="off"
+            onfocus="renderTxnMetaOptions('OUT','jobNo',true);setupTxnMetaOutsideClick()"
+            oninput="renderTxnMetaOptions('OUT','jobNo',true)">
+          <div id="txnMetaResults-jobNo" class="searchable-options txn-meta-results"></div>
+        </div>
+      </div>`}
     ${fin?"":`<div class="row-2">
-      <div class="field"><label for="txDepartment">Client Name</label><input class="input" id="txDepartment" list="txDepartmentSuggestions" placeholder="e.g. Client / Company Name" autocomplete="off"></div>
-      <div class="field"><label for="txIssuedTo">Issued To</label><input class="input" id="txIssuedTo" list="txIssuedToSuggestions" placeholder="Person / Team / Section" autocomplete="off"></div>
-    </div>
-    <datalist id="txDepartmentSuggestions">${getRememberedTxnMeta("OUT","department").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
-    <datalist id="txIssuedToSuggestions">${getRememberedTxnMeta("OUT","issuedTo").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`}
+      <div class="field">
+        <label for="txDepartment">Client Name</label>
+        <div class="txn-meta-wrap">
+          <input class="input" id="txDepartment" placeholder="e.g. Client / Company Name" autocomplete="off"
+            onfocus="renderTxnMetaOptions('OUT','department',true);setupTxnMetaOutsideClick()"
+            oninput="renderTxnMetaOptions('OUT','department',true)">
+          <div id="txnMetaResults-department" class="searchable-options txn-meta-results"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="txIssuedTo">Issued To</label>
+        <div class="txn-meta-wrap">
+          <input class="input" id="txIssuedTo" placeholder="Person / Team / Section" autocomplete="off"
+            onfocus="renderTxnMetaOptions('OUT','issuedTo',true);setupTxnMetaOutsideClick()"
+            oninput="renderTxnMetaOptions('OUT','issuedTo',true)">
+          <div id="txnMetaResults-issuedTo" class="searchable-options txn-meta-results"></div>
+        </div>
+      </div>
+    </div>`}
     <div class="field">
       <label for="txNote">Note (optional)</label>
       <input class="input" id="txNote" list="txNoteSuggestions" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}" autocomplete="off">
@@ -1990,6 +2069,7 @@ async function submitTxn(e,kind){
     const department=(!fin && $("#txDepartment") ? $("#txDepartment").value.trim() : "");
     const issuedTo=(!fin && $("#txIssuedTo") ? $("#txIssuedTo").value.trim() : "");
     const purpose="";
+    rememberTxnMeta(kind,fin?"referenceNo":"jobNo",referenceNo);
     rememberTxnMeta(kind,"department",department);
     rememberTxnMeta(kind,"issuedTo",issuedTo);
     const result=await commitStockMovement({type:kind,qtyDelta:fin?qty:-qty,date,itemId:it.id,note,supplierId,referenceNo,department,issuedTo,purpose});
