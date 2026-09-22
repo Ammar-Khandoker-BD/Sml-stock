@@ -163,6 +163,14 @@ td.muted{color:var(--faint)}
 .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
 .input{width:100%;padding:8.5px 12px;border:1px solid var(--border);border-radius:7px;background:var(--panel)}
 .search-wrap .input{padding-left:34px}
+.searchable-item{position:relative}
+.searchable-item .input{padding-right:34px}
+.searchable-item .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint);pointer-events:none}
+.searchable-options{display:none;position:absolute;left:0;right:0;top:calc(100% + 5px);max-height:260px;overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:9px;box-shadow:0 12px 30px rgba(22,21,19,.15);z-index:95;padding:4px}
+.searchable-option{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:7px;padding:9px 11px;font-size:13px;color:var(--text);cursor:pointer}
+.searchable-option:hover,.searchable-option.active{background:var(--bg)}
+.searchable-option small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.searchable-empty{padding:12px;color:var(--faint);font-size:12.5px;text-align:center}
 .input:focus,.select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(199,70,52,.1)}
 .select{padding:8.5px 32px 8.5px 12px;border:1px solid var(--border);border-radius:7px;background:var(--panel);appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%236E6A63' fill='none' stroke-width='1.5'/></svg>");background-repeat:no-repeat;background-position:right 11px center}
 
@@ -883,18 +891,34 @@ function txnItemMatches(it, query){
   ].join(" ").toLowerCase();
   return hay.includes(query.trim().toLowerCase());
 }
-function renderTxnItemOptions(){
-  const sel = $("#txItem");
-  if(!sel) return;
-  const current = sel.value;
-  const query = TXN_ITEM_SEARCH.trim().toLowerCase();
-  const items = DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b)))
-    .filter(it=>txnItemMatches(it, query));
-  sel.innerHTML = '<option value="">Select item…</option>' + items.map(it =>
-    '<option value="' + esc(it.id) + '">' + esc(itemLabel(it)) + ' — ' + it.stock + ' ' + esc(it.uom||"Pcs") + ' in stock</option>'
-  ).join("");
-  if(current && items.some(it=>it.id===current)) sel.value = current;
+function renderTxnItemOptions(show){
+  const box = $("#txItemResults");
+  if(!box) return;
+  const query = (TXN_ITEM_SEARCH || "").trim().toLowerCase();
+  const selectedId = $("#txItem") ? $("#txItem").value : "";
+  const items = DB.items.slice()
+    .sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b)))
+    .filter(it=>txnItemMatches(it, query))
+    .slice(0, 80);
+  if(!show){ box.style.display = "none"; return; }
+  box.style.display = "block";
+  box.innerHTML = items.length
+    ? items.map(it=>`<button type="button" class="searchable-option ${it.id===selectedId?"active":""}" onclick="chooseTxnItem('${it.id}')">
+        ${esc(itemLabel(it))}
+        <small>${esc(it.category||"Board")} · SL ${esc(it.sl)} · ${esc(it.uom||"Pcs")} · Stock: ${it.stock}</small>
+      </button>`).join("")
+    : '<div class="searchable-empty">No matching items found</div>';
 }
+function chooseTxnItem(id){
+  const it = itemById(id);
+  if(!it) return;
+  $("#txItem").value = it.id;
+  $("#txItemSearch").value = itemLabel(it);
+  TXN_ITEM_SEARCH = itemLabel(it);
+  const box = $("#txItemResults");
+  if(box) box.style.display = "none";
+}
+
 
 function txnRows(kind, f){
   return DB.txns.filter(t => {
@@ -940,13 +964,16 @@ function txnModal(kind){
   openModal(`<h2>${fin?"New Stock In":"New Stock Out"}</h2><div class="hint" style="margin-bottom:14px">${fin?"Add received material to stock":"Issue material from stock"}</div>
   <form onsubmit="submitTxn(event,'${kind}')">
     <div class="field">
-      <label for="txItemSearch">Search Item</label>
-      <input class="input" id="txItemSearch" type="search" placeholder="Search item, category, type, color, thickness…" autocomplete="off" oninput="TXN_ITEM_SEARCH=this.value;renderTxnItemOptions()">
-      <div class="hint">Type to quickly find the item you need.</div>
-    </div>
-    <div class="field">
-      <label for="txItem">Item *</label>
-      <select class="select" id="txItem" required><option value="">Select item…</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${esc(it.id)}">${esc(itemLabel(it))} — ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select>
+      <label for="txItemSearch">Item *</label>
+      <div class="searchable-item">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input class="input" id="txItemSearch" type="search" placeholder="Search item…" autocomplete="off"
+          onfocus="renderTxnItemOptions(true)"
+          oninput="TXN_ITEM_SEARCH=this.value;renderTxnItemOptions(true)">
+        <input id="txItem" type="hidden" value="">
+        <div id="txItemResults" class="searchable-options"></div>
+      </div>
+      <div class="hint">Search by item, category, type, color, thickness, page or SL.</div>
     </div>
     <div class="row-2">
       <div class="field">
@@ -964,7 +991,7 @@ function txnModal(kind){
 function submitTxn(e, kind){
   e.preventDefault(); if(!canWrite()) return;
   const fin = kind === "IN";
-  const it = itemById($("#txItem").value); if(!it){ toast("Please select an item"); return; }
+  const it = itemById($("#txItem").value); if(!it){ toast("Please search and select an item"); return; }
   const qty = Number($("#txQty").value);
   if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
   if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
