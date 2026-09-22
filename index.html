@@ -514,7 +514,7 @@ function migrateDB(){
     if(it.color === undefined) it.color = "";
     if(it.thickness === undefined) it.thickness = "";
     if(it.page === undefined) it.page = "";
-    if(!it.uom) it.uom = it.uomOut || "Pcs";
+    if((it.category||"Board") === "Board") it.uom = "Pcs"; else if(!it.uom) it.uom = it.uomOut || "Pcs";
     if(it.alarm === undefined || it.alarm === null) it.alarm = 0;
     it.stock = Number(it.stock) || 0;
   });
@@ -751,7 +751,7 @@ function itemModal(id){
     </div>
     <div class="row-3">
       <div class="field"><label>Page No</label><input class="input" id="itPage" value="${esc(it?it.page:"")}" placeholder="Stock book page"></div>
-      <div class="field"><label>Unit</label><input class="input" id="itUom" value="${esc(it?(it.uom||"Pcs"):"Pcs")}" placeholder="Pcs / Sheet"></div>
+      <div class="field"><label>Unit</label><input class="input" id="itUom" value="${esc(it?(it.uom||"Pcs"):"Pcs")}" placeholder="Pcs"></div>
       <div class="field"><label>Alarm Qty</label><input class="input" id="itAlarm" type="number" min="0" value="${it?it.alarm:(DB.settings.alarmDefault||5)}"></div>
     </div>
     ${it?"":`<div class="field"><label>Opening Stock</label><input class="input" id="itOpen" type="number" min="0" value="0"></div>`}
