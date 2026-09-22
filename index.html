@@ -368,8 +368,8 @@ const fdb = firebase.firestore();
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 const tk = n => "Tk " + Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
-const todayISO = () => new Date().toISOString().slice(0,10);
-const daysAgo = d => { const t = new Date(); t.setDate(t.getDate()-d); return t.toISOString().slice(0,10); };
+const todayISO = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+const daysAgo = d => { const t = new Date(); t.setDate(t.getDate()-d); return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); };
 const fmtD = iso => { if(!iso) return "\u2014"; const d = new Date(iso+"T00:00:00"); return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short"}); };
 const nowTime = () => new Date().toTimeString().slice(0,8);
 
