@@ -979,7 +979,6 @@ body{position:relative}
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
     <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
     <div class="nav-label">Purchasing</div>
-    <button class="nav-item" data-view="pos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>Purchase Orders</button>
     <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="M6 13l6-6 6 6"/><path d="M4 3h16"/></svg>Stock Out</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
@@ -997,7 +996,6 @@ body{position:relative}
     <div class="view" id="view-items"></div>
     <div class="view" id="view-stockin"></div>
     <div class="view" id="view-stockout"></div>
-    <div class="view" id="view-pos"></div>
     <div class="view" id="view-suppliers"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
@@ -2885,7 +2883,7 @@ document.addEventListener("keydown",e=>{
 });
 /* ---------- router & init ---------- */
 const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers, pos:renderPOs,
+  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers,
   reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings
 };
 function show(view){
