@@ -1898,7 +1898,7 @@ function txnModal(kind){
         <label for="txRef">${fin?"Challan / Reference No.":"Job No"}</label>
         <input class="input" id="txRef" placeholder="${fin?"e.g. CH-1025":"e.g. JOB-2026-014"}" autocomplete="off">
       </div>
-    </div>`:`<div class="field"><label for="txRef">Issue / Reference No.</label><input class="input" id="txRef" placeholder="e.g. ISSUE-2026-014" autocomplete="off"></div>`}
+    </div>`:`<div class="field"><label for="txRef">Job No</label><input class="input" id="txRef" placeholder="e.g. JOB-2026-014" autocomplete="off"></div>`}
     ${fin?"":`<div class="row-2">
       <div class="field"><label for="txDepartment">Client Name</label><input class="input" id="txDepartment" list="txDepartmentSuggestions" placeholder="e.g. Client / Company Name" autocomplete="off"></div>
       <div class="field"><label for="txIssuedTo">Issued To</label><input class="input" id="txIssuedTo" list="txIssuedToSuggestions" placeholder="Person / Team / Section" autocomplete="off"></div>
@@ -1915,8 +1915,9 @@ function txnModal(kind){
       <div class="hint">Previous notes are suggested as you type.</div>
     </div>
     <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Done</button><button id="txSaveBtn" class="btn ${fin?"btn-green":"btn-primary"}">Save &amp; Continue</button></div>
-    <div class="hint" style="margin-top:8px">After saving, this window stays open for the next entry. Date and job/client context are kept.</div>
+    <div class="hint" style="margin-top:8px">After saving, this window stays open for the next entry. Date and selected context are kept.</div>
   </form>`);
+  setTimeout(()=>{ const s=$("#txItemSearch"); if(s){ s.focus(); s.select(); } },40);
 }
 
 async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId="",supplierId="",referenceNo="",department="",issuedTo="",purpose=""}){
