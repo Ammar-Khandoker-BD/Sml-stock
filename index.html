@@ -892,6 +892,40 @@ function txnItemMatches(it, query){
   ].join(" ").toLowerCase();
   return hay.includes(query.trim().toLowerCase());
 }
+function txnNoteSuggestions(kind){
+  const seen = new Set();
+  return DB.txns
+    .filter(t => t.type === kind && String(t.note||"").trim())
+    .slice()
+    .sort((a,b) => String(b.date||"").localeCompare(String(a.date||"")) || String(b.id||"").localeCompare(String(a.id||"")))
+    .map(t => String(t.note||"").trim())
+    .filter(note => {
+      const key = note.toLowerCase();
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 50);
+}
+function rememberTxnNote(kind, note){
+  const value = String(note||"").trim();
+  if(!value) return;
+  try {
+    const key = kind === "IN" ? "sml-stock-note-history-in" : "sml-stock-note-history-out";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    const next = [value, ...existing.filter(x => String(x).toLowerCase() !== value.toLowerCase())].slice(0, 50);
+    localStorage.setItem(key, JSON.stringify(next));
+  } catch(err) {}
+}
+function getRememberedTxnNotes(kind){
+  try {
+    const key = kind === "IN" ? "sml-stock-note-history-in" : "sml-stock-note-history-out";
+    const saved = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(saved) ? saved.filter(Boolean).slice(0,50) : [];
+  } catch(err) {
+    return [];
+  }
+}
 function renderTxnItemOptions(show){
   const box = $("#txItemResults");
   if(!box) return;
@@ -984,7 +1018,15 @@ function txnModal(kind){
       </div>
       <div class="field"><label for="txQty">Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
     </div>
-    <div class="field"><label>Note (optional)</label><input class="input" id="txNote" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}"></div>
+    <div class="field">
+      <label for="txNote">Note (optional)</label>
+      <input class="input" id="txNote" list="txNoteSuggestions" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}" autocomplete="off">
+      <datalist id="txNoteSuggestions">${[...getRememberedTxnNotes(kind), ...txnNoteSuggestions(kind)]
+        .filter((note, idx, arr) => arr.findIndex(x => String(x).toLowerCase() === String(note).toLowerCase()) === idx)
+        .map(note => `<option value="${esc(note)}">`)
+        .join("")}</datalist>
+      <div class="hint">Previous notes are suggested as you type.</div>
+    </div>
     <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn ${fin?"btn-green":"btn-primary"}">Save Entry</button></div>
   </form>`);
 }
@@ -997,7 +1039,8 @@ function submitTxn(e, kind){
   if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
   if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
   const date = $("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind, date);
-  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
+  const note = $("#txNote").value.trim(); rememberTxnNote(kind, note);
+  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note, by: currentUser ? currentUser.username : "system" };
   DB.txns.push(t); sortTxns();
   it.stock += t.qty;
   audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
