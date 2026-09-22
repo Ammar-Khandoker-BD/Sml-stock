@@ -980,7 +980,51 @@ body{position:relative}
   #view-audit th:nth-child(2),#view-audit td:nth-child(2){width:82px}
   #view-audit th:nth-child(3),#view-audit td:nth-child(3){width:125px}
 }
-</style><style id="sml-user-photo">.tb-user .av{overflow:hidden;padding:0}.tb-user .av img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}.user-photo-field{display:flex;gap:14px;align-items:center;padding:12px;border:1px dashed #D7E0EA;border-radius:12px;background:#F8FAFC}.user-photo-preview{width:64px;height:64px;min-width:64px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#4F8DF7,#295ED4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;box-shadow:0 6px 16px rgba(15,23,42,.10)}.user-photo-preview img{width:100%;height:100%;object-fit:cover;display:block}.user-photo-copy b{display:block;font-size:12.5px;color:#344054}.user-photo-copy span{display:block;color:#98A2B3;font-size:11.5px;margin-top:3px}.user-photo-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}</style></style>>
+</style><style id="sml-user-photo">.tb-user .av{overflow:hidden;padding:0}.tb-user .av img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}.user-photo-field{display:flex;gap:14px;align-items:center;padding:12px;border:1px dashed #D7E0EA;border-radius:12px;background:#F8FAFC}.user-photo-preview{width:64px;height:64px;min-width:64px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#4F8DF7,#295ED4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;box-shadow:0 6px 16px rgba(15,23,42,.10)}.user-photo-preview img{width:100%;height:100%;object-fit:cover;display:block}.user-photo-copy b{display:block;font-size:12.5px;color:#344054}.user-photo-copy span{display:block;color:#98A2B3;font-size:11.5px;margin-top:3px}.user-photo-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}</style><style id="sml-txn-reverse-action-fix">
+/* ---------- Stock In / Out action stays visible ---------- */
+#view-stockin .table-scroll,
+#view-stockout .table-scroll{
+  overflow-x:auto;
+  overflow-y:hidden;
+  position:relative;
+}
+#view-stockin .table-scroll table,
+#view-stockout .table-scroll table{
+  min-width:1050px;
+}
+#view-stockin .table-scroll th:last-child,
+#view-stockin .table-scroll td:last-child,
+#view-stockout .table-scroll th:last-child,
+#view-stockout .table-scroll td:last-child{
+  position:sticky !important;
+  right:0 !important;
+  z-index:6;
+  background:#FFFFFF !important;
+  box-shadow:-10px 0 18px -15px rgba(15,23,42,.55);
+  white-space:nowrap;
+}
+#view-stockin .table-scroll th:last-child,
+#view-stockout .table-scroll th:last-child{
+  background:#F7F9FC !important;
+  z-index:7;
+}
+#view-stockin .table-scroll td:last-child,
+#view-stockout .table-scroll td:last-child{
+  min-width:92px;
+  width:92px;
+  padding-left:10px;
+  padding-right:12px;
+  text-align:right;
+}
+#view-stockin .table-scroll td:last-child .btn,
+#view-stockout .table-scroll td:last-child .btn{
+  min-width:72px;
+}
+#view-stockin .table-scroll tbody tr:hover td:last-child,
+#view-stockout .table-scroll tbody tr:hover td:last-child{
+  background:#F8FBFF !important;
+}
+</style></style>>
 </head>
 <body>
 
