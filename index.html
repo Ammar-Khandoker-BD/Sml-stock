@@ -316,6 +316,7 @@ tbody tr:hover{background:#FAF6F3}
     <div class="nav-label">Inventory</div>
     <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
+    <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
     <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="M6 13l6-6 6 6"/><path d="M4 3h16"/></svg>Stock Out</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
@@ -333,6 +334,7 @@ tbody tr:hover{background:#FAF6F3}
     <div class="view" id="view-items"></div>
     <div class="view" id="view-stockin"></div>
     <div class="view" id="view-stockout"></div>
+    <div class="view" id="view-suppliers"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
     <div class="view" id="view-audit"></div>
@@ -466,6 +468,8 @@ const grpOf = it => byId(DB.groups||[], it.groupId);
 const itemById = id => byId(DB.items, id);
 function itemName(it){ if(!it) return "(deleted item)"; const n = [it.type, it.color, it.thickness].filter(Boolean).join(" "); return n || it.desc || "(unnamed)"; }
 function itemCode(it){ return it ? "B-"+String(it.sl).padStart(3,"0") : "\u2014"; }
+function supplierById(id){ return (DB.suppliers||[]).find(s=>s.id===id); }
+function supplierName(id){ const s=supplierById(id); return s?s.name:""; }
 
 /* ---------- audit ---------- */
 function audit(action){
@@ -519,12 +523,12 @@ function seedData(){
   txns.sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date)));
   return {
     settings:{ company:"Step Media Ltd", address:"Tejgaon Industrial Area, Dhaka", alarmDefault:5 },
-    seq, categories:[], groups:[], items, txns,
+    seq, categories:[], groups:[], items, txns, suppliers:[],
     audit:[{ date:todayISO(), time:nowTime(), user:"system", action:"System initialized with demo data" }]
   };
 }
 function migrateDB(){
-  DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
+  DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || []; DB.suppliers = DB.suppliers || [];
   DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0; DB.seq.adj = DB.seq.adj || 0; DB.seq.rv = DB.seq.rv || 0;
   let changed = false;
   DB.items.forEach(it => {
@@ -996,8 +1000,8 @@ function renderTxns(kind){
     <input type="date" class="input" style="max-width:160px" value="${f.to}" onchange="${F}.to=this.value;renderTxns('${kind}')">
   </div>
   <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
-  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn('${t.id}')">Reverse</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="8" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
+  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Supplier</th><th>Reference</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(supplierName(t.supplierId)||"")}</td><td class="muted">${esc(t.referenceNo||"")}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn('${t.id}')">Reverse</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
   </tbody></table></div></div>`;
 }
 function txnModal(kind){
@@ -1028,6 +1032,16 @@ function txnModal(kind){
       </div>
       <div class="field"><label for="txQty">Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div>
     </div>
+    ${fin?`<div class="row-2">
+      <div class="field">
+        <label for="txSupplier">Supplier</label>
+        <select class="select" id="txSupplier"><option value="">Select supplier…</option>${(DB.suppliers||[]).filter(s=>s.active!==false).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("")}</select>
+      </div>
+      <div class="field">
+        <label for="txRef">${fin?"Challan / Reference No.":"Issue / Reference No."}</label>
+        <input class="input" id="txRef" placeholder="${fin?"e.g. CH-1025":"e.g. ISSUE-2026-014"}" autocomplete="off">
+      </div>
+    </div>`:`<div class="field"><label for="txRef">Issue / Reference No.</label><input class="input" id="txRef" placeholder="e.g. ISSUE-2026-014" autocomplete="off"></div>`}
     <div class="field">
       <label for="txNote">Note (optional)</label>
       <input class="input" id="txNote" list="txNoteSuggestions" placeholder="${fin?"e.g. New purchase received":"e.g. Delivered to production"}" autocomplete="off">
@@ -1041,7 +1055,7 @@ function txnModal(kind){
   </form>`);
 }
 
-async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId=""}){
+async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId="",supplierId="",referenceNo=""}){
   const mainRef=fdb.collection("erp").doc("main");
   const auditRef=fdb.collection("erp_audit").doc();
   let result=null;
@@ -1062,7 +1076,7 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORM
     const prefix=subtype==="ADJUSTMENT"?"ADJ-":subtype==="REVERSAL"?"RV-":(type==="IN"?"SI-":"SO-");
     const txId=prefix+String(seq[key]).padStart(4,"0");
     const now=Date.now();
-    const txn={id:txId,type,subtype,referenceId:referenceId||"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
+    const txn={id:txId,type,subtype,referenceId:referenceId||"",supplierId:supplierId||"",referenceNo:referenceNo||"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
     const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(subtype==="ADJUSTMENT"?"Stock Adjustment: ":subtype==="REVERSAL"?"Reversal: ":(type==="IN"?"Stock In: ":"Stock Out: "))+((delta>0)?"+":"")+delta+" "+itemName(item)};
     transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
     transaction.set(fdb.collection("erp_txns").doc(txId),txn);
@@ -1091,7 +1105,8 @@ async function submitTxn(e,kind){
   const date=$("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind,date);
   const note=$("#txNote").value.trim(); rememberTxnNote(kind,note);
   try{
-    const result=await commitStockMovement({type:kind,qtyDelta:fin?qty:-qty,date,itemId:it.id,note});
+    const supplierId=fin ? (($("#txSupplier") && $("#txSupplier").value) || "") : ""; const referenceNo=(($("#txRef") && $("#txRef").value)||"").trim();
+    const result=await commitStockMovement({type:kind,qtyDelta:fin?qty:-qty,date,itemId:it.id,note,supplierId,referenceNo});
     closeModal();
     applyCommittedMovement(result,fin?"Stock In saved safely":"Stock Out saved safely");
   }catch(err){
@@ -1243,9 +1258,9 @@ function runReport(){
   let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
   let head = [], rows = [];
   if(REP.type==="txns"){
-    head = ["ID","Date","Category","Item","Type","Qty","Unit","Note","By"];
+    head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Reference","Note","By"];
     rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
+      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
     head = ["Item","Category","Type","Thickness","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock","Unit"];
     const map = {};
@@ -1430,7 +1445,7 @@ async function exportReportXlsx(){
       "id":13,"date":14,"sl":8,"page":10,"category":22,"item":30,"type":18,
       "color":18,"thickness":14,"stock in":13,"stock out":14,"net":13,
       "current stock":16,"unit":12,"qty":12,"note":28,"by":24,"status":16,
-      "alarm qty":13,"shortage":13,"unit price (tk)":16,"value (tk)":18
+      "alarm qty":13,"shortage":13,"unit price (tk)":16,"value (tk)":18,"supplier":24,"reference":20
     };
     REP_OUT.head.forEach((h, idx) => {
       const key = String(h).toLowerCase();
@@ -1523,6 +1538,57 @@ function renderReports(){
   <div class="table-scroll"><table><thead><tr>${REP_OUT.head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
   ${REP_OUT.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${REP_OUT.head.length}" style="text-align:center;color:var(--faint);padding:30px">No data in this range</td></tr>`}
   </tbody></table></div></div>`:`<div class="card" style="text-align:center;padding:40px;color:var(--muted)">Select a report and press <b>Run Report</b></div>`}`;
+}
+
+/* ---------- suppliers ---------- */
+let SUPPLIER_Q = "";
+function renderSuppliers(){
+  const rows=(DB.suppliers||[]).filter(s=>!SUPPLIER_Q || (String(s.name)+" "+String(s.contact||"")+" "+String(s.phone||"")+" "+String(s.email||"")+" "+String(s.address||"")).toLowerCase().includes(SUPPLIER_Q.toLowerCase())).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  $("#view-suppliers").innerHTML=`
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Suppliers</b></div><h1>Suppliers</h1><p>Supplier master and material source tracking</p></div>
+    <div class="page-actions">${isAdmin()?'<button class="btn btn-primary" onclick="supplierModal()">+ Add Supplier</button>':""}</div></div>
+  <div class="filter-bar"><div class="search-wrap"><input class="input" placeholder="Search supplier, contact, phone, email…" value="${esc(SUPPLIER_Q)}" oninput="SUPPLIER_Q=this.value;renderSuppliers()"></div></div>
+  <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.contact||"—")}</td><td>${esc(s.phone||"—")}</td><td>${esc(s.email||"—")}</td><td class="muted">${esc(s.address||"—")}</td><td><span class="badge ${s.active===false?"viewer":"admin"}">${s.active===false?"INACTIVE":"ACTIVE"}</span></td><td class="num" style="white-space:nowrap">${isAdmin()?'<button class="btn btn-sm" onclick="supplierModal(\''+${esc(s.id)}+'\')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delSupplier(\''+${esc(s.id)}+'\')">Delete</button>':""}</td></tr>`).join("") || '<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No suppliers yet</td></tr>'}
+  </tbody></table></div></div>`;
+}
+function supplierModal(id){
+  if(!isAdmin()){ toast("Only Admin can manage suppliers"); return; }
+  const s=id?supplierById(id):null;
+  openModal(`<h2>${s?"Edit Supplier":"Add Supplier"}</h2>
+  <form onsubmit="submitSupplier(event,${s?JSON.stringify(id):"null"})">
+    <div class="field"><label for="spName">Supplier Name *</label><input class="input" id="spName" value="${esc(s?s.name:"")}" required placeholder="Supplier / Company name"></div>
+    <div class="row-2">
+      <div class="field"><label for="spContact">Contact Person</label><input class="input" id="spContact" value="${esc(s?s.contact||"":"" )}" placeholder="Contact person"></div>
+      <div class="field"><label for="spPhone">Phone</label><input class="input" id="spPhone" value="${esc(s?s.phone||"":"" )}" placeholder="01XXXXXXXXX"></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label for="spEmail">Email</label><input class="input" id="spEmail" type="email" value="${esc(s?s.email||"":"" )}" placeholder="supplier@example.com"></div>
+      <div class="field"><label for="spActive">Status</label><select class="select" id="spActive"><option value="1" ${!s||s.active!==false?"selected":""}>Active</option><option value="0" ${s&&s.active===false?"selected":""}>Inactive</option></select></div>
+    </div>
+    <div class="field"><label for="spAddress">Address</label><textarea class="input" id="spAddress" rows="3" placeholder="Supplier address">${esc(s?s.address||"":"" )}</textarea></div>
+    <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save Supplier</button></div>
+  </form>`);
+}
+function submitSupplier(e,id){
+  e.preventDefault(); if(!isAdmin()) return;
+  const name=$("#spName").value.trim();
+  if(!name){ toast("Supplier name is required"); return; }
+  const data={name,contact:$("#spContact").value.trim(),phone:$("#spPhone").value.trim(),email:$("#spEmail").value.trim(),address:$("#spAddress").value.trim(),active:$("#spActive").value==="1"};
+  const duplicate=(DB.suppliers||[]).some(s=>s.id!==id && String(s.name||"").trim().toLowerCase()===name.toLowerCase());
+  if(duplicate){ toast("Supplier already exists"); return; }
+  if(id){ Object.assign(supplierById(id),data); audit("Updated supplier: "+name); }
+  else { DB.suppliers.push(Object.assign({id:"sp"+Date.now()},data)); audit("Added supplier: "+name); }
+  save(); closeModal(); renderSuppliers(); toast(id?"Supplier updated":"Supplier added");
+}
+function delSupplier(id){
+  if(!isAdmin()) return;
+  const s=supplierById(id); if(!s) return;
+  if(DB.txns.some(t=>t.supplierId===id)){ toast("Cannot delete — supplier is used in stock history"); return; }
+  if(!confirm("Delete supplier \""+s.name+"?\"")) return;
+  DB.suppliers=DB.suppliers.filter(x=>x.id!==id);
+  audit("Deleted supplier: "+s.name);
+  save(); renderSuppliers(); toast("Supplier deleted");
 }
 
 /* ---------- users (Firebase roles) ---------- */
@@ -1665,7 +1731,7 @@ document.addEventListener("keydown",e=>{
 });
 /* ---------- router & init ---------- */
 const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut,
+  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers,
   reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings
 };
 function show(view){
