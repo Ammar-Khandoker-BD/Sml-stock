@@ -1208,8 +1208,8 @@ function exportTxns(kind){
   const fin = kind === "IN";
   const rows = txnRows(kind, fin ? SI_F : SO_F);
   exportCSV(fin ? "stock-in.csv" : "stock-out.csv",
-    ["ID","Date","Category","Type","Color","Thickness","Item","Qty","Unit","Note","By"],
-    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
+    ["ID","Date","Category","Type","Color","Thickness","Item","Qty","Unit","Supplier","Reference","Note","By"],
+    rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.note||"", t.by||""]; }));
 }
 
 function movementTotals(rows){
@@ -1255,7 +1255,7 @@ function runReport(){
   const ihay = it => (itemName(it)+" "+(it.page||"")+" "+(it.category||"")+" "+(it.type||"")).toLowerCase();
   const catOk = it => !REP.cat || ((it ? (it.category||"Board") : "") === REP.cat);
   const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && (!q || hay(t).includes(q)));
-  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
+  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","valuation","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
   let head = [], rows = [];
   if(REP.type==="txns"){
     head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Reference","Note","By"];
