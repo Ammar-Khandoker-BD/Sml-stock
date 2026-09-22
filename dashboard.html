@@ -343,7 +343,7 @@ function openStockModal(dir){
   const isIn = dir === "in";
   openModal(`
     <h3>${isIn ? "+ Stock In" : "− Stock Out"}</h3>
-    <div class="sub">${isIn ? "Record newly received sheets" : "Record sheets leaving the store"}</div>
+    <div class="sub">${isIn ? "Record newly received Pcs" : "Record Pcs leaving the store"}</div>
     <div class="field"><label for="smItem">Item</label><select id="smItem" class="select" style="width:100%">${itemOptions()}</select></div>
     <div class="row-2">
       <div class="field"><label for="smQty">Quantity (sheets)</label><input id="smQty" class="input" type="number" min="1" value="1"></div>
@@ -394,7 +394,7 @@ function openItemModal(id){
       <div class="field"><label for="imThk">Thickness</label><input id="imThk" class="input" value="${esc(it.thickness)}" placeholder="e.g. 12 mm"></div>
     </div>
     <div class="row-2">
-      <div class="field"><label for="imStock">Stock (sheets)</label><input id="imStock" class="input" type="number" min="0" value="${it.stock}"></div>
+      <div class="field"><label for="imStock">Stock (Pcs)</label><input id="imStock" class="input" type="number" min="0" value="${it.stock}"></div>
       <div class="field"><label for="imPrice">Unit price (Tk)</label><input id="imPrice" class="input" type="number" min="0" value="${it.price}"></div>
     </div>
     <div class="field"><label for="imReorder">Reorder level</label><input id="imReorder" class="input" type="number" min="0" value="${it.reorder}"></div>
