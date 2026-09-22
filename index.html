@@ -1067,6 +1067,17 @@ firebase.initializeApp({
 });
 const fauth = firebase.auth();
 const fdb = firebase.firestore();
+
+let userCreatorAuth = null;
+function getUserCreatorAuth(){
+  if(userCreatorAuth) return userCreatorAuth;
+  const appName = "sml-user-creator";
+  let app;
+  try { app = firebase.app(appName); }
+  catch(err) { app = firebase.initializeApp(firebase.app().options, appName); }
+  userCreatorAuth = app.auth();
+  return userCreatorAuth;
+}
 </script>
 <script>
 /* =====================================================
@@ -2766,24 +2777,68 @@ function renderUsers(){
   }).catch(() => { if(CURRENT_VIEW==="users") toast("Could not load users"); });
 }
 function userModal(email){
+  if(!isAdmin()){ toast("Only Admin can manage users"); return; }
   const r = email ? ROLES.find(x => x.email === email) : null;
-  openModal(`<h3>${r ? "Edit" : "Add"} User</h3><div class="sub">${r ? esc(r.email) : "Step 1: create this login in Firebase Console \u2192 Authentication first"}</div>
-  ${r ? "" : `<div class="field"><label>Email *</label><input class="input" id="fEmail" placeholder="name@sml.com"></div>`}
-  <div class="field"><label>Full Name</label><input class="input" id="fName" value="${r?esc(r.name||""):""}"></div>
+  openModal(`<h3>${r ? "Edit User" : "Add User"}</h3>
+  <div class="sub">${r ? esc(r.email)+" · update profile & access" : "Create the login and assign its ERP access here — no Firebase Console step needed"}</div>
+  ${r ? "" : `<div class="field"><label>Email *</label><input class="input" id="fEmail" type="email" autocomplete="off" placeholder="name@sml.com" required></div>`}
+  <div class="field"><label>Full Name</label><input class="input" id="fName" value="${r?esc(r.name||""):""}" placeholder="Full name" autocomplete="name"></div>
+  ${r ? "" : `<div class="field"><label>Password *</label><input class="input" id="fPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters"><div class="hint">Use a strong password. The user can sign in with this email and password immediately.</div></div>`}
   <div class="field"><label>Access Type</label><select class="select" id="fAccess">${["Admin","Store","Viewer"].map(a=>`<option ${r&&accessOf(r.role)===a?"selected":""}>${a}</option>`).join("")}</select></div>
-  <div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitUser('${r?esc(r.email):""}')">Save</button></div>`);
+  ${r ? `<div class="note" style="margin-top:10px">Password changes are handled through Firebase Authentication's password reset flow. Edit here updates the user's ERP role/name only.</div>` : ""}
+  <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="userSaveBtn" onclick="submitUser('${r?esc(r.email):""}')">${r?"Save Changes":"Create User"}</button></div>`);
 }
-function submitUser(email){
-  const em = (email || $("#fEmail").value.trim()).toLowerCase();
-  if(!em || em.indexOf("@") === -1) return toast("Valid email is required");
+
+async function submitUser(email){
+  if(!isAdmin()){ toast("Only Admin can manage users"); return; }
+  const isEdit = !!email;
+  const em = (email || ($("#fEmail") ? $("#fEmail").value.trim() : "")).toLowerCase();
+  if(!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return toast("Valid email is required");
   const acc = $("#fAccess").value;
   if(em === currentUser.id && acc !== "Admin") return toast("You cannot remove your own Admin access");
   const role = acc === "Admin" ? "admin" : acc === "Store" ? "staff" : "viewer";
-  fdb.collection("roles").doc(em).set({ role, name: $("#fName").value.trim() }, { merge: true }).then(() => {
-    audit((email ? "Edited" : "Added") + " user: " + em); save();
-    closeModal(); toast("User saved"); renderUsers();
-  }).catch(() => toast("Could not save user \u2014 check permission"));
+  const name = $("#fName").value.trim();
+  const btn = $("#userSaveBtn");
+  if(btn){ btn.disabled=true; btn.textContent=isEdit?"Saving…":"Creating…"; }
+
+  try{
+    if(isEdit){
+      await fdb.collection("roles").doc(em).set({ role, name }, { merge:true });
+      audit("Edited user: "+em);
+      save(); closeModal(); toast("User updated"); renderUsers();
+      return;
+    }
+
+    const pw = $("#fPassword").value;
+    if(pw.length < 6){
+      if(btn){btn.disabled=false;btn.textContent="Create User";}
+      return toast("Password must be at least 6 characters");
+    }
+
+    const creator = getUserCreatorAuth();
+    const credential = await creator.createUserWithEmailAndPassword(em, pw);
+    try{
+      await fdb.collection("roles").doc(em).set({ role, name }, { merge:true });
+    }catch(roleErr){
+      try{ await credential.user.delete(); }catch(cleanErr){ console.error("Cleanup failed after role write error", cleanErr); }
+      throw roleErr;
+    }
+
+    audit("Created user: "+em+" · "+acc);
+    save(); closeModal(); toast("User created successfully"); renderUsers();
+  }catch(err){
+    console.error(err);
+    let msg="Could not create user";
+    if(err && err.code==="auth/email-already-in-use") msg="This email already has a Firebase login";
+    else if(err && err.code==="auth/invalid-email") msg="Invalid email address";
+    else if(err && err.code==="auth/weak-password") msg="Password is too weak";
+    else if(err && err.code==="permission-denied") msg="Could not assign ERP role — check Admin permission";
+    else if(isEdit) msg="Could not update user — check Admin permission";
+    if(btn){ btn.disabled=false; btn.textContent=isEdit?"Save Changes":"Create User"; }
+    toast(msg);
+  }
 }
+
 function delUser(email){
   if(email === currentUser.id) return toast("You cannot delete your own account");
   if(!confirm(`Remove access for "${email}"?\nAlso delete the login from Firebase Console \u2192 Authentication.`)) return;
