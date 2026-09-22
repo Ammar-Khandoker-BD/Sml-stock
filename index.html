@@ -980,7 +980,7 @@ body{position:relative}
   #view-audit th:nth-child(2),#view-audit td:nth-child(2){width:82px}
   #view-audit th:nth-child(3),#view-audit td:nth-child(3){width:125px}
 }
-</style></style>>
+</style><style id="sml-user-photo">.tb-user .av{overflow:hidden;padding:0}.tb-user .av img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}.user-photo-field{display:flex;gap:14px;align-items:center;padding:12px;border:1px dashed #D7E0EA;border-radius:12px;background:#F8FAFC}.user-photo-preview{width:64px;height:64px;min-width:64px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#4F8DF7,#295ED4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;box-shadow:0 6px 16px rgba(15,23,42,.10)}.user-photo-preview img{width:100%;height:100%;object-fit:cover;display:block}.user-photo-copy b{display:block;font-size:12.5px;color:#344054}.user-photo-copy span{display:block;color:#98A2B3;font-size:11.5px;margin-top:3px}.user-photo-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}</style></style>>
 </head>
 <body>
 
@@ -1273,7 +1273,7 @@ function enterApp(u){
   $("#loginWrap").style.display = "none";
   $("#userName").textContent = u.name;
   $("#userRole").textContent = u.access;
-  $("#userAv").textContent = u.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  $("#userAv").innerHTML = u.photo ? "<img src=\""+esc(u.photo)+"\" alt=\""+esc(u.name)+" avatar\">" : esc((String(u.name||"?").trim().split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2)||"?").toUpperCase());
   $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
   document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin() ? "" : "none");
   renderAll();
@@ -2776,17 +2776,77 @@ function renderUsers(){
   </tbody></table></div></div>`;
   }).catch(() => { if(CURRENT_VIEW==="users") toast("Could not load users"); });
 }
+let USER_MODAL_PHOTO = "";
+function prepareUserPhoto(input){
+  const file=input&&input.files&&input.files[0];
+  if(!file) return;
+  if(!String(file.type||"").startsWith("image/")){ input.value=""; return toast("Please choose an image file"); }
+  if(file.size>8*1024*1024){ input.value=""; return toast("Image is too large — choose a file under 8 MB"); }
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const size=256, canvas=document.createElement("canvas");
+        canvas.width=size; canvas.height=size;
+        const ctx=canvas.getContext("2d");
+        const scale=Math.max(size/img.width,size/img.height);
+        const w=img.width*scale, h=img.height*scale;
+        ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
+        let quality=.82, data="";
+        for(let i=0;i<5;i++){
+          data=canvas.toDataURL("image/jpeg",quality);
+          if(data.length<170000) break;
+          quality-=.08;
+        }
+        USER_MODAL_PHOTO=data;
+        renderUserPhotoPreview();
+      }catch(err){ console.error(err); toast("Could not process the photo"); }
+    };
+    img.onerror=()=>toast("Could not read this image");
+    img.src=reader.result;
+  };
+  reader.onerror=()=>toast("Could not read this image");
+  reader.readAsDataURL(file);
+}
+function renderUserPhotoPreview(){
+  const box=$("#userPhotoPreview");
+  if(!box) return;
+  const name=$("#fName")?$("#fName").value.trim():"User";
+  box.innerHTML=USER_MODAL_PHOTO ? "<img src=\""+esc(USER_MODAL_PHOTO)+"\" alt=\"Profile photo preview\">" : esc((String(name||"?").trim().split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2)||"?").toUpperCase());
+}
+function clearUserPhoto(){
+  USER_MODAL_PHOTO="";
+  const input=$("#fPhoto");
+  if(input) input.value="";
+  renderUserPhotoPreview();
+}
 function userModal(email){
   if(!isAdmin()){ toast("Only Admin can manage users"); return; }
   const r = email ? ROLES.find(x => x.email === email) : null;
+  USER_MODAL_PHOTO = r && r.photo ? String(r.photo) : "";
   openModal(`<h3>${r ? "Edit User" : "Add User"}</h3>
   <div class="sub">${r ? esc(r.email)+" · update profile & access" : "Create the login and assign its ERP access here — no Firebase Console step needed"}</div>
   ${r ? "" : `<div class="field"><label>Email *</label><input class="input" id="fEmail" type="email" autocomplete="off" placeholder="name@sml.com" required></div>`}
   <div class="field"><label>Full Name</label><input class="input" id="fName" value="${r?esc(r.name||""):""}" placeholder="Full name" autocomplete="name"></div>
+  <div class="field"><label>Profile Photo</label>
+    <div class="user-photo-field">
+      <div class="user-photo-preview" id="userPhotoPreview"></div>
+      <div class="user-photo-copy">
+        <b>Admin-managed profile photo</b>
+        <span>JPG, PNG or WebP · resized for the ERP profile</span>
+        <div class="user-photo-actions">
+          <label class="btn btn-sm" style="cursor:pointer">Choose Photo<input id="fPhoto" type="file" accept="image/*" style="display:none" onchange="prepareUserPhoto(this)"></label>
+          <button type="button" class="btn btn-sm" onclick="clearUserPhoto()">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
   ${r ? "" : `<div class="field"><label>Password *</label><input class="input" id="fPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters"><div class="hint">Use a strong password. The user can sign in with this email and password immediately.</div></div>`}
   <div class="field"><label>Access Type</label><select class="select" id="fAccess">${["Admin","Store","Viewer"].map(a=>`<option ${r&&accessOf(r.role)===a?"selected":""}>${a}</option>`).join("")}</select></div>
   ${r ? `<div class="note" style="margin-top:10px">Password changes are handled through Firebase Authentication's password reset flow. Edit here updates the user's ERP role/name only.</div>` : ""}
   <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="userSaveBtn" onclick="submitUser('${r?esc(r.email):""}')">${r?"Save Changes":"Create User"}</button></div>`);
+  setTimeout(renderUserPhotoPreview,0);
 }
 
 async function submitUser(email){
@@ -2803,7 +2863,7 @@ async function submitUser(email){
 
   try{
     if(isEdit){
-      await fdb.collection("roles").doc(em).set({ role, name }, { merge:true });
+      await fdb.collection("roles").doc(em).set({ role, name, photo: USER_MODAL_PHOTO || "" }, { merge:true });
       audit("Edited user: "+em);
       save(); closeModal(); toast("User updated"); renderUsers();
       return;
@@ -2818,7 +2878,7 @@ async function submitUser(email){
     const creator = getUserCreatorAuth();
     const credential = await creator.createUserWithEmailAndPassword(em, pw);
     try{
-      await fdb.collection("roles").doc(em).set({ role, name }, { merge:true });
+      await fdb.collection("roles").doc(em).set({ role, name, photo: USER_MODAL_PHOTO || "" }, { merge:true });
     }catch(roleErr){
       try{ await credential.user.delete(); }catch(cleanErr){ console.error("Cleanup failed after role write error", cleanErr); }
       throw roleErr;
@@ -3002,7 +3062,7 @@ fauth.onAuthStateChanged(async fu => {
     const role = String(rd.role || "").toLowerCase();
     const access = role === "admin" ? "Admin" : (role === "staff" || role === "store") ? "Store" : "Viewer";
     await loadData();
-    enterApp({ id: fu.email, email: fu.email, name: rd.name || fu.email.split("@")[0], username: fu.email.split("@")[0], access });
+    enterApp({ id: fu.email, email: fu.email, name: rd.name || fu.email.split("@")[0], username: fu.email.split("@")[0], access, photo: rd.photo || "" });
     attachListeners();
     if(!rs.exists) toast("No role assigned \u2014 view-only. Ask admin to add you in Users.");
     audit("Logged in"); save();
