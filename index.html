@@ -1317,7 +1317,7 @@ async function exportTxnXlsx(kind){
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet(fin?"Stock In":"Stock Out",{views:[{state:"frozen",ySplit:3}]});
     const company=(DB.settings&&DB.settings.company)||"Step Media Ltd";
-    const head=["ID","Date","Category","Item","Qty","Unit","Supplier","Reference","Department / Project","Issued To","Purpose","Note","By"];
+    const head=["ID","Date","Category","Item","Qty","Unit","Supplier","PO","Reference","Department / Project","Issued To","Purpose","Note","By"];
     ws.mergeCells(1,1,1,head.length); ws.getCell(1,1).value=company+" — "+(fin?"Stock In":"Stock Out")+" Register";
     ws.getCell(1,1).font={name:"Aptos Display",size:15,bold:true,color:{argb:"FFFFFFFF"}};
     ws.getCell(1,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:fin?"FF3F7D5A":"FFD8503B"}};
@@ -1328,10 +1328,10 @@ async function exportTxnXlsx(kind){
     hr.eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:fin?"FF3F7D5A":"FFD8503B"}};cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};});
     rows.forEach((t,i)=>{
       const it=itemById(t.itemId);
-      const row=ws.addRow([t.id,t.date,it?it.category||"":"",itemName(it),Math.abs(Number(t.qty)||0),it?it.uom||"Pcs":"",supplierName(t.supplierId),t.referenceNo||"",t.department||"",t.issuedTo||"",t.purpose||"",t.note||"",t.by||""]);
+      const row=ws.addRow([t.id,t.date,it?it.category||"":"",itemName(it),Math.abs(Number(t.qty)||0),it?it.uom||"Pcs":"",supplierName(t.supplierId),t.poNo||"",t.referenceNo||"",t.department||"",t.issuedTo||"",t.purpose||"",t.note||"",t.by||""]);
       row.height=20; if(i%2===1) row.eachCell(cell=>cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF8F7F5"}});
     });
-    [14,14,22,30,12,12,24,20,24,20,26,30,22].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    [14,14,22,30,12,12,24,16,20,24,20,26,30,22].forEach((w,i)=>ws.getColumn(i+1).width=w);
     ws.autoFilter={from:{row:3,column:1},to:{row:3,column:head.length}};
     ws.pageSetup={orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9};
     const buffer=await wb.xlsx.writeBuffer();
@@ -1934,6 +1934,42 @@ async function receivePO(e,id){
   }catch(err){ console.error(err); toast(err.message||"Could not receive PO"); }
 }
 
+function printPONumber(id){
+  const po=(DB.pos||[]).find(x=>x.id===id); if(!po) return;
+  const company=(DB.settings&&DB.settings.company)||"Step Media Ltd";
+  const supplier=supplierById(po.supplierId);
+  const rows=(po.lines||[]).map((l,i)=>{const it=itemById(l.itemId);return "<tr><td style=\"padding:8px;border:1px solid #ddd;text-align:center\">"+(i+1)+"</td><td style=\"padding:8px;border:1px solid #ddd\">"+esc(itemName(it))+"</td><td style=\"padding:8px;border:1px solid #ddd;text-align:right\">"+formatQty(l.qty)+"</td><td style=\"padding:8px;border:1px solid #ddd;text-align:center\">"+esc(it?it.uom||"Pcs":"Pcs")+"</td><td style=\"padding:8px;border:1px solid #ddd;text-align:right\">Tk "+Number(l.unitPrice||0).toLocaleString("en-IN",{maximumFractionDigits:2})+"</td><td style=\"padding:8px;border:1px solid #ddd;text-align:right\">Tk "+poLineTotal(l).toLocaleString("en-IN",{maximumFractionDigits:2})+"</td></tr>";}).join("");
+  $("#slipPrint").innerHTML="<div style=\"max-width:820px;margin:0 auto;padding:34px;font-family:Arial,sans-serif;color:#111\">"+
+    "<div style=\"display:flex;justify-content:space-between;border-bottom:2px solid #222;padding-bottom:14px\"><div><div style=\"font-size:22px;font-weight:700\">"+esc(company)+"</div><div style=\"font-size:12px;color:#666;margin-top:4px\">"+esc(DB.settings.address||"")+"</div></div><div style=\"text-align:right\"><div style=\"font-size:20px;font-weight:700\">PURCHASE ORDER</div><div style=\"font-size:12px;color:#666;margin-top:4px\">"+esc(po.poNo)+"</div></div></div>"+
+    "<table style=\"width:100%;border-collapse:collapse;font-size:13px;margin-top:18px\"><tr><td style=\"padding:8px;border:1px solid #ddd\"><b>Supplier</b></td><td style=\"padding:8px;border:1px solid #ddd\">"+esc(supplier?supplier.name:"")+"</td><td style=\"padding:8px;border:1px solid #ddd\"><b>Expected Date</b></td><td style=\"padding:8px;border:1px solid #ddd\">"+esc(po.expectedDate||"")+"</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd\"><b>Status</b></td><td style=\"padding:8px;border:1px solid #ddd\">"+esc(po.status||"")+"</td><td style=\"padding:8px;border:1px solid #ddd\"><b>Created By</b></td><td style=\"padding:8px;border:1px solid #ddd\">"+esc(po.createdBy||"")+"</td></tr></table>"+
+    "<table style=\"width:100%;border-collapse:collapse;font-size:13px;margin-top:18px\"><thead><tr><th style=\"padding:8px;border:1px solid #ddd\">#</th><th style=\"padding:8px;border:1px solid #ddd;text-align:left\">Item</th><th style=\"padding:8px;border:1px solid #ddd\">Qty</th><th style=\"padding:8px;border:1px solid #ddd\">Unit</th><th style=\"padding:8px;border:1px solid #ddd\">Unit Price</th><th style=\"padding:8px;border:1px solid #ddd\">Total</th></tr></thead><tbody>"+rows+"</tbody></table>"+
+    "<div style=\"text-align:right;margin-top:14px;font-size:16px;font-weight:700\">Grand Total: Tk "+poTotal(po).toLocaleString("en-IN",{maximumFractionDigits:2})+"</div>"+
+    "<div style=\"margin-top:18px;padding:12px;border:1px solid #ddd;min-height:54px\"><b>Note</b><div style=\"margin-top:7px\">"+esc(po.note||"")+"</div></div>"+
+    "<div style=\"display:flex;justify-content:space-between;margin-top:64px;font-size:12px;color:#555\"><div>Prepared By: __________________</div><div>Approved By: __________________</div><div>Supplier: __________________</div></div>"+
+    "<div style=\"margin-top:28px;text-align:center;font-size:10px;color:#888\">Generated by SML Inventory ERP</div></div>";
+  document.body.classList.add("slip-mode"); setTimeout(()=>window.print(),60);
+}
+
+async function exportPOXlsx(id){
+  if(typeof ExcelJS==="undefined"){toast("Excel export library is still loading — try again");return;}
+  const po=(DB.pos||[]).find(x=>x.id===id); if(!po) return;
+  try{
+    const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet("Purchase Order",{views:[{state:"frozen",ySplit:6}]});
+    const company=(DB.settings&&DB.settings.company)||"Step Media Ltd"; const supplier=supplierById(po.supplierId);
+    const head=["SL","Item","Category","Qty","Unit","Unit Price (Tk)","Line Total (Tk)"];
+    ws.mergeCells(1,1,1,head.length); ws.getCell(1,1).value=company+" — PURCHASE ORDER"; ws.getCell(1,1).font={name:"Aptos Display",size:15,bold:true,color:{argb:"FFFFFFFF"}}; ws.getCell(1,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
+    ws.mergeCells(2,1,2,head.length); ws.getCell(2,1).value=po.poNo+" | Supplier: "+(supplier?supplier.name:"")+" | Status: "+po.status;
+    ws.getCell(2,1).font={name:"Aptos",size:10,color:{argb:"FF6E6A63"}};
+    ws.mergeCells(3,1,3,head.length); ws.getCell(3,1).value="Expected: "+(po.expectedDate||"—")+" | Created by: "+(po.createdBy||"")+" | Approved by: "+(po.approvedBy||"—");
+    ws.getCell(3,1).font={name:"Aptos",size:10,color:{argb:"FF6E6A63"}};
+    ws.addRow([]); const hr=ws.addRow(head); hr.eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle"};});
+    (po.lines||[]).forEach((l,i)=>{const it=itemById(l.itemId); const row=ws.addRow([i+1,itemName(it),it?it.category||"Board":"",l.qty,it?it.uom||"Pcs":"Pcs",l.unitPrice,poLineTotal(l)]); row.height=20; if(i%2===1) row.eachCell(cell=>cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF8F7F5"}});});
+    const totalRow=ws.addRow(["","","","","","Grand Total",poTotal(po)]); totalRow.eachCell(cell=>cell.font={name:"Aptos",size:10,bold:true});
+    [8,32,20,12,12,18,18].forEach((w,i)=>ws.getColumn(i+1).width=w); ws.getColumn(6).numFmt="#,##0.00"; ws.getColumn(7).numFmt="#,##0.00";
+    const buffer=await wb.xlsx.writeBuffer(); const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=po.poNo+"_Purchase_Order.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("PO Excel downloaded");
+  }catch(err){console.error(err);toast("Could not create PO Excel");}
+}
+window.addEventListener("afterprint",()=>{document.body.classList.remove("slip-mode");$("#slipPrint").innerHTML="";});
 function renderPOs(){
   const q=(PO_F.q||"").toLowerCase();
   const rows=(DB.pos||[]).filter(po=>{
@@ -1953,7 +1989,7 @@ function renderPOs(){
   ${rows.map(po=>{
     const ordered=(po.lines||[]).reduce((s,l)=>s+(Number(l.qty)||0),0);
     const received=poReceived(po);
-    let actions='<button class="btn btn-sm" onclick="viewPODetails(\''+esc(po.id)+'\')">View</button>';
+    let actions='<button class="btn btn-sm" onclick="viewPODetails(\''+esc(po.id)+'\')">View</button> <button class="btn btn-sm" onclick="printPONumber(\''+esc(po.id)+'\')">Print</button> <button class="btn btn-sm" onclick="exportPOXlsx(\''+esc(po.id)+'\')">Excel</button>';
     if(po.status==="Draft") actions='<button class="btn btn-sm" onclick="openPOModal(\''+esc(po.id)+'\')">Edit</button> <button class="btn btn-sm btn-primary" onclick="submitPOForApproval(\''+esc(po.id)+'\')">Submit</button>';
     else if(po.status==="Pending Approval") actions=(isAdmin()?'<button class="btn btn-sm btn-green" onclick="approvePO(\''+esc(po.id)+'\')">Approve</button> ':"")+'<button class="btn btn-sm" onclick="viewPODetails(\''+esc(po.id)+'\')">View</button>';
     else if(["Approved","Partially Received"].includes(po.status)) actions='<button class="btn btn-sm btn-green" onclick="openPOReceiveModal(\''+esc(po.id)+'\')">Receive</button> <button class="btn btn-sm" onclick="viewPODetails(\''+esc(po.id)+'\')">View</button>';
