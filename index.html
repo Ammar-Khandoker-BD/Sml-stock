@@ -347,6 +347,7 @@ tbody tr:hover{background:#FAF6F3}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 /* Firebase project: stepmedia-stock */
 firebase.initializeApp({
@@ -1071,6 +1072,171 @@ function runReport(){
   REP_OUT = { title, head, rows };
   renderReports();
 }
+async function exportReportXlsx(){
+  if(!REP_OUT){ toast("Run the report first"); return; }
+  if(typeof ExcelJS === "undefined"){ toast("Excel export library is still loading — please try again"); return; }
+
+  const btn = document.getElementById("reportExcelBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "Preparing…"; }
+
+  try{
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "SML Inventory ERP";
+    wb.lastModifiedBy = currentUser ? (currentUser.username || "system") : "system";
+    wb.created = new Date();
+    wb.modified = new Date();
+    wb.company = (DB.settings && DB.settings.company) || "Step Media Ltd";
+    wb.subject = REP_OUT.title;
+    wb.title = REP_OUT.title;
+
+    const ws = wb.addWorksheet("Management Report", {
+      views: [{state:"frozen", ySplit:6}],
+      pageSetup: {
+        orientation: "landscape",
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        paperSize: 9,
+        margins: {left:0.3,right:0.3,top:0.5,bottom:0.5,header:0.2,footer:0.2}
+      }
+    });
+
+    const company = (DB.settings && DB.settings.company) || "Step Media Ltd";
+    const generated = new Date().toLocaleString("en-GB", {
+      day:"2-digit", month:"short", year:"numeric",
+      hour:"2-digit", minute:"2-digit"
+    });
+    const filterParts = [];
+    if(REP.from && REP.to) filterParts.push("Period: " + fmtD(REP.from) + " – " + fmtD(REP.to));
+    if(REP.cat) filterParts.push("Category: " + REP.cat);
+    if(REP.q) filterParts.push("Search: " + REP.q);
+
+    const lastCol = Math.max(REP_OUT.head.length, 1);
+
+    ws.mergeCells(1,1,1,lastCol);
+    const titleCell = ws.getCell(1,1);
+    titleCell.value = company;
+    titleCell.font = {name:"Aptos Display",size:16,bold:true,color:{argb:"FFFFFFFF"}};
+    titleCell.alignment = {horizontal:"left",vertical:"middle"};
+    titleCell.fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
+    ws.getRow(1).height = 28;
+
+    ws.mergeCells(2,1,2,lastCol);
+    const reportCell = ws.getCell(2,1);
+    reportCell.value = REP_OUT.title;
+    reportCell.font = {name:"Aptos",size:12,bold:true,color:{argb:"FF211E1C"}};
+    reportCell.alignment = {horizontal:"left",vertical:"middle"};
+    ws.getRow(2).height = 22;
+
+    ws.mergeCells(3,1,3,lastCol);
+    const filterCell = ws.getCell(3,1);
+    filterCell.value = filterParts.length ? filterParts.join("  |  ") : "All records";
+    filterCell.font = {name:"Aptos",size:10,color:{argb:"FF6E6A63"}};
+    filterCell.alignment = {horizontal:"left",vertical:"middle",wrapText:true};
+    ws.getRow(3).height = 20;
+
+    ws.mergeCells(4,1,4,lastCol);
+    const generatedCell = ws.getCell(4,1);
+    generatedCell.value = "Generated: " + generated + "  |  Records: " + REP_OUT.rows.length;
+    generatedCell.font = {name:"Aptos",size:9.5,italic:true,color:{argb:"FF8B8780"}};
+    generatedCell.alignment = {horizontal:"left",vertical:"middle"};
+    ws.getRow(4).height = 18;
+
+    ws.addRow([]);
+    const headerRow = ws.addRow(REP_OUT.head);
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};
+      cell.fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};
+      cell.alignment = {horizontal:"center",vertical:"middle",wrapText:true};
+      cell.border = {
+        top:{style:"thin",color:{argb:"FFD8DDD8"}},
+        bottom:{style:"thin",color:{argb:"FFD8DDD8"}},
+        left:{style:"thin",color:{argb:"FFE7E9E6"}},
+        right:{style:"thin",color:{argb:"FFE7E9E6"}}
+      };
+    });
+
+    REP_OUT.rows.forEach((rawRow, rowIndex) => {
+      const excelRow = ws.addRow(rawRow);
+      excelRow.height = 20;
+      excelRow.eachCell((cell, colNumber) => {
+        cell.font = {name:"Aptos",size:10,color:{argb:"FF161513"}};
+        cell.alignment = {vertical:"middle",horizontal:"left",wrapText:true};
+        cell.border = {
+          bottom:{style:"hair",color:{argb:"FFE9E7E3"}}
+        };
+        if(rowIndex % 2 === 1){
+          cell.fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FFF8F7F5"}};
+        }
+
+        const head = String(REP_OUT.head[colNumber-1] || "").toLowerCase();
+        const numericHead = /qty|stock in|stock out|net|current stock|alarm qty|shortage|total|value|price/.test(head);
+        if(numericHead && cell.value !== "" && cell.value !== null && !isNaN(Number(cell.value))){
+          cell.value = Number(cell.value);
+          cell.numFmt = Number.isInteger(cell.value) ? '#,##0;[Red]-#,##0' : '#,##0.00;[Red]-#,##0.00';
+          cell.alignment = {vertical:"middle",horizontal:"right"};
+        }
+        if(head === "unit"){
+          cell.alignment = {vertical:"middle",horizontal:"center"};
+        }
+        if(head === "status"){
+          cell.alignment = {vertical:"middle",horizontal:"center"};
+          const val = String(cell.value||"").toLowerCase();
+          if(val === "ok"){
+            cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FF3F7D5A"}};
+          } else if(val.includes("low")){
+            cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FFB7770D"}};
+          } else if(val.includes("out")){
+            cell.font = {name:"Aptos",size:10,bold:true,color:{argb:"FFC7402E"}};
+          }
+        }
+      });
+    });
+
+    const headerExcelRow = 6;
+    ws.autoFilter = {from:{row:headerExcelRow,column:1},to:{row:headerExcelRow,column:lastCol}};
+
+    // Sensible management-report column widths.
+    const widthByHead = {
+      "id":13,"date":14,"sl":8,"page":10,"category":22,"item":30,"type":18,
+      "color":18,"thickness":14,"stock in":13,"stock out":14,"net":13,
+      "current stock":16,"unit":12,"qty":12,"note":28,"by":24,"status":16,
+      "alarm qty":13,"shortage":13,"unit price (tk)":16,"value (tk)":18
+    };
+    REP_OUT.head.forEach((h, idx) => {
+      const key = String(h).toLowerCase();
+      ws.getColumn(idx+1).width = widthByHead[key] || Math.min(32, Math.max(12, key.length + 4));
+    });
+
+    ws.headerFooter.oddFooter = "&LGenerated by SML Inventory ERP&R&Page &P of &N";
+    ws.headerFooter.oddHeader = "&R&F";
+    ws.views = [{state:"frozen", ySplit:6}];
+
+    const safeName = company.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"") || "SML";
+    const reportSlug = REP_OUT.title.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,70) || "Report";
+    const dateSlug = todayISO();
+    const filename = safeName + "_" + reportSlug + "_" + dateSlug + ".xlsx";
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast("Professional Excel report downloaded");
+  }catch(err){
+    console.error(err);
+    toast("Could not create the Excel report");
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "↧ Excel"; }
+  }
+}
+
 function renderReports(){
   $("#view-reports").innerHTML = `
   <div class="page-head"><div><div class="crumb">Insight / <b>Reports</b></div><h1>Reports</h1><p>Run, search, print or export to Excel</p></div></div>
@@ -1083,7 +1249,7 @@ function renderReports(){
       <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
       <input class="input" style="max-width:220px" placeholder="Search item, note, user\u2026" value="${esc(REP.q||"")}" onchange="REP.q=this.value;runReport()">
       <button class="btn btn-primary" onclick="runReport()">Run Report</button>
-      ${REP_OUT?`<button class="btn" onclick="exportCSV('report.csv',REP_OUT.head,REP_OUT.rows)">\u2913 Excel</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
+      ${REP_OUT?`<button class="btn" id="reportExcelBtn" onclick="exportReportXlsx()">\u2913 Excel</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
     </div>
   </div>
   ${REP_OUT?`<div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">${esc(REP_OUT.title)}</h3><div class="sub">${REP_OUT.rows.length} rows</div></div>
