@@ -7,19 +7,62 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function roleDoc() {
+      return /databases/$(database)/documents/roles/$(request.auth.token.email);
+    }
+
     function isAdmin() {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/roles/$(request.auth.token.email))
-        && get(/databases/$(database)/documents/roles/$(request.auth.token.email)).data.role == 'admin';
+        && exists(roleDoc())
+        && get(roleDoc()).data.role == 'admin';
     }
 
     function isStore() {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/roles/$(request.auth.token.email))
+        && exists(roleDoc())
         && (
-          get(/databases/$(database)/documents/roles/$(request.auth.token.email)).data.role == 'staff'
-          || get(/databases/$(database)/documents/roles/$(request.auth.token.email)).data.role == 'store'
+          get(roleDoc()).data.role == 'staff'
+          || get(roleDoc()).data.role == 'store'
         );
+    }
+
+    function isMainDoc() {
+      return false;
+    }
+
+    function storeMainUpdateAllowed() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['items', 'seq', 'client', 'rev']);
+    }
+
+    function validTxnCreate(txId) {
+      return request.resource.data.keys().hasAll([
+          'id', 'type', 'subtype', 'date', 'itemId', 'qty', 'by', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'type', 'subtype', 'poId', 'poNo', 'referenceId',
+          'supplierId', 'referenceNo', 'department', 'issuedTo',
+          'purpose', 'date', 'itemId', 'qty', 'note', 'by', 'createdAt'
+        ])
+        && request.resource.data.id == txId
+        && request.resource.data.type in ['IN', 'OUT']
+        && request.resource.data.subtype in [
+          'NORMAL', 'OPENING', 'ADJUSTMENT', 'REVERSAL', 'PO_RECEIPT'
+        ]
+        && request.resource.data.qty is number
+        && request.resource.data.qty != 0
+        && request.resource.data.createdAt is number;
+    }
+
+    function validAuditCreate(auditId) {
+      return request.resource.data.keys().hasAll([
+          'id', 'ts', 'date', 'time', 'user', 'action'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'ts', 'date', 'time', 'user', 'action'
+        ])
+        && request.resource.data.id == auditId
+        && request.resource.data.ts is number;
     }
 
     match /roles/{email} {
@@ -29,19 +72,21 @@ service cloud.firestore {
 
     match /erp/{docId} {
       allow read: if isSignedIn();
-      allow create, update: if isAdmin() || isStore();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        || (isStore() && docId == 'main' && storeMainUpdateAllowed());
       allow delete: if isAdmin();
     }
 
     match /erp_txns/{txId} {
       allow read: if isSignedIn();
-      allow create: if isAdmin() || isStore();
+      allow create: if (isAdmin() || isStore()) && validTxnCreate(txId);
       allow update, delete: if false;
     }
 
     match /erp_audit/{auditId} {
       allow read: if isSignedIn();
-      allow create: if isAdmin() || isStore();
+      allow create: if (isAdmin() || isStore()) && validAuditCreate(auditId);
       allow update, delete: if false;
     }
 
