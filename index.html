@@ -1090,7 +1090,7 @@ function renderTxns(kind){
   </div>
   <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total ${fin?"received":"issued"}: <b>${total}</b></span></div>
   <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Supplier</th><th>Reference</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
-  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(supplierName(t.supplierId)||"")}</td><td class="muted">${esc(t.referenceNo||"")}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn('${t.id}')">Reverse</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
+  ${rows.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(supplierName(t.supplierId)||"")}</td><td class="muted">${esc(t.referenceNo||"")}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="printTxnSlip('${t.id}')">Print</button>`}${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn('${t.id}')">Reverse</button>`:""}</td></tr>`; }).join("") || `<tr><td colspan="10" style="text-align:center;color:var(--faint);padding:28px">No entries found</td></tr>`}
   </tbody></table></div></div>`;
 }
 function txnModal(kind){
@@ -1339,6 +1339,29 @@ async function exportTxnXlsx(kind){
     toast("Excel report downloaded");
   }catch(err){ console.error(err); toast("Could not create Excel report"); }
 }
+function printTxnSlip(id){
+  const t=DB.txns.find(x=>x.id===id); if(!t) return;
+  const it=itemById(t.itemId);
+  const company=(DB.settings&&DB.settings.company)||"Step Media Ltd";
+  const movement=t.subtype==="OPENING"?"OPENING BALANCE":t.subtype==="REVERSAL"?"REVERSAL":(t.type==="IN"?"STOCK IN":"STOCK OUT");
+  const qty=Math.abs(Number(t.qty)||0);
+  const unit=it?(it.uom||"Pcs"):"Pcs";
+  const ref=t.referenceNo||"";
+  const supplier=supplierName(t.supplierId)||"";
+  const address=DB.settings.address||"";
+  const trace=t.type==="OUT" ? ("<tr><td><b>Department / Project</b></td><td>"+esc(t.department||"")+"</td><td><b>Issued To</b></td><td>"+esc(t.issuedTo||"")+"</td></tr><tr><td><b>Purpose</b></td><td colspan=\"3\">"+esc(t.purpose||"")+"</td></tr>") : "<tr><td><b>Supplier</b></td><td>"+esc(supplier)+"</td><td><b>Challan / Reference</b></td><td>"+esc(ref)+"</td></tr>";
+  $("#slipPrint").innerHTML="<div style=\"max-width:760px;margin:0 auto;padding:34px;font-family:Arial,sans-serif;color:#111\">"+
+    "<div style=\"display:flex;justify-content:space-between;border-bottom:2px solid #222;padding-bottom:14px;margin-bottom:18px\"><div><div style=\"font-size:22px;font-weight:700\">"+esc(company)+"</div><div style=\"font-size:12px;color:#666;margin-top:4px\">"+esc(address)+"</div></div><div style=\"text-align:right\"><div style=\"font-size:18px;font-weight:700\">"+movement+"</div><div style=\"font-size:12px;color:#666;margin-top:4px\">Voucher: "+esc(t.id)+"</div></div></div>"+
+    "<table style=\"width:100%;border-collapse:collapse;font-size:13px\"><tr><td style=\"padding:9px;border:1px solid #ddd\"><b>Date</b></td><td style=\"padding:9px;border:1px solid #ddd\">"+esc(t.date||"")+"</td><td style=\"padding:9px;border:1px solid #ddd\"><b>User</b></td><td style=\"padding:9px;border:1px solid #ddd\">"+esc(t.by||"")+"</td></tr>"+
+    "<tr><td style=\"padding:9px;border:1px solid #ddd\"><b>Item</b></td><td style=\"padding:9px;border:1px solid #ddd\">"+esc(itemName(it))+"</td><td style=\"padding:9px;border:1px solid #ddd\"><b>Quantity</b></td><td style=\"padding:9px;border:1px solid #ddd\">"+qty+" "+esc(unit)+"</td></tr>"+
+    trace.replaceAll("<td>","<td style=\"padding:9px;border:1px solid #ddd\">")+
+    "</table><div style=\"margin-top:16px;padding:12px;border:1px solid #ddd;min-height:70px\"><b>Note</b><div style=\"margin-top:8px\">"+esc(t.note||"")+"</div></div>"+
+    "<div style=\"display:flex;justify-content:space-between;margin-top:58px;font-size:12px;color:#555\"><div>Prepared By: __________________</div><div>Received / Issued By: __________________</div><div>Signature: __________</div></div>"+
+    "<div style=\"margin-top:28px;text-align:center;font-size:10px;color:#888\">Generated by SML Inventory ERP</div></div>";
+  document.body.classList.add("slip-mode");
+  setTimeout(()=>window.print(),60);
+}
+window.addEventListener("afterprint",()=>{ document.body.classList.remove("slip-mode"); $("#slipPrint").innerHTML=""; });
 function exportTxns(kind){
   const fin = kind === "IN";
   const rows = txnRows(kind, fin ? SI_F : SO_F);
