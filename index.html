@@ -525,7 +525,7 @@ function seedData(){
 }
 function migrateDB(){
   DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
-  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0; DB.seq.adj = DB.seq.adj || 0; DB.seq.rv = DB.seq.rv || 0; DB.seq.rv = DB.seq.rv || 0;
+  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0; DB.seq.adj = DB.seq.adj || 0; DB.seq.rv = DB.seq.rv || 0;
   let changed = false;
   DB.items.forEach(it => {
     if(it.type === undefined){ it.type = ""; changed = true; }
