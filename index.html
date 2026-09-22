@@ -2151,7 +2151,6 @@ const REP_TYPES = [
   ["valuation","Stock Valuation"],
   ["ledger","Stock Ledger"],
   ["supplier","Supplier-wise Received"],
-  ["department","Department-wise Issued"],
   ["low","Low Stock Report"]
 ];
 function runReport(){
@@ -2229,17 +2228,6 @@ function runReport(){
       const nb=b==="__none__"?"(No supplier)":supplierName(b);
       return na.localeCompare(nb);
     }).map(k=>[k==="__none__"?"(No supplier)":supplierName(k),map[k].qty,map[k].count,map[k].last||""]);
-  } else if(REP.type==="department"){
-    head=["Department / Project","Stock Out","Issue Count","Last Issue","Top Reference"];
-    const map={};
-    T.filter(t=>t.type==="OUT").forEach(t=>{
-      const key=(t.department||"").trim()||"Unspecified";
-      const m=map[key]||(map[key]={qty:0,count:0,last:"",ref:""});
-      m.qty += Math.abs(Number(t.qty)||0);
-      m.count += 1;
-      if(String(t.date||"")>=String(m.last||"")){ m.last=t.date||""; m.ref=t.referenceNo||""; }
-    });
-    rows=Object.keys(map).sort().map(k=>[k,map[k].qty,map[k].count,map[k].last||"",map[k].ref||""]);
   } else if(REP.type==="low"){
     head = ["Item","Category","Type","Thickness","Current Stock","Alarm Qty","Shortage","Unit"];
     rows = lowItems().filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [itemName(it), it.category||"Board", it.type||"", it.thickness||"", it.stock, it.alarm, Math.max(0, it.alarm-it.stock), it.uom||"Pcs"]);
