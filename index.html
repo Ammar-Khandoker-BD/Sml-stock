@@ -936,7 +936,7 @@ function txnModal(kind){
     </div>
     <div class="field">
       <label for="txItem">Item *</label>
-      <select class="select" id="txItem" required><option value="">Select item…</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(b)).map(it=>`<option value="${esc(it.id)}">${esc(itemLabel(it))} — ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select>
+      <select class="select" id="txItem" required><option value="">Select item…</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${esc(it.id)}">${esc(itemLabel(it))} — ${it.stock} ${esc(it.uom||"Pcs")} in stock</option>`).join("")}</select>
     </div>
     <div class="row-2">
       <div class="field">
