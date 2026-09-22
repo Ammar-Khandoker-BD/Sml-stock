@@ -977,7 +977,7 @@ function renderStockOut(){ renderTxns("OUT"); }
 function renderTxns(kind){
   const fin = kind === "IN", f = fin ? SI_F : SO_F, F = fin ? "SI_F" : "SO_F";
   const rows = txnRows(kind, f);
-  const total = rows.reduce((s,t) => s + Math.abs(Number(t.qty)||0), 0);
+  const total = rows.reduce((s,t) => s + (fin ? (Number(t.qty)||0) : -(Number(t.qty)||0)), 0);
   $(fin ? "#view-stockin" : "#view-stockout").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>${fin?"Stock In":"Stock Out"}</b></div><h1>${fin?"Stock In":"Stock Out"}</h1><p>${fin?"Material received into store":"Material issued / delivered from store"}</p></div>
     <div class="page-actions">
@@ -1145,6 +1145,21 @@ function exportTxns(kind){
     rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
 }
 
+function reportMovementAmounts(t){
+  const q=Number(t.qty)||0;
+  return t.type==="IN" ? {in:q,out:0} : t.type==="OUT" ? {in:0,out:-q} : {in:0,out:0};
+}
+function reportStockBeforeDate(itemId,date){
+  const it=itemById(itemId);
+  if(!it) return 0;
+  const movementAfterStart=DB.txns.filter(t=>t.itemId===itemId && String(t.date||"")>=date).reduce((s,t)=>s+(Number(t.qty)||0),0);
+  return Number(it.stock||0)-movementAfterStart;
+}
+function reportClosingStock(itemId,from,to){
+  const opening=reportStockBeforeDate(itemId,from);
+  const net=DB.txns.filter(t=>t.itemId===itemId && String(t.date||"")>=from && String(t.date||"")<=to).reduce((s,t)=>s+(Number(t.qty)||0),0);
+  return opening+net;
+}
 /* ---------- reports ---------- */
 let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"" }, REP_OUT = null;
 const REP_TYPES = [
@@ -1167,23 +1182,23 @@ function runReport(){
   if(REP.type==="txns"){
     head = ["ID","Date","Category","Item","Type","Qty","Unit","Note","By"];
     rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", itemName(it), t.type==="IN"?"Stock In":"Stock Out", Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
+      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
-    head = ["Item","Category","Type","Thickness","Stock In","Stock Out","Net","Current Stock","Unit"];
+    head = ["Item","Category","Type","Thickness","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock","Unit"];
     const map = {};
-    T.forEach(t => { const m = map[t.itemId]||(map[t.itemId]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; return [itemName(it), it?it.category||"":"", it?it.type||"":"", it?it.thickness||"":"", m.i, m.o, m.i-m.o, it?it.stock:"", it?it.uom||"Pcs":""]; })
+    T.forEach(t => { const m = map[t.itemId]||(map[t.itemId]={i:0,o:0}); const a=reportMovementAmounts(t); m.i += a.in; m.o += a.out; });
+    rows = Object.keys(map).map(iid => { const it = itemById(iid), m = map[iid]; const opening=reportStockBeforeDate(iid,from); const closing=opening+m.i-m.o; return [itemName(it), it?it.category||"":"", it?it.type||"":"", it?it.thickness||"":"", opening, m.i, m.o, m.i-m.o, closing, it?it.stock:"", it?it.uom||"Pcs":""]; })
       .sort((a,b) => String(a[0]).localeCompare(String(b[0])));
   } else if(REP.type==="catwise"){
-    head = ["Category","Stock In","Stock Out","Net","Current Stock"];
+    head = ["Category","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock"];
     const map = {};
-    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.category||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.category||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
+    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.category||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); const a=reportMovementAmounts(t); m.i += a.in; m.o += a.out; });
+    rows = Object.keys(map).sort().map(k => { const items=DB.items.filter(it=>(it.category||"Other")===k); const opening=items.reduce((s,it)=>s+reportStockBeforeDate(it.id,from),0); const closing=opening+map[k].i-map[k].o; const current=items.reduce((s,it)=>s+(Number(it.stock)||0),0); return [k,opening,map[k].i,map[k].o,map[k].i-map[k].o,closing,current]; });
   } else if(REP.type==="typewise"){
-    head = ["Type","Stock In","Stock Out","Net","Current Stock"];
+    head = ["Type","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock"];
     const map = {};
-    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.type||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); if(t.type==="IN") m.i += Math.abs(Number(t.qty)||0); else m.o += Math.abs(Number(t.qty)||0); });
-    rows = Object.keys(map).sort().map(k => [k, map[k].i, map[k].o, map[k].i-map[k].o, DB.items.filter(it=>(it.type||"Other")===k).reduce((s,it)=>s+(Number(it.stock)||0),0)]);
+    T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.type||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); const a=reportMovementAmounts(t); m.i += a.in; m.o += a.out; });
+    rows = Object.keys(map).sort().map(k => { const items=DB.items.filter(it=>(it.type||"Other")===k); const opening=items.reduce((s,it)=>s+reportStockBeforeDate(it.id,from),0); const closing=opening+map[k].i-map[k].o; const current=items.reduce((s,it)=>s+(Number(it.stock)||0),0); return [k,opening,map[k].i,map[k].o,map[k].i-map[k].o,closing,current]; });
   } else if(REP.type==="stock"){
     head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
     rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [it.sl, it.page||"", it.category||"Board", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
@@ -1335,6 +1350,45 @@ async function exportReportXlsx(){
     ws.headerFooter.oddHeader = "&R&F";
     ws.views = [{state:"frozen", ySplit:6}];
 
+    const summaryWs = wb.addWorksheet("Executive Summary");
+    summaryWs.getColumn(1).width=28;
+    summaryWs.getColumn(2).width=28;
+    summaryWs.mergeCells(1,1,1,2);
+    summaryWs.getCell(1,1).value=company;
+    summaryWs.getCell(1,1).font={name:"Aptos Display",size:16,bold:true,color:{argb:"FFFFFFFF"}};
+    summaryWs.getCell(1,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
+    summaryWs.getRow(1).height=28;
+    summaryWs.mergeCells(2,1,2,2);
+    summaryWs.getCell(2,1).value=REP_OUT.title;
+    summaryWs.getCell(2,1).font={name:"Aptos",size:12,bold:true,color:{argb:"FF211E1C"}};
+    const summaryRows=[
+      ["Period", (REP.from||"") + " – " + (REP.to||"")],
+      ["Category", REP.cat || "All Categories"],
+      ["Search", REP.q || "All"],
+      ["Rows in Report", REP_OUT.rows.length],
+      ["Total Current Stock (Pcs)", DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0)],
+      ["Current Stock Value (Tk)", DB.items.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0)],
+      ["Low Stock Items", lowItems().length],
+      ["Out of Stock Items", DB.items.filter(it=>(Number(it.stock)||0)<=0).length],
+      ["Generated", new Date().toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})]
+    ];
+    summaryRows.forEach(row=>summaryWs.addRow(row));
+    summaryWs.getColumn(2).numFmt="#,##0.00";
+    summaryWs.getCell(6,2).numFmt="#,##0";
+    summaryWs.getCell(7,2).numFmt="#,##0";
+    summaryWs.eachRow((row,ri)=>{ row.height=20; if(ri>2){ row.getCell(1).font={name:"Aptos",size:10,bold:true,color:{argb:"FF6E6A63"}}; row.getCell(2).font={name:"Aptos",size:10,color:{argb:"FF161513"}}; }});
+    const lowWs=wb.addWorksheet("Low Stock");
+    const lowHead=["SL","Item","Category","Type","Current Stock","Alarm Qty","Shortage","Unit"];
+    const lowRows=DB.items.filter(it=>(Number(it.stock)||0)<=Number(it.alarm||0)).sort((a,b)=>(a.stock||0)-(b.stock||0)).map(it=>[it.sl,itemName(it),it.category||"Board",it.type||"",Number(it.stock)||0,Number(it.alarm)||0,Math.max(0,(Number(it.alarm)||0)-(Number(it.stock)||0)),it.uom||"Pcs"]);
+    lowWs.addRow(["Low Stock Items"]);
+    lowWs.mergeCells(1,1,1,lowHead.length);
+    lowWs.getCell(1,1).font={name:"Aptos Display",size:14,bold:true,color:{argb:"FF211E1C"}};
+    const lowHeader=lowWs.addRow(lowHead);
+    lowHeader.eachCell(cell=>{ cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFB7770D"}}; cell.alignment={horizontal:"center",vertical:"middle"}; });
+    lowRows.forEach(row=>lowWs.addRow(row));
+    lowWs.views=[{state:"frozen",ySplit:2}];
+    lowWs.autoFilter={from:{row:2,column:1},to:{row:2,column:lowHead.length}};
+    [8,30,22,18,16,14,14,12].forEach((w,i)=>lowWs.getColumn(i+1).width=w);
     const safeName = company.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"") || "SML";
     const reportSlug = REP_OUT.title.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,70) || "Report";
     const dateSlug = todayISO();
