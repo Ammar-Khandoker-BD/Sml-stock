@@ -1229,6 +1229,8 @@ const REP_TYPES = [
   ["catwise","Category-wise Summary"],
   ["typewise","Type-wise Summary"],
   ["stock","Current Stock List"],
+  ["valuation","Stock Valuation"],
+  ["ledger","Stock Ledger"],
   ["low","Low Stock Report"]
 ];
 function runReport(){
@@ -1263,6 +1265,34 @@ function runReport(){
   } else if(REP.type==="stock"){
     head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
     rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [it.sl, it.page||"", it.category||"Board", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
+  } else if(REP.type==="valuation"){
+    head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit Price (Tk)","Value (Tk)","Status"];
+    rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q)))
+      .map(it => {
+        const stock=Number(it.stock)||0, price=Number(it.price)||0, value=stock*price;
+        return [it.sl,it.page||"",it.category||"Board",itemName(it),it.type||"",it.color||"",it.thickness||"",stock,price,value,stock<=0?"Stock Out":(stock<=it.alarm?"Low":"OK")];
+      })
+      .sort((a,b)=>String(a[2]).localeCompare(String(b[2])) || String(a[3]).localeCompare(String(b[3])));
+  } else if(REP.type==="ledger"){
+    head = ["Date","ID","Item","Category","Movement","Qty In","Qty Out","Balance","Unit","Note","By"];
+    const groups = {};
+    T.forEach(t => { (groups[t.itemId]||(groups[t.itemId]=[])).push(t); });
+    rows = [];
+    Object.keys(groups).sort((a,b)=>{
+      const ia=itemById(a), ib=itemById(b);
+      return String(itemName(ia)).localeCompare(String(itemName(ib)));
+    }).forEach(iid=>{
+      const it=itemById(iid);
+      let balance=reportStockBeforeDate(iid,from);
+      rows.push(["", "OPENING", itemName(it), it?it.category||"Board":"", "Opening Balance", balance>0?balance:0, balance<0?-balance:0, balance, it?it.uom||"Pcs":"", "Balance before selected period", ""]);
+      groups[iid].slice().sort((a,b)=>a.date===b.date?String(a.id).localeCompare(String(b.id)):String(a.date).localeCompare(String(b.date))).forEach(t=>{
+        const q=Number(t.qty)||0;
+        balance += q;
+        const inQty=q>0?q:0, outQty=q<0?-q:0;
+        const movement=t.subtype==="REVERSAL"?"Reversal":(t.subtype==="ADJUSTMENT"?"Adjustment":(t.type==="IN"?"Stock In":"Stock Out"));
+        rows.push([t.date,t.id,itemName(it),it?it.category||"Board":"",movement,inQty,outQty,balance,it?it.uom||"Pcs":"",t.note||"",t.by||""]);
+      });
+    });
   } else if(REP.type==="low"){
     head = ["Item","Category","Type","Thickness","Current Stock","Alarm Qty","Shortage","Unit"];
     rows = lowItems().filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [itemName(it), it.category||"Board", it.type||"", it.thickness||"", it.stock, it.alarm, Math.max(0, it.alarm-it.stock), it.uom||"Pcs"]);
