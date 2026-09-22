@@ -1031,21 +1031,66 @@ function txnModal(kind){
   </form>`);
 }
 
-function submitTxn(e, kind){
-  e.preventDefault(); if(!canWrite()) return;
-  const fin = kind === "IN";
-  const it = itemById($("#txItem").value); if(!it){ toast("Please search and select an item"); return; }
-  const qty = Number($("#txQty").value);
-  if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
-  if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
-  const date = $("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind, date);
-  const note = $("#txNote").value.trim(); rememberTxnNote(kind, note);
-  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note, by: currentUser ? currentUser.username : "system" };
-  DB.txns.push(t); sortTxns();
-  it.stock += t.qty;
-  audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
-  save(); closeModal(); renderAll(); toast(fin?"Stock In saved":"Stock Out saved");
+async function commitStockMovement({type,qtyDelta,date,itemId,note}){
+  const mainRef=fdb.collection("erp").doc("main");
+  const auditRef=fdb.collection("erp_audit").doc();
+  let result=null;
+  await fdb.runTransaction(async transaction=>{
+    const snap=await transaction.get(mainRef);
+    if(!snap.exists) throw new Error("Inventory database not found");
+    const data=snap.data()||{};
+    const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
+    const item=items.find(it=>it.id===itemId);
+    if(!item) throw new Error("Item not found");
+    const delta=Number(qtyDelta)||0;
+    const current=Number(item.stock)||0;
+    if(delta<0 && current+delta<0) throw new Error("Not enough stock — only "+current+" "+(item.uom||"Pcs")+" left");
+    item.stock=current+delta;
+    const seq=Object.assign({si:0,so:0},data.seq||{});
+    const key=type==="IN"?"si":"so";
+    seq[key]=(Number(seq[key])||0)+1;
+    const prefix=type==="IN"?"SI-":"SO-";
+    const txId=prefix+String(seq[key]).padStart(4,"0");
+    const now=Date.now();
+    const txn={id:txId,type,subtype:"NORMAL",referenceId:"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
+    const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(type==="IN"?"Stock In: +":"Stock Out: ")+delta+" "+itemName(item)};
+    transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
+    transaction.set(fdb.collection("erp_txns").doc(txId),txn);
+    transaction.set(auditRef,audit);
+    result={items,seq,txn,audit};
+  });
+  return result;
 }
+
+function applyCommittedMovement(result,message){
+  DB.items=result.items; DB.seq=result.seq; DB.txns.push(result.txn); DB.audit.unshift(result.audit);
+  SAVED_TXN.add(result.txn.id); SAVED_AUDIT.add(result.audit.id); sortTxns();
+  if(DB.audit.length>1000) DB.audit.length=1000;
+  renderAll();
+  if(message) toast(message);
+}
+
+async function submitTxn(e,kind){
+  e.preventDefault(); if(!canWrite()) return;
+  const fin=kind==="IN";
+  const it=itemById($("#txItem").value);
+  if(!it){ toast("Please search and select an item"); return; }
+  const qty=Number($("#txQty").value);
+  if(!(qty>0)){ toast("Quantity must be greater than 0"); return; }
+  if(!fin && qty>Number(it.stock||0)){ toast("Not enough stock — only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
+  const date=$("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind,date);
+  const note=$("#txNote").value.trim(); rememberTxnNote(kind,note);
+  try{
+    const result=await commitStockMovement({type:kind,qtyDelta:fin?qty:-qty,date,itemId:it.id,note});
+    closeModal();
+    applyCommittedMovement(result,fin?"Stock In saved safely":"Stock Out saved safely");
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Could not save stock movement");
+  }
+}
+
+
 async function delTxn(id){
   if(!isAdmin()){ toast("Only admin can delete entries"); return; }
   const t = DB.txns.find(x => x.id === id); if(!t) return;
