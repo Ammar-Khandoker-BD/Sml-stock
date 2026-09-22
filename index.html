@@ -968,7 +968,8 @@ function submitTxn(e, kind){
   const qty = Number($("#txQty").value);
   if(!(qty > 0)){ toast("Quantity must be greater than 0"); return; }
   if(!fin && qty > it.stock){ toast("Not enough stock \u2014 only "+it.stock+" "+(it.uom||"Pcs")+" left"); return; }
-  const date = $("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind, date);\n  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
+  const date = $("#txDate").value || getRememberedTxnDate(kind); rememberTxnDate(kind, date);
+  const t = { id: nextSeq(fin?"si":"so", fin?"SI-":"SO-"), type: kind, date, itemId: it.id, qty: fin ? qty : -qty, note: $("#txNote").value.trim(), by: currentUser ? currentUser.username : "system" };
   DB.txns.push(t); sortTxns();
   it.stock += t.qty;
   audit((fin?"Stock In: +":"Stock Out: -")+qty+" "+itemName(it));
