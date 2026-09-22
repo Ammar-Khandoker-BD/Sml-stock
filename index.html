@@ -399,9 +399,10 @@ async function loadData(){
     ]);
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
     DB.audit = auSnap.docs.map(d => d.data());
-    migrateDB();
+    const migrated = migrateDB();
     SAVED_TXN = new Set(DB.txns.map(t => t.id));
     SAVED_AUDIT = new Set(DB.audit.map(a => a.id));
+    if(migrated) await doSave();
   } else {
     DB = seedData();
     SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
@@ -425,7 +426,9 @@ function attachListeners(){
     const d = snap.data();
     if(d.client === CLIENT_ID) return;
     const txns = DB ? DB.txns : [], aud = DB ? DB.audit : [];
-    DB = d; DB.txns = txns; DB.audit = aud; migrateDB();
+    DB = d; DB.txns = txns; DB.audit = aud;
+    const migrated = migrateDB();
+    if(migrated) save();
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
     renderAll();
   });
@@ -508,16 +511,23 @@ function seedData(){
 function migrateDB(){
   DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
   DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0;
+  let changed = false;
   DB.items.forEach(it => {
-    if(it.type === undefined) it.type = "";
-    if(!it.category) it.category = "Board";
-    if(it.color === undefined) it.color = "";
-    if(it.thickness === undefined) it.thickness = "";
-    if(it.page === undefined) it.page = "";
-    if((it.category||"Board") === "Board") it.uom = "Pcs"; else if(!it.uom) it.uom = it.uomOut || "Pcs";
-    if(it.alarm === undefined || it.alarm === null) it.alarm = 0;
-    it.stock = Number(it.stock) || 0;
+    if(it.type === undefined){ it.type = ""; changed = true; }
+    if(!it.category){ it.category = "Board"; changed = true; }
+    if(it.color === undefined){ it.color = ""; changed = true; }
+    if(it.thickness === undefined){ it.thickness = ""; changed = true; }
+    if(it.page === undefined){ it.page = ""; changed = true; }
+    if((it.category||"Board") === "Board"){
+      if(it.uom !== "Pcs"){ it.uom = "Pcs"; changed = true; }
+    } else if(!it.uom){
+      it.uom = it.uomOut || "Pcs"; changed = true;
+    }
+    if(it.alarm === undefined || it.alarm === null){ it.alarm = 0; changed = true; }
+    const stock = Number(it.stock) || 0;
+    if(it.stock !== stock){ it.stock = stock; changed = true; }
   });
+  return changed;
 }
 
 /* ---------- auth (Firebase) ---------- */
