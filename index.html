@@ -525,7 +525,7 @@ function seedData(){
 }
 function migrateDB(){
   DB.items = DB.items || []; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
-  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0; DB.seq.rv = DB.seq.rv || 0;
+  DB.seq = DB.seq || {}; DB.seq.si = DB.seq.si || 0; DB.seq.so = DB.seq.so || 0; DB.seq.adj = DB.seq.adj || 0; DB.seq.rv = DB.seq.rv || 0; DB.seq.rv = DB.seq.rv || 0;
   let changed = false;
   DB.items.forEach(it => {
     if(it.type === undefined){ it.type = ""; changed = true; }
@@ -1041,7 +1041,7 @@ function txnModal(kind){
   </form>`);
 }
 
-async function commitStockMovement({type,qtyDelta,date,itemId,note}){
+async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId=""}){
   const mainRef=fdb.collection("erp").doc("main");
   const auditRef=fdb.collection("erp_audit").doc();
   let result=null;
@@ -1056,14 +1056,14 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note}){
     const current=Number(item.stock)||0;
     if(delta<0 && current+delta<0) throw new Error("Not enough stock — only "+current+" "+(item.uom||"Pcs")+" left");
     item.stock=current+delta;
-    const seq=Object.assign({si:0,so:0},data.seq||{});
-    const key=type==="IN"?"si":"so";
+    const seq=Object.assign({si:0,so:0,adj:0,rv:0},data.seq||{});
+    const key=subtype==="ADJUSTMENT"?"adj":subtype==="REVERSAL"?"rv":(type==="IN"?"si":"so");
     seq[key]=(Number(seq[key])||0)+1;
-    const prefix=type==="IN"?"SI-":"SO-";
+    const prefix=subtype==="ADJUSTMENT"?"ADJ-":subtype==="REVERSAL"?"RV-":(type==="IN"?"SI-":"SO-");
     const txId=prefix+String(seq[key]).padStart(4,"0");
     const now=Date.now();
-    const txn={id:txId,type,subtype:"NORMAL",referenceId:"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
-    const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(type==="IN"?"Stock In: +":"Stock Out: ")+delta+" "+itemName(item)};
+    const txn={id:txId,type,subtype,referenceId:referenceId||"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
+    const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(subtype==="ADJUSTMENT"?"Stock Adjustment: ":subtype==="REVERSAL"?"Reversal: ":(type==="IN"?"Stock In: ":"Stock Out: "))+((delta>0)?"+":"")+delta+" "+itemName(item)};
     transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
     transaction.set(fdb.collection("erp_txns").doc(txId),txn);
     transaction.set(auditRef,audit);
@@ -1197,6 +1197,15 @@ function exportTxns(kind){
     rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", t.note||"", t.by||""]; }));
 }
 
+function movementTotals(rows){
+  return rows.reduce((acc,t)=>{
+    const q=Number(t.qty)||0;
+    if(t.type==="IN") acc.in+=q;
+    else if(t.type==="OUT") acc.out+=-q;
+    return acc;
+  },{in:0,out:0});
+}
+function formatQty(q){ return Number(q||0).toLocaleString("en-IN",{maximumFractionDigits:2}); }
 function reportMovementAmounts(t){
   const q=Number(t.qty)||0;
   return t.type==="IN" ? {in:q,out:0} : t.type==="OUT" ? {in:0,out:-q} : {in:0,out:0};
