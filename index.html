@@ -1643,56 +1643,100 @@ async function importItemsSmart(inp){
 }
 
 async function importItemRows(rows){
-  if(!Array.isArray(rows)||rows.length<2) throw new Error("Excel/CSV file is empty");
+  if(!Array.isArray(rows) || rows.length < 2) throw new Error("Excel/CSV file is empty");
+  const dataRows = rows.slice(1);
+  if(dataRows.length > 1000) throw new Error("Maximum 1,000 data rows per import");
+
   const head=(rows[0]||[]).map(h=>String(h??"").replace(/^\\uFEFF/,"").trim().toLowerCase());
   const col=name=>head.findIndex(h=>h===name||h.includes(name));
   const cSl=col("sl"), cPage=col("page"), cCat=col("category"), cType=col("type"), cColor=col("color"), cThick=col("thickness");
   const cUnit=Math.max(col("unit"),col("uom"));
   const cStock=col("opening stock")>=0?col("opening stock"):col("stock");
   const cAlarm=col("alarm"), cDate=col("opening date");
-  if(cType<0) throw new Error("Template needs a Type column");
-
-  let nextSl=DB.items.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
-  const usedSl=new Set(DB.items.map(it=>Number(it.sl)).filter(Number.isInteger));
-  const fileSlSeen=new Set();
-  let added=0, skipped=0, openingAdded=0, conflicts=0, blankSlAdded=0;
+  if(cType<0) throw new Error('Template needs a "Type" column');
 
   const norm=v=>String(v??"").trim();
+  const keyPart=v=>norm(v).replace(/\\s+/g," ").toLowerCase();
+  const itemKey=(cat,type,color,thick)=>[cat,type,color,thick].map(keyPart).join("|");
+
+  const existingKeys=new Set(
+    DB.items.map(it=>itemKey(it.category||"Board",it.type||"",it.color||"",it.thickness||""))
+  );
+  const fileKeys=new Set();
+  const usedSl=new Set(DB.items.map(it=>Number(it.sl)).filter(Number.isInteger));
+  const fileSlSeen=new Set();
+  let nextSl=DB.items.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
+
+  const pendingItems=[];
+  const pendingTxns=[];
+  const errors=[];
+  let skippedBlank=0;
+  let skippedDuplicate=0;
+  let openingAdded=0;
+  let conflicts=0;
+  let blankSlAdded=0;
+
   const makeId=sl=>"i"+Date.now().toString(36)+"_"+sl+"_"+Math.random().toString(36).slice(2,6);
 
-  for(const r of rows.slice(1)){
+  for(let i=0;i<dataRows.length;i++){
+    const rowNo=i+2;
+    const r=dataRows[i]||[];
+
     const type=norm(cType>=0?r[cType]:"");
+    if(!type){ skippedBlank++; continue; }
+
     const page=norm(cPage>=0?r[cPage]:"");
-    const cat=(norm(cCat>=0?r[cCat]:"")||"Board");
+    const cat=norm(cCat>=0?r[cCat]:"")||"Board";
     const color=norm(cColor>=0?r[cColor]:"");
     const thick=norm(cThick>=0?r[cThick]:"");
-    const rawSl=norm(cSl>=0?r[cSl]:"");
+    const key=itemKey(cat,type,color,thick);
 
-    if(!type){ skipped++; continue; }
-
-    let requestedSl=rawSl?Number(rawSl):null;
-    if(rawSl && (!Number.isInteger(requestedSl)||requestedSl<1)){
-      throw new Error("Invalid SL: "+rawSl);
+    if(existingKeys.has(key) || fileKeys.has(key)){
+      skippedDuplicate++;
+      continue;
     }
 
-    let sl=null;
-    if(requestedSl!==null && !fileSlSeen.has(requestedSl) && !usedSl.has(requestedSl)){
+    const rawSl=norm(cSl>=0?r[cSl]:"");
+    let requestedSl=rawSl ? Number(rawSl) : null;
+    if(rawSl && (!Number.isInteger(requestedSl) || requestedSl<1)){
+      errors.push("Row "+rowNo+": invalid SL \""+rawSl+"\"");
+      continue;
+    }
+
+    let sl;
+    if(requestedSl!==null && !usedSl.has(requestedSl) && !fileSlSeen.has(requestedSl)){
       sl=requestedSl;
     }else{
-      while(usedSl.has(nextSl)||fileSlSeen.has(nextSl)) nextSl++;
+      while(usedSl.has(nextSl) || fileSlSeen.has(nextSl)) nextSl++;
       sl=nextSl++;
       if(requestedSl!==null) conflicts++;
       else blankSlAdded++;
     }
-    fileSlSeen.add(sl);
     usedSl.add(sl);
+    fileSlSeen.add(sl);
+    fileKeys.add(key);
 
     const openingRaw=norm(cStock>=0?r[cStock]:"").replace(/,/g,"");
-    const opening=Math.max(0,Number(openingRaw)||0);
-    const unit=(norm(cUnit>=0?r[cUnit]:"")||"Pcs");
-    const alarm=cAlarm>=0?Math.max(0,Number(r[cAlarm])||0):(DB.settings.alarmDefault||5);
+    const opening=openingRaw==="" ? 0 : Number(openingRaw);
+    if(!Number.isFinite(opening) || opening<0){
+      errors.push("Row "+rowNo+": invalid Opening Stock \""+openingRaw+"\"");
+      continue;
+    }
+
     const rawDate=norm(cDate>=0?r[cDate]:"");
-    const openDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)?rawDate:todayISO();
+    if(rawDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)){
+      errors.push("Row "+rowNo+": invalid Opening Date \""+rawDate+"\"");
+      continue;
+    }
+    const openDate=rawDate || todayISO();
+
+    const unit=norm(cUnit>=0?r[cUnit]:"") || "Pcs";
+    const alarmRaw=norm(cAlarm>=0?r[cAlarm]:"");
+    const alarm=alarmRaw==="" ? (DB.settings.alarmDefault||5) : Number(alarmRaw);
+    if(!Number.isFinite(alarm) || alarm<0){
+      errors.push("Row "+rowNo+": invalid Alarm Qty \""+alarmRaw+"\"");
+      continue;
+    }
 
     const it={
       id:makeId(sl),
@@ -1702,38 +1746,70 @@ async function importItemRows(rows){
       type,
       color,
       thickness:thick,
-      uom:cat==="Board"?"Pcs":unit,
+      uom:cat==="Board" ? "Pcs" : unit,
       alarm,
       stock:opening
     };
-
-    DB.items.push(it);
-    added++;
+    pendingItems.push(it);
 
     if(opening>0){
       const txId=nextSeq("si","SI-");
-      DB.txns.push({
+      pendingTxns.push({
         id:txId,type:"IN",subtype:"OPENING",
         referenceId:"",supplierId:"",referenceNo:"",
         department:"",issuedTo:"",purpose:"",
         date:openDate,itemId:it.id,qty:opening,
-        note:"Opening Balance",by:currentUser?currentUser.username:"system",
+        note:"Opening Balance",
+        by:currentUser?currentUser.username:"system",
         createdAt:Date.now()
       });
       openingAdded++;
     }
   }
 
+  if(errors.length){
+    const preview=errors.slice(0,5).join(" | ");
+    const more=errors.length>5 ? " | +"+(errors.length-5)+" more error(s)" : "";
+    throw new Error("Import validation failed: "+preview+more);
+  }
+
+  const added=pendingItems.length;
+  if(!added){
+    toast("No new items to import"+(skippedDuplicate ? " · "+skippedDuplicate+" duplicate item(s) skipped" : ""));
+    return;
+  }
+
+  const summary=[
+    "Import "+added+" new item(s)?",
+    openingAdded ? openingAdded+" opening balance(s) will be recorded." : "No opening balance will be recorded.",
+    skippedDuplicate ? skippedDuplicate+" duplicate item(s) will be skipped." : "",
+    conflicts ? conflicts+" conflicting SL(s) will get new available SL numbers." : "",
+    blankSlAdded ? blankSlAdded+" blank SL row(s) will get new SL numbers." : ""
+  ].filter(Boolean).join("\n");
+
+  if(!confirm(summary)) return;
+
+  DB.items.push(...pendingItems);
+  DB.txns.push(...pendingTxns);
   sortTxns();
-  audit("Imported "+added+" new items from Excel/CSV"+(openingAdded?" · "+openingAdded+" opening balances":"")+(conflicts?" · "+conflicts+" SL conflicts auto-assigned":""));
+
+  audit(
+    "Imported "+added+" new items from Excel/CSV"+
+    (openingAdded ? " · "+openingAdded+" opening balances" : "")+
+    (skippedDuplicate ? " · "+skippedDuplicate+" duplicates skipped" : "")+
+    (conflicts ? " · "+conflicts+" SL conflicts auto-assigned" : "")+
+    (blankSlAdded ? " · "+blankSlAdded+" blank SLs auto-assigned" : "")
+  );
+
   const saved=save();
   if(saved && typeof saved.then==="function") await saved;
   renderItems();
 
-  let msg="Imported "+added+" new item"+(added===1?"":"s");
-  if(skipped) msg+=" · skipped "+skipped+" blank row"+(skipped===1?"":"s");
-  if(openingAdded) msg+=" · "+openingAdded+" opening balance"+(openingAdded===1?"":"s");
-  if(conflicts) msg+=" · "+conflicts+" existing/duplicate SL auto-assigned";
+  let msg="Imported "+added+" new item"+(added===1 ? "" : "s");
+  if(openingAdded) msg+=" · "+openingAdded+" opening balance"+(openingAdded===1 ? "" : "s");
+  if(skippedDuplicate) msg+=" · skipped "+skippedDuplicate+" duplicate"+(skippedDuplicate===1 ? "" : "s");
+  if(conflicts) msg+=" · "+conflicts+" SL conflict"+(conflicts===1 ? "" : "s")+" auto-assigned";
+  if(blankSlAdded) msg+=" · "+blankSlAdded+" blank SL"+(blankSlAdded===1 ? "" : "s")+" auto-assigned";
   toast(msg);
 }
 function downloadItemTemplate(){
