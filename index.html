@@ -2132,14 +2132,19 @@ function txnCategoryTone(category){
   for(let i=0;i<value.length;i++) hash=(hash*31+value.charCodeAt(i))>>>0;
   return "txn-row-cat-"+String.fromCharCode(97+(hash%6));
 }
-function txnRows(kind, f){
-  return DB.txns.filter(t => {
-    if(kind==="RETURN" ? t.subtype!=="RETURN" : t.type !== kind) return false;
-    if(f.cat){ const ci = itemById(t.itemId); if(!ci || (ci.category||"Board") !== f.cat) return false; }
-    if(f.item && t.itemId !== f.item) return false;
-    if(f.from && t.date < f.from) return false;
-    if(f.to && t.date > f.to) return false;
-    if(f.q){ const qi = itemById(t.itemId); const h = ((qi?qi.category||"":"")+" "+itemName(qi)+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); if(!h.includes(f.q.toLowerCase())) return false; }
+let TXN_VIEW_EXTRA=new Map(), TXN_VIEW_LOAD_ID=0;
+function txnRows(kind,f,source=DB.txns){
+  return source.filter(t=>{
+    if(kind==="RETURN" ? t.subtype!=="RETURN" : t.type!==kind) return false;
+    if(f.cat){ const ci=itemById(t.itemId); if(!ci || (ci.category||"Board")!==f.cat) return false; }
+    if(f.item && t.itemId!==f.item) return false;
+    if(f.from && t.date<f.from) return false;
+    if(f.to && t.date>f.to) return false;
+    if(f.q){
+      const qi=itemById(t.itemId);
+      const h=((qi?qi.category||"":"")+" "+itemName(qi)+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase();
+      if(!h.includes(f.q.toLowerCase())) return false;
+    }
     return true;
   });
 }
@@ -2164,9 +2169,31 @@ function renderStockReturn(){
   </tbody></table></div></div>`;
 }
 
-function renderTxns(kind){
-  const fin = kind === "IN", f = fin ? SI_F : SO_F, F = fin ? "SI_F" : "SO_F";
-  const rows = txnRows(kind, f);
+async function renderTxns(kind){
+  const fin=kind==="IN", f=fin?SI_F:SO_F, F=fin?"SI_F":"SO_F";
+  const loadId=++TXN_VIEW_LOAD_ID;
+  let source=DB.txns;
+  try{
+    const dates=DB.txns.map(t=>String(t.date||"")).filter(Boolean);
+    const oldest=dates.length?dates.reduce((a,b)=>a<b?a:b):"";
+    const newest=dates.length?dates.reduce((a,b)=>a>b?a:b):"";
+    const needFrom=!!f.from && (!oldest || f.from<oldest);
+    const needTo=!!f.to && (!newest || f.to>newest);
+    const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
+    if(needFrom || needTo){
+      const from=f.from||"0000-01-01", to=f.to||todayISO();
+      const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
+      snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); TXN_VIEW_EXTRA.set(t.id,t); });
+    }
+    TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
+    source=[...sourceMap.values()];
+  }catch(err){
+    console.error(err);
+    toast("Could not load transaction history");
+    return;
+  }
+  if(loadId!==TXN_VIEW_LOAD_ID) return;
+  const rows=txnRows(kind,f,source);
   const total = rows.reduce((s,t) => s + (fin ? (Number(t.qty)||0) : -(Number(t.qty)||0)), 0);
   $(fin ? "#view-stockin" : "#view-stockout").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>${fin?"Stock In":"Stock Out"}</b></div><h1>${fin?"Stock In":"Stock Out"}</h1><p>${fin?"Material received into store":"Material issued / delivered from store"}</p></div>
