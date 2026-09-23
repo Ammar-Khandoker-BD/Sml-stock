@@ -2222,7 +2222,7 @@ async function downloadStockInImportTemplate(){
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet("Stock In Import"), head=["Date","Item SL","Quantity","Supplier","Challan / Reference No.","Note"];
   ws.addRow(head); ws.addRow([todayISO(),1,25,"Example Supplier","CH-1025","New material received"]); ws.addRow(["",2,10,"","CH-1026","Received against reference"]);
   ws.getRow(1).eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};});
-  [15,12,14,24,26,34].forEach((w,i)=>ws.getColumn(i+1).width=w); ws.getRange("A2:A200").numFmt="yyyy-mm-dd"; ws.getRange("C2:C200").numFmt="0.00"; ws.views=[{state:"frozen",ySplit:1}];
+  [15,12,14,24,26,34].forEach((w,i)=>ws.getColumn(i+1).width=w); ws.getColumn(1).numFmt="yyyy-mm-dd"; ws.getColumn(3).numFmt="0.00"; ws.views=[{state:"frozen",ySplit:1}];
   const ins=wb.addWorksheet("Instructions"); ins.addRow(["Column","What to enter"]); [["Date","YYYY-MM-DD. Leave blank to use today."],["Item SL","ERP Item SL number. Required."],["Quantity","Positive received quantity. Required."],["Supplier","Optional. Must match an active Supplier in ERP."],["Challan / Reference No.","Optional."],["Note","Optional."]].forEach(r=>ins.addRow(r));
   ins.getRow(1).eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};}); ins.getColumn(1).width=28; ins.getColumn(2).width=80;
   const buffer=await wb.xlsx.writeBuffer(), url=URL.createObjectURL(new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
