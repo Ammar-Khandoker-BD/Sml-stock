@@ -2562,8 +2562,8 @@ function renderReports(){
       <span style="color:var(--faint)">to</span>
       <input class="input" type="date" style="width:auto" value="${REP.to}" onchange="REP.to=this.value;runReport()">
       <input class="input" style="max-width:220px" placeholder="Search item, note, user\u2026" value="${esc(REP.q||"")}" onchange="REP.q=this.value;runReport()">
-      <input class="input" style="max-width:180px" placeholder="Job No" value="${esc(REP.job||"")}" ${["stock","valuation","low"].includes(REP.type)?"disabled":""} oninput="REP.job=this.value;runReport()">
-      <input class="input" style="max-width:180px" placeholder="Client Name" value="${esc(REP.client||"")}" ${["stock","valuation","low"].includes(REP.type)?"disabled":""} oninput="REP.client=this.value;runReport()">
+      <input class="input" style="max-width:180px" placeholder="Job No" value="${esc(REP.job||"")}" ${["stock","valuation","low"].includes(REP.type)?"disabled":""} onchange="REP.job=this.value;runReport()">
+      <input class="input" style="max-width:180px" placeholder="Client Name" value="${esc(REP.client||"")}" ${["stock","valuation","low"].includes(REP.type)?"disabled":""} onchange="REP.client=this.value;runReport()">
       <button class="btn btn-primary" onclick="runReport()">Run Report</button>
       ${REP_OUT?`<button class="btn" id="reportExcelBtn" onclick="exportReportXlsx()">\u2913 Excel</button><button class="btn" onclick="window.print()">\ud83d\udda8 Print</button>`:""}
     </div>
