@@ -1274,10 +1274,19 @@ function attachListeners(){
 
 /* ---------- id helpers ---------- */
 function nextSeq(key, prefix){ DB.seq[key] = (DB.seq[key]||0)+1; return prefix + String(DB.seq[key]).padStart(4,"0"); }
-const byId = (arr, id) => arr.find(x => x.id === id);
-const catOf = it => byId(DB.categories||[], it.catId);
-const grpOf = it => byId(DB.groups||[], it.groupId);
-const itemById = id => byId(DB.items, id);
+const byId = (arr,id) => arr.find(x=>x.id===id);
+const catOf = it => byId(DB.categories||[],it.catId);
+const grpOf = it => byId(DB.groups||[],it.groupId);
+let ITEM_INDEX=new Map(), ITEM_INDEX_SOURCE=null, ITEM_INDEX_SIZE=-1;
+function itemById(id){
+  if(!DB) return null;
+  if(ITEM_INDEX_SOURCE!==DB.items || ITEM_INDEX_SIZE!==DB.items.length){
+    ITEM_INDEX=new Map((DB.items||[]).map(it=>[it.id,it]));
+    ITEM_INDEX_SOURCE=DB.items;
+    ITEM_INDEX_SIZE=DB.items.length;
+  }
+  return ITEM_INDEX.get(id)||null;
+}
 function itemName(it){ if(!it) return "(deleted item)"; const n = [it.type, it.color, it.thickness].filter(Boolean).join(" "); return n || it.desc || "(unnamed)"; }
 function itemCode(it){ return it ? "B-"+String(it.sl).padStart(3,"0") : "\u2014"; }
 function supplierById(id){ return (DB.suppliers||[]).find(s=>s.id===id); }
