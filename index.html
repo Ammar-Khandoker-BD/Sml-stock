@@ -1161,14 +1161,41 @@ let DB = null, currentUser = null;
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null;
 
-function save(){ if(!DB) return; clearTimeout(saveTimer); saveTimer = setTimeout(doSave, 350); }
-function metaOf(db){ const m = Object.assign({}, db); delete m.txns; delete m.audit; delete m.users; m.client = CLIENT_ID; m.rev = Date.now(); return m; }
-function doSave(){
-  if(!DB) return;
+let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [];
+function save(){
+  if(!DB) return Promise.resolve(false);
+  clearTimeout(saveTimer);
+  const promise = new Promise((resolve,reject)=>saveWaiters.push({resolve,rejecasync function doSave(){
+  if(!DB) return false;
   const ops = [[fdb.collection("erp").doc("main"), metaOf(DB)]];
-  DB.txns.forEach(t => { if(!SAVED_TXN.has(t.id)){ ops.push([fdb.collection("erp_txns").doc(t.id), t]); SAVED_TXN.add(t.id); } });
-  DB.audit.forEach(a => {
-    if(!a.id) a.id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const newTxnIds=[];
+  const newAuditIds=[];
+  DB.txns.forEach(t=>{
+    if(!SAVED_TXN.has(t.id)){
+      ops.push([fdb.collection("erp_txns").doc(t.id),t]);
+      newTxnIds.push(t.id);
+    }
+  });
+  DB.audit.forEach(a=>{
+    if(!a.id) a.id="a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    if(!a.ts) a.ts=Date.now();
+    if(!SAVED_AUDIT.has(a.id)){
+      ops.push([fdb.collection("erp_audit").doc(a.id),a]);
+      newAuditIds.push(a.id);
+    }
+  });
+  const commits=[];
+  for(let i=0;i<ops.length;i+=400){
+    const b=fdb.batch();
+    ops.slice(i,i+400).forEach(o=>b.set(o[0],o[1]));
+    commits.push(b.commit());
+  }
+  await Promise.all(commits);
+  newTxnIds.forEach(id=>SAVED_TXN.add(id));
+  newAuditIds.forEach(id=>SAVED_AUDIT.add(id));
+  return true;
+}
+ate.now().toString(36) + Math.random().toString(36).slice(2,6);
     if(!a.ts) a.ts = Date.now();
     if(!SAVED_AUDIT.has(a.id)){ ops.push([fdb.collection("erp_audit").doc(a.id), a]); SAVED_AUDIT.add(a.id); }
   });
@@ -1353,8 +1380,8 @@ function logout(){
   const done = () => { location.hash = ""; location.reload(); };
   if(currentUser){
     audit("Logged out");
-    const p = doSave(); currentUser = null;
-    Promise.resolve(p).then(() => fauth.signOut()).then(done, done);
+    const p = save();
+    Promise.resolve(p).catch(()=>false).then(() => fauth.signOut()).then(done, done);
   } else fauth.signOut().then(done, done);
 }
 $("#loginForm").addEventListener("submit", async e => {
