@@ -1748,7 +1748,7 @@ function parseBoardStockRows(rows){
   const head=rows[hi].map(v=>String(v||"").trim().toLowerCase());
   const col=name=>head.findIndex(h=>h===name||h.includes(name));
   const cSl=col("sl"), cType=col("type"), cColor=col("color"), cThick=col("thickness"), cStock=col("stock");
-  const out=[], slSeen=new Set(), keySeen=new Set();
+  const out=[], slSeen=new Set();
   let nextAutoSl=1;
   rows.slice(hi+1).forEach(r=>{
     const rawSl=String(r[cSl]||"").trim(), type=String(r[cType]||"").trim(), color=cColor>=0?String(r[cColor]||"").trim():"", thickness=String(r[cThick]||"").trim();
@@ -1763,10 +1763,8 @@ function parseBoardStockRows(rows){
     }
     nextAutoSl=Math.max(nextAutoSl,Number.isInteger(sl)?sl+1:nextAutoSl);
     if(!Number.isFinite(stock)||stock<0) throw new Error("Invalid Stock at SL "+(rawSl||("auto "+sl)));
-    const key=boardStockKey(type,color,thickness);
     if(slSeen.has(sl)) throw new Error("Duplicate SL "+sl);
-    if(keySeen.has(key)) throw new Error("Duplicate board item at SL "+(rawSl||sl));
-    slSeen.add(sl); keySeen.add(key); out.push({sl,type,color,thickness,stock,slWasBlank:!rawSl});
+    slSeen.add(sl); out.push({sl,type,color,thickness,stock,slWasBlank:!rawSl});
   });
   if(!out.length) throw new Error("No Board Stock rows found");
   return out.sort((a,b)=>a.sl-b.sl);
@@ -1789,13 +1787,12 @@ async function replaceBoardStockSmart(inp){
       const data=snap.data()||{};
       const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
       const board=items.filter(it=>(it.category||"Board")==="Board");
-      const used=new Set(), byKey=new Map(), bySl=new Map();
-      board.forEach(it=>{ byKey.set(boardStockKey(it.type,it.color,it.thickness),it); if(Number.isInteger(Number(it.sl))) bySl.set(Number(it.sl),it); });
-      const changes=[], syncTxns=[];
+      const bySl=new Map();
+      board.forEach(it=>{ if(Number.isInteger(Number(it.sl))) bySl.set(Number(it.sl),it); });
+      const used=new Set(), changes=[], syncTxns=[];
       rows.forEach(row=>{
-        let it=byKey.get(boardStockKey(row.type,row.color,row.thickness));
+        let it=bySl.get(row.sl);
         if(it && used.has(it.id)) it=null;
-        if(!it){ it=bySl.get(row.sl); if(it&&used.has(it.id)) it=null; }
         if(!it){
           it={id:"i"+Date.now().toString(36)+"_"+row.sl,sl:row.sl,page:"",category:"Board",type:row.type,color:row.color,thickness:row.thickness,uom:"Pcs",alarm:Number((data.settings&&data.settings.alarmDefault)||5),stock:0};
           items.push(it); changes.push({kind:"added",item:it,before:0,after:row.stock});
