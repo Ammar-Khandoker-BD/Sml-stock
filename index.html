@@ -1200,7 +1200,7 @@ async function loadData(){
   if(snap.exists){
     DB = snap.data();
     const [txSnap, auSnap] = await Promise.all([
-      fdb.collection("erp_txns").orderBy("createdAt","desc").limit(TXN_CACHE_LIMIT).get(),
+      fdb.collection("erp_txns").orderBy("date","desc").limit(TXN_CACHE_LIMIT).get(),
       fdb.collection("erp_audit").orderBy("ts","desc").limit(500).get()
     ]);
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
@@ -1244,7 +1244,7 @@ function attachListeners(){
     SAVED_AUDIT=new Set(DB.audit.map(a=>a.id));
     renderAll();
   });
-  fdb.collection("erp_txns").orderBy("createdAt","desc").limit(TXN_CACHE_LIMIT).onSnapshot(snap => {
+  fdb.collection("erp_txns").orderBy("date","desc").limit(TXN_CACHE_LIMIT).onSnapshot(snap => {
     if(!currentUser || snap.metadata.hasPendingWrites) return;
     let changed = false;
     snap.docChanges().forEach(ch => {
