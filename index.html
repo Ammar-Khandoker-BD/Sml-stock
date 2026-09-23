@@ -2584,7 +2584,13 @@ async function submitTxn(e,kind){
 
 async function reverseTxn(id){
   if(!isAdmin()){ toast("Only Admin can reverse entries"); return; }
-  const original=DB.txns.find(x=>x.id===id);
+  let original=DB.txns.find(x=>x.id===id);
+  if(!original){
+    try{
+      const snap=await fdb.collection("erp_txns").doc(id).get();
+      if(snap.exists) original=snap.data();
+    }catch(err){ console.error(err); toast("Could not load the transaction"); return; }
+  }
   if(!original) return;
   if(original.subtype==="REVERSAL"){ toast("This entry is already a reversal"); return; }
   if(DB.txns.some(x=>x.subtype==="REVERSAL" && x.referenceId===id)){ toast("This entry has already been reversed"); return; }
