@@ -1642,39 +1642,99 @@ async function importItemsSmart(inp){
 }
 
 async function importItemRows(rows){
-  const head=rows[0].map(h=>String(h).trim().toLowerCase());
-  const col=name=>head.findIndex(h=>h===name || h.includes(name));
-  const cSl=col("sl"), cPage=col("page"), cCat=col("category"), cType=col("type"), cColor=col("color"), cThick=col("thickness"), cUnit=Math.max(col("unit"),col("uom")), cStock=col("opening stock")>=0?col("opening stock"):col("stock"), cAlarm=col("alarm"), cDate=col("opening date");
+  if(!Array.isArray(rows)||rows.length<2) throw new Error("Excel/CSV file is empty");
+  const head=(rows[0]||[]).map(h=>String(h??"").replace(/^\\uFEFF/,"").trim().toLowerCase());
+  const col=name=>head.findIndex(h=>h===name||h.includes(name));
+  const cSl=col("sl"), cPage=col("page"), cCat=col("category"), cType=col("type"), cColor=col("color"), cThick=col("thickness");
+  const cUnit=Math.max(col("unit"),col("uom"));
+  const cStock=col("opening stock")>=0?col("opening stock"):col("stock");
+  const cAlarm=col("alarm"), cDate=col("opening date");
   if(cType<0) throw new Error("Template needs a Type column");
-  let added=0, skipped=0, openingAdded=0;
-  let sl=DB.items.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
-  const keyOf=(cat,type,color,thick)=>(cat+"|"+type+"|"+color+"|"+thick).toLowerCase();
-  const seen=new Set(DB.items.map(it=>keyOf(it.category||"Board",it.type||"",it.color||"",it.thickness||"")));
-  rows.slice(1).forEach(r=>{
-    const type=String(cType>=0?r[cType]:"").trim(); if(!type){skipped++;return;}
-    const cat=(cCat>=0?String(r[cCat]||"").trim():"")||"Board";
-    const color=cColor>=0?String(r[cColor]||"").trim():"";
-    const thick=cThick>=0?String(r[cThick]||"").trim():"";
-    const key=keyOf(cat,type,color,thick);
-    if(seen.has(key)){skipped++;return;}
-    seen.add(key); sl++;
-    const opening=Math.max(0,Number(String(cStock>=0?r[cStock]:"").replace(/,/g,""))||0);
-    const unit=(cUnit>=0?String(r[cUnit]||"").trim():"")||"Pcs";
-    const it={id:"i"+Date.now()+"_"+sl,sl,page:cPage>=0?String(r[cPage]||"").trim():"",category:cat,type,color,thickness:thick,uom:cat==="Board"?"Pcs":unit,alarm:cAlarm>=0?Math.max(0,Number(r[cAlarm])||0):(DB.settings.alarmDefault||5),stock:opening};
-    DB.items.push(it); added++;
+
+  let nextSl=DB.items.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
+  const usedSl=new Set(DB.items.map(it=>Number(it.sl)).filter(Number.isInteger));
+  const fileSlSeen=new Set();
+  let added=0, skipped=0, openingAdded=0, conflicts=0, blankSlAdded=0;
+
+  const norm=v=>String(v??"").trim();
+  const makeId=sl=>"i"+Date.now().toString(36)+"_"+sl+"_"+Math.random().toString(36).slice(2,6);
+
+  for(const r of rows.slice(1)){
+    const type=norm(cType>=0?r[cType]:"");
+    const page=norm(cPage>=0?r[cPage]:"");
+    const cat=(norm(cCat>=0?r[cCat]:"")||"Board");
+    const color=norm(cColor>=0?r[cColor]:"");
+    const thick=norm(cThick>=0?r[cThick]:"");
+    const rawSl=norm(cSl>=0?r[cSl]:"");
+
+    if(!type){ skipped++; continue; }
+
+    let requestedSl=rawSl?Number(rawSl):null;
+    if(rawSl && (!Number.isInteger(requestedSl)||requestedSl<1)){
+      throw new Error("Invalid SL: "+rawSl);
+    }
+
+    let sl=null;
+    if(requestedSl!==null && !fileSlSeen.has(requestedSl) && !usedSl.has(requestedSl)){
+      sl=requestedSl;
+    }else{
+      while(usedSl.has(nextSl)||fileSlSeen.has(nextSl)) nextSl++;
+      sl=nextSl++;
+      if(requestedSl!==null) conflicts++;
+      else blankSlAdded++;
+    }
+    fileSlSeen.add(sl);
+    usedSl.add(sl);
+
+    const openingRaw=norm(cStock>=0?r[cStock]:"").replace(/,/g,"");
+    const opening=Math.max(0,Number(openingRaw)||0);
+    const unit=(norm(cUnit>=0?r[cUnit]:"")||"Pcs");
+    const alarm=cAlarm>=0?Math.max(0,Number(r[cAlarm])||0):(DB.settings.alarmDefault||5);
+    const rawDate=norm(cDate>=0?r[cDate]:"");
+    const openDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)?rawDate:todayISO();
+
+    const it={
+      id:makeId(sl),
+      sl,
+      page,
+      category:cat,
+      type,
+      color,
+      thickness:thick,
+      uom:cat==="Board"?"Pcs":unit,
+      alarm,
+      stock:opening
+    };
+
+    DB.items.push(it);
+    added++;
+
     if(opening>0){
       const txId=nextSeq("si","SI-");
-      const rawDate=cDate>=0?String(r[cDate]||"").trim():"";
-      const openDate=/^\d{4}-\d{2}-\d{2}$/.test(rawDate)?rawDate:todayISO();
-      DB.txns.push({id:txId,type:"IN",subtype:"OPENING",referenceId:"",supplierId:"",referenceNo:"",department:"",issuedTo:"",purpose:"",date:openDate,itemId:it.id,qty:opening,note:"Opening Balance",by:currentUser?currentUser.username:"system",createdAt:Date.now()});
+      DB.txns.push({
+        id:txId,type:"IN",subtype:"OPENING",
+        referenceId:"",supplierId:"",referenceNo:"",
+        department:"",issuedTo:"",purpose:"",
+        date:openDate,itemId:it.id,qty:opening,
+        note:"Opening Balance",by:currentUser?currentUser.username:"system",
+        createdAt:Date.now()
+      });
       openingAdded++;
     }
-  });
-  audit("Imported "+added+" items from Excel/CSV"+(openingAdded?" · "+openingAdded+" opening balances":""));
-  save(); renderItems();
-  toast("Imported "+added+" items"+(skipped?" · skipped "+skipped+" duplicate/blank":"")+(openingAdded?" · opening balances recorded":""));
-}
+  }
 
+  sortTxns();
+  audit("Imported "+added+" new items from Excel/CSV"+(openingAdded?" · "+openingAdded+" opening balances":"")+(conflicts?" · "+conflicts+" SL conflicts auto-assigned":""));
+  const saved=save();
+  if(saved && typeof saved.then==="function") await saved;
+  renderItems();
+
+  let msg="Imported "+added+" new item"+(added===1?"":"s");
+  if(skipped) msg+=" · skipped "+skipped+" blank row"+(skipped===1?"":"s");
+  if(openingAdded) msg+=" · "+openingAdded+" opening balance"+(openingAdded===1?"":"s");
+  if(conflicts) msg+=" · "+conflicts+" existing/duplicate SL auto-assigned";
+  toast(msg);
+}
 function downloadItemTemplate(){
   if(!isAdmin()){ toast("Only Admin can download the item template"); return; }
   if(typeof ExcelJS==="undefined"){ toast("Excel export library is still loading — try again"); return; }
@@ -1693,48 +1753,21 @@ function downloadItemTemplate(){
     toast("Import template downloaded");
   });
 }
-function importItems(inp){
-  const f = inp.files[0]; if(!f) return;
-  if(!canWrite()){ inp.value = ""; return; }
-  const rd = new FileReader();
-  rd.onload = () => {
-    try{
-      const rows = parseCSV(String(rd.result));
-      if(rows.length < 2){ toast("CSV file is empty"); inp.value = ""; return; }
-      const head = rows[0].map(h => String(h).trim().toLowerCase());
-      const col = name => head.findIndex(h => h.includes(name));
-      const cCat = col("categ"), cType = col("type"), cColor = col("color"), cThick = col("thick"), cPage = col("page"), cStock = col("stock"), cUnit = col("unit") >= 0 ? col("unit") : col("uom"), cAlarm = col("alarm");
-      if(cType < 0){ toast('CSV needs a "Type" column'); inp.value = ""; return; }
-      let added = 0, skipped = 0;
-      let sl = DB.items.reduce((m,x) => Math.max(m, x.sl||0), 0);
-      const keyOf = (g,t,c,th) => (g+"|"+t+"|"+c+"|"+th).toLowerCase();
-      const seen = new Set(DB.items.map(it => keyOf(it.category||"Board", it.type||"", it.color||"", it.thickness||"")));
-      rows.slice(1).forEach(r => {
-        const type = String(r[cType]||"").trim(); if(!type){ skipped++; return; }
-        const cat = (cCat >= 0 && String(r[cCat]||"").trim()) || "Board";
-        const color = cColor >= 0 ? String(r[cColor]||"").trim() : "";
-        const thick = cThick >= 0 ? String(r[cThick]||"").trim() : "";
-        const k = keyOf(cat, type, color, thick);
-        if(seen.has(k)){ skipped++; return; }
-        seen.add(k); sl++;
-        DB.items.push({
-          id: "i" + Date.now() + "_" + sl, sl,
-          page: cPage >= 0 ? String(r[cPage]||"").trim() : "",
-          category: cat, type, color, thickness: thick,
-          uom: (cUnit >= 0 && String(r[cUnit]||"").trim()) || "Pcs",
-          alarm: cAlarm >= 0 ? Math.max(0, Number(r[cAlarm])||0) : (DB.settings.alarmDefault||5),
-          stock: cStock >= 0 ? (Number(String(r[cStock]).replace(/,/g,"").trim())||0) : 0
-        });
-        added++;
-      });
-      audit("Imported "+added+" items from CSV");
-      save(); renderItems();
-      toast("Imported "+added+" items" + (skipped ? " \u00b7 skipped "+skipped+" (blank/duplicate)" : ""));
-    }catch(err){ console.error(err); toast("Could not read CSV file"); }
-    inp.value = "";
-  };
-  rd.readAsText(f);
+async function importItems(inp){
+  const f=inp&&inp.files&&inp.files[0]; if(!f) return;
+  if(!isAdmin()){ toast("Only Admin can import items"); inp.value=""; return; }
+  try{
+    const rows=parseCSV(await f.text());
+    if(rows.length<2) throw new Error("CSV file is empty");
+    await importItemRows(rows);
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Could not read CSV file");
+  }finally{
+    inp.value="";
+  }
 }
+
 function exportItems(){
   exportCSV("items.csv", ["SL","Page","Category","Type","Color","Thickness","Unit","Stock","Alarm Qty","Status"],
     DB.items.map(it => [it.sl, it.page||"", it.category||"Board", it.type||itemName(it), it.color||"", it.thickness||"", it.uom||"Pcs", it.stock, it.alarm, it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]));
