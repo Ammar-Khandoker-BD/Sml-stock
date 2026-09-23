@@ -1958,31 +1958,19 @@ function txnModal(kind){
       </div>
     </div>`:`<div class="field">
         <label for="txRef">Job No</label>
-        <div class="txn-meta-wrap">
-          <input class="input" id="txRef" placeholder="e.g. JOB-2026-014" autocomplete="off"
-            onfocus="renderTxnMetaOptions('OUT','jobNo',true);setupTxnMetaOutsideClick()"
-            oninput="renderTxnMetaOptions('OUT','jobNo',true)">
-          <div id="txnMetaResults-jobNo" class="searchable-options txn-meta-results"></div>
-        </div>
+        <input class="input" id="txRef" list="txJobNoSuggestions" placeholder="e.g. JOB-2026-014" autocomplete="off">
+        <datalist id="txJobNoSuggestions">${getRememberedTxnMeta("OUT","jobNo").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
       </div>`}
     ${fin?"":`<div class="row-2">
       <div class="field">
         <label for="txDepartment">Client Name</label>
-        <div class="txn-meta-wrap">
-          <input class="input" id="txDepartment" placeholder="e.g. Client / Company Name" autocomplete="off"
-            onfocus="renderTxnMetaOptions('OUT','department',true);setupTxnMetaOutsideClick()"
-            oninput="renderTxnMetaOptions('OUT','department',true)">
-          <div id="txnMetaResults-department" class="searchable-options txn-meta-results"></div>
-        </div>
+        <input class="input" id="txDepartment" list="txClientSuggestions" placeholder="e.g. Client / Company Name" autocomplete="off">
+        <datalist id="txClientSuggestions">${getRememberedTxnMeta("OUT","department").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
       </div>
       <div class="field">
         <label for="txIssuedTo">Issued To</label>
-        <div class="txn-meta-wrap">
-          <input class="input" id="txIssuedTo" placeholder="Person / Team / Section" autocomplete="off"
-            onfocus="renderTxnMetaOptions('OUT','issuedTo',true);setupTxnMetaOutsideClick()"
-            oninput="renderTxnMetaOptions('OUT','issuedTo',true)">
-          <div id="txnMetaResults-issuedTo" class="searchable-options txn-meta-results"></div>
-        </div>
+        <input class="input" id="txIssuedTo" list="txIssuedToSuggestions" placeholder="Person / Team / Section" autocomplete="off">
+        <datalist id="txIssuedToSuggestions">${getRememberedTxnMeta("OUT","issuedTo").map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
       </div>
     </div>`}
     <div class="field">
@@ -2039,6 +2027,21 @@ function applyCommittedMovement(result,message){
   if(message) toast(message);
 }
 
+function refreshTxnMetaDatalists(kind){
+  if(kind!=="OUT") return;
+  const maps={
+    jobNo:"#txJobNoSuggestions",
+    department:"#txClientSuggestions",
+    issuedTo:"#txIssuedToSuggestions"
+  };
+  Object.keys(maps).forEach(function(key){
+    const box=$(maps[key]);
+    if(!box) return;
+    box.innerHTML=getRememberedTxnMeta("OUT",key).map(function(v){
+      return '<option value="'+esc(v)+'">';
+    }).join("");
+  });
+}
 function prepareNextTxnEntry(kind){
   TXN_MODAL_KIND=kind;
   TXN_ITEM_SEARCH="";
@@ -2047,6 +2050,7 @@ function prepareNextTxnEntry(kind){
   if($("#txQty")) $("#txQty").value="";
   if($("#txNote")) $("#txNote").value="";
   if($("#txDate")) $("#txDate").value=getRememberedTxnDate(kind);
+  refreshTxnMetaDatalists(kind);
   const results=$("#txItemResults");
   if(results){ results.innerHTML=""; results.style.display="none"; }
   setTimeout(()=>{ const s=$("#txItemSearch"); if(s){ s.focus(); s.select(); } },40);
