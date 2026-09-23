@@ -1028,6 +1028,13 @@ body{position:relative}
   background:#F8FBFF !important;
 }
 </style></style>>
+<style id="sml-category-overview-fit">/* Keep Category Overview quantity visible on compact dashboard cards */
+.category-overview-table{min-width:0 !important;width:100%;table-layout:fixed}
+.category-overview-table th:first-child,.category-overview-table td:first-child{width:52%}
+.category-overview-table th:nth-child(2),.category-overview-table td:nth-child(2){width:22%}
+.category-overview-table th:nth-child(3),.category-overview-table td:nth-child(3){width:26%}
+.category-overview-table td,.category-overview-table th{padding-left:10px;padding-right:10px}
+</style>
 </head>
 <body>
 
@@ -1570,7 +1577,7 @@ function renderDashboard(){
       <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
     <div class="card"><h3>Category Overview</h3><div class="sub">Current stock distribution by category</div>
-      <div class="table-scroll"><table><thead><tr><th>Category</th><th class="num">Items</th><th class="num">Stock</th></tr></thead><tbody>
+      <div class="table-scroll"><table class="category-overview-table"><thead><tr><th>Category</th><th class="num">Items</th><th class="num">Qty</th></tr></thead><tbody>
       ${categoryRows.map(r=>`<tr><td><b>${esc(r.cat)}</b></td><td class="num">${fmtQty(r.items)}</td><td class="num"><b>${fmtQty(r.stock)}</b></td></tr>`).join('') || '<tr><td colspan="3" class="dash-empty">No categories yet.</td></tr>'}
       </tbody></table></div></div>
   </div>
