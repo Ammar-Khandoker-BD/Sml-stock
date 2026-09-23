@@ -1158,7 +1158,7 @@ const nowTime = () => new Date().toTimeString().slice(0,8);
 
 let DB = null, currentUser = null;
 const TXN_CACHE_LIMIT = 1000;
-let REPORT_TXNS = [];
+let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = "";
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [];
@@ -1607,10 +1607,17 @@ function renderDashboard(){
     </tbody></table></div></div>`;
 
   const labels = [], ins = [], outs = [];
-  for(let d = 13; d >= 0; d--){
-    const day = daysAgo(d); labels.push(fmtD(day));
-    ins.push(DB.txns.filter(t => t.date===day && t.type==="IN").reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0));
-    outs.push(DB.txns.filter(t => t.date===day && t.type==="OUT").reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0));
+  const dailyIn={}, dailyOut={};
+  DB.txns.forEach(t=>{
+    if(String(t.date||"")>=daysAgo(13) && String(t.date||"")<=today){
+      const q=Math.abs(Number(t.qty)||0);
+      if(t.type==="IN") dailyIn[t.date]=(dailyIn[t.date]||0)+q;
+      else if(t.type==="OUT") dailyOut[t.date]=(dailyOut[t.date]||0)+q;
+    }
+  });
+  for(let d=13;d>=0;d--){
+    const day=daysAgo(d); labels.push(fmtD(day));
+    ins.push(dailyIn[day]||0); outs.push(dailyOut[day]||0);
   }
   drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
 }
@@ -2743,12 +2750,31 @@ function reportMovementAmounts(t){
   const q=Number(t.qty)||0;
   return t.type==="IN" ? {in:q,out:0} : t.type==="OUT" ? {in:0,out:-q} : {in:0,out:0};
 }
+function rebuildReportOpeningStock(from){
+  const movement={};
+  REPORT_TXNS.forEach(t=>{
+    if(String(t.date||"")>=from){
+      movement[t.itemId]=(movement[t.itemId]||0)+(Number(t.qty)||0);
+    }
+  });
+  REPORT_OPENING_STOCK=new Map();
+  DB.items.forEach(it=>{
+    REPORT_OPENING_STOCK.set(it.id,(Number(it.stock)||0)-(movement[it.id]||0));
+  });
+  REPORT_OPENING_FROM=from;
+}
 function reportStockBeforeDate(itemId,date){
   const it=itemById(itemId);
   if(!it) return 0;
+  if(REPORT_OPENING_FROM===date && REPORT_OPENING_STOCK.has(itemId)){
+    return REPORT_OPENING_STOCK.get(itemId)||0;
+  }
   const source=REPORT_TXNS.length ? REPORT_TXNS : DB.txns;
-  const movementAfterStart=source.filter(t=>t.itemId===itemId && String(t.date||"")>=date).reduce((s,t)=>s+(Number(t.qty)||0),0);
-  return Number(it.stock||0)-movementAfterStart;
+  let movement=0;
+  source.forEach(t=>{
+    if(t.itemId===itemId && String(t.date||"")>=date) movement+=Number(t.qty)||0;
+  });
+  return Number(it.stock||0)-movement;
 }
 function reportClosingStock(itemId,from,to){
   const opening=reportStockBeforeDate(itemId,from);
@@ -2781,10 +2807,16 @@ async function runReport(){
   const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
   if(from>to){ toast("Report start date cannot be after end date"); return; }
   if(!["stock","valuation","low"].includes(REP.type)){
-    try{ REPORT_TXNS=await loadReportTransactions(from); }
-    catch(err){ console.error(err); toast("Could not load report data — check internet connection"); return; }
+    try{
+      REPORT_TXNS=await loadReportTransactions(from);
+      rebuildReportOpeningStock(from);
+    }catch(err){ console.error(err); toast("Could not load report data — check internet connection"); return; }
     if(runId!==REPORT_RUN_ID) return;
-  }else REPORT_TXNS=[];
+  }else{
+    REPORT_TXNS=[];
+    REPORT_OPENING_STOCK=new Map();
+    REPORT_OPENING_FROM="";
+  }
   const job = (REP.job||"").trim().toLowerCase();
   const client = (REP.client||"").trim().toLowerCase();
   const inRange = t => t.date >= from && t.date <= to;
