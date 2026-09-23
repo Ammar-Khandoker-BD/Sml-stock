@@ -1324,7 +1324,7 @@ function seedData(){
       const it = items[Math.floor(rnd()*items.length)];
       const q = 10 + Math.floor(rnd()*40);
       seq.si++;
-      txns.push({ id:"SI-"+String(seq.si).padStart(4,"0"), type:"IN", date:daysAgo(d), itemId:it.id, qty:q, note:"", by:"admin", createdAt:Date.now() });
+      txns.push({ id:"SI-"+String(seq.si).padStart(4,"0"), type:"IN", subtype:"NORMAL", date:daysAgo(d), itemId:it.id, qty:q, note:"", by:"admin", createdAt:Date.now() });
       it.stock += q;
     }
     const n = 1 + Math.floor(rnd()*2);
@@ -1333,7 +1333,7 @@ function seedData(){
       const q = 1 + Math.floor(rnd()*8);
       if(it.stock - q < 0) continue;
       seq.so++;
-      txns.push({ id:"SO-"+String(seq.so).padStart(4,"0"), type:"OUT", date:daysAgo(d), itemId:it.id, qty:-q, note:"", by:"admin", createdAt:Date.now() });
+      txns.push({ id:"SO-"+String(seq.so).padStart(4,"0"), type:"OUT", subtype:"NORMAL", date:daysAgo(d), itemId:it.id, qty:-q, note:"", by:"admin", createdAt:Date.now() });
       it.stock -= q;
     }
   }
@@ -2670,7 +2670,7 @@ async function reverseTxn(id){
       seq.rv=(Number(seq.rv)||0)+1;
       const txId="RV-"+String(seq.rv).padStart(4,"0");
       const now=Date.now();
-      const txn={id:txId,type:original.type,subtype:"REVERSAL",referenceId:id,date:todayISO(),itemId:original.itemId,qty:delta,note:"Reversal of "+id+(original.note?" — "+original.note:""),by:currentUser?currentUser.username:"system",createdAt:now};
+      const txn={id:txId,type:delta>0?"IN":"OUT",subtype:"REVERSAL",referenceId:id,date:todayISO(),itemId:original.itemId,qty:delta,note:"Reversal of "+id+(original.note?" — "+original.note:""),by:currentUser?currentUser.username:"system",createdAt:now};
       const auditRef=fdb.collection("erp_audit").doc();
       const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Reversed "+id};
       transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
