@@ -2586,6 +2586,13 @@ async function reverseTxn(id){
       const mainRef=fdb.collection("erp").doc("main");
       const snap=await transaction.get(mainRef);
       if(!snap.exists) throw new Error("Inventory database not found");
+      const existingReversalSnap=await transaction.get(
+        fdb.collection("erp_txns").where("referenceId","==",id).limit(1)
+      );
+      if(!existingReversalSnap.empty){
+        const existingReversal=existingReversalSnap.docs[0].data()||{};
+        if(existingReversal.subtype==="REVERSAL") throw new Error("This entry has already been reversed");
+      }
       const data=snap.data()||{};
       const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
       const liveItem=items.find(it=>it.id===original.itemId);
