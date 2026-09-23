@@ -2248,7 +2248,35 @@ async function submitStockAdjustment(e,id){
     toast(err.message||"Could not post adjustment");
   }
 }
+async function exportReturnXlsx(){
+  if(typeof ExcelJS==="undefined"){ toast("Excel export library is still loading — try again"); return; }
+  const rows=txnRows("RETURN",RETURN_F);
+  try{
+    const wb=new ExcelJS.Workbook();
+    const ws=wb.addWorksheet("Stock Return",{views:[{state:"frozen",ySplit:3}]});
+    const company=(DB.settings&&DB.settings.company)||"Step Media Ltd";
+    const head=["ID","Date","Category","Item","Qty","Unit","Return Ref","Return From / Client","Originally Issued To","Note","By"];
+    ws.mergeCells(1,1,1,head.length); ws.getCell(1,1).value=company+" — Stock Return Register";
+    ws.getCell(1,1).font={name:"Aptos Display",size:15,bold:true,color:{argb:"FFFFFFFF"}};
+    ws.getCell(1,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2F6FBF"}}; ws.getRow(1).height=26;
+    ws.mergeCells(2,1,2,head.length); ws.getCell(2,1).value="Generated: "+new Date().toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})+" | Records: "+rows.length;
+    ws.getCell(2,1).font={name:"Aptos",size:10,color:{argb:"FF6E6A63"}};
+    const hr=ws.addRow(head); hr.eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2F6FBF"}};cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};});
+    rows.forEach((t,i)=>{
+      const it=itemById(t.itemId);
+      const row=ws.addRow([t.id,t.date,it?it.category||"":"",itemName(it),Math.abs(Number(t.qty)||0),it?it.uom||"Pcs":"",t.referenceNo||"",t.department||"",t.issuedTo||"",t.note||"",t.by||""]);
+      row.height=20; if(i%2===1) row.eachCell(cell=>cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF8F7F5"}});
+    });
+    [14,14,22,30,12,12,22,26,24,32,22].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    ws.autoFilter={from:{row:3,column:1},to:{row:3,column:head.length}};
+    ws.pageSetup={orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9};
+    const buffer=await wb.xlsx.writeBuffer(); const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=(company.replace(/[^a-z0-9]+/gi,"_")||"SML")+"_Stock_Return_"+todayISO()+".xlsx";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("Stock Return Excel downloaded");
+  }catch(err){ console.error(err); toast("Could not create Stock Return Excel"); }
+}
 async function exportTxnXlsx(kind){
+  if(kind==="RETURN") return exportReturnXlsx();
   if(typeof ExcelJS==="undefined"){ toast("Excel export library is still loading — try again"); return; }
   const fin=kind==="IN";
   const rows=txnRows(kind,fin?SI_F:SO_F);
