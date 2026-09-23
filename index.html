@@ -1749,17 +1749,24 @@ function parseBoardStockRows(rows){
   const col=name=>head.findIndex(h=>h===name||h.includes(name));
   const cSl=col("sl"), cType=col("type"), cColor=col("color"), cThick=col("thickness"), cStock=col("stock");
   const out=[], slSeen=new Set(), keySeen=new Set();
+  let nextAutoSl=1;
   rows.slice(hi+1).forEach(r=>{
     const rawSl=String(r[cSl]||"").trim(), type=String(r[cType]||"").trim(), color=cColor>=0?String(r[cColor]||"").trim():"", thickness=String(r[cThick]||"").trim();
-    if(!rawSl&&!type&&!thickness) return;
-    const sl=Number(rawSl), stock=Number(String(r[cStock]??"").replace(/,/g,"").trim());
-    if(!Number.isInteger(sl)||sl<1) throw new Error("Invalid SL: "+rawSl);
-    if(!type) throw new Error("Missing Type at SL "+sl);
-    if(!Number.isFinite(stock)||stock<0) throw new Error("Invalid Stock at SL "+sl);
+    if(!rawSl && !type) return;
+    let sl=rawSl ? Number(rawSl) : NaN;
+    const stock=Number(String(r[cStock]??"").replace(/,/g,"").trim());
+    if(!type) return;
+    if(rawSl && (!Number.isInteger(sl)||sl<1)) throw new Error("Invalid SL: "+rawSl);
+    if(!rawSl){
+      while(slSeen.has(nextAutoSl)) nextAutoSl++;
+      sl=nextAutoSl++;
+    }
+    nextAutoSl=Math.max(nextAutoSl,Number.isInteger(sl)?sl+1:nextAutoSl);
+    if(!Number.isFinite(stock)||stock<0) throw new Error("Invalid Stock at SL "+(rawSl||("auto "+sl)));
     const key=boardStockKey(type,color,thickness);
     if(slSeen.has(sl)) throw new Error("Duplicate SL "+sl);
-    if(keySeen.has(key)) throw new Error("Duplicate board item at SL "+sl);
-    slSeen.add(sl); keySeen.add(key); out.push({sl,type,color,thickness,stock});
+    if(keySeen.has(key)) throw new Error("Duplicate board item at SL "+(rawSl||sl));
+    slSeen.add(sl); keySeen.add(key); out.push({sl,type,color,thickness,stock,slWasBlank:!rawSl});
   });
   if(!out.length) throw new Error("No Board Stock rows found");
   return out.sort((a,b)=>a.sl-b.sl);
@@ -1770,7 +1777,9 @@ async function replaceBoardStockSmart(inp){
   try{
     const rows=await readBoardStockFile(file);
     const total=rows.reduce((s,r)=>s+r.stock,0);
-    if(!confirm("Load "+rows.length+" Board items with current stock "+total+"?\\n\\nExisting Board items not in this file will have their current stock set to 0. Their history will be preserved. Matching items will be updated and new Board items will be added.")) return;
+    const autoSl=rows.filter(r=>r.slWasBlank).length;
+    const note=autoSl?"\\n\\nNote: "+autoSl+" row(s) had blank SL; an internal SL number will be assigned automatically for those new items.":"";
+    if(!confirm("Load "+rows.length+" Board items with current stock "+total+"?"+note+"\\n\\nExisting Board items not in this file will have their current stock set to 0. Their history will be preserved. Matching items will be updated and new Board items will be added.")) return;
     toast("Updating Board stock… please wait");
     const mainRef=fdb.collection("erp").doc("main");
     let result=null;
