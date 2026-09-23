@@ -2469,9 +2469,19 @@ async function importStockInSmart(inp){
     const entries=parseStockInImportRows(rows);
     const slMap=new Map(DB.items.map(it=>[Number(it.sl),it]));
     const supplierMap=new Map((DB.suppliers||[]).map(s=>[String(s.name||"").trim().toLowerCase(),s]));
+    const itemKey=v=>[v.category||"Board",v.type||"",v.color||"",v.thickness||""].map(x=>String(x||"").trim().replace(/\\s+/g," ").toLowerCase()).join("|");
+    const existingKeys=new Set(DB.items.map(itemKey));
+    const newFileKeys=new Set();
     for(const e of entries){
       if(e.sl && !slMap.get(e.sl)) throw new Error("Row "+e.row+": Item SL "+e.sl+" was not found in Items");
       if(e.sl===null && !e.type) throw new Error("Row "+e.row+": New item needs Type");
+      if(e.sl===null){
+        const key=itemKey(e);
+        if(existingKeys.has(key) || newFileKeys.has(key)){
+          throw new Error("Row "+e.row+": New item is a duplicate of an existing/new item");
+        }
+        newFileKeys.add(key);
+      }
       if(e.supplier){
         const s=supplierMap.get(e.supplier.toLowerCase());
         if(!s) throw new Error("Row "+e.row+": Supplier not found — "+e.supplier);
@@ -2486,6 +2496,7 @@ async function importStockInSmart(inp){
       const snap=await transaction.get(mainRef); if(!snap.exists) throw new Error("Inventory database not found");
       const data=snap.data()||{}, items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
       const liveBySl=new Map(items.map(it=>[Number(it.sl),it]));
+      const liveItemKeys=new Set(items.map(itemKey));
       let nextSl=items.reduce((m,it)=>Math.max(m,Number(it.sl)||0),0);
       let seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{}), si=Number(seq.si)||0, now=Date.now(), txns=[], created=0;
       entries.forEach(e=>{
@@ -2494,10 +2505,13 @@ async function importStockInSmart(inp){
           item=liveBySl.get(e.sl);
           if(!item) throw new Error("Item SL "+e.sl+" was not found in live inventory");
         }else{
+          const newKey=itemKey(e);
+          if(liveItemKeys.has(newKey)) throw new Error("A new item in the import conflicts with an item already added");
           nextSl++;
+          while(liveBySl.has(nextSl)) nextSl++;
           const id="i"+Date.now().toString(36)+"_"+nextSl;
           item={id,sl:nextSl,page:e.page||"",category:e.category||"Board",type:e.type||"",color:e.color||"",thickness:e.thickness||"",uom:(e.category||"Board")==="Board"?"Pcs":(e.unit||"Pcs"),alarm:e.alarm===null?Number((data.settings&&data.settings.alarmDefault)||5):e.alarm,stock:0};
-          items.push(item); liveBySl.set(nextSl,item); created++;
+          items.push(item); liveBySl.set(nextSl,item); liveItemKeys.add(newKey); created++;
         }
         item.stock=(Number(item.stock)||0)+e.qty;
         if(e.sl===null){
