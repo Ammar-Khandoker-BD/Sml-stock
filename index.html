@@ -1073,9 +1073,9 @@ body{position:relative}
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
     <div class="nav-label admin-only">Administration</div>
-    <button class="nav-item admin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
+    <button class="nav-item admin-only superadmin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
     <button class="nav-item admin-only" data-view="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Audit Trail</button>
-    <button class="nav-item admin-only" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    <button class="nav-item admin-only superadmin-only" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
     <div class="side-dev"><span class="dev-ak">AK</span><div>Developed by<br><b>Ammar Khandoker</b></div></div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -1241,7 +1241,11 @@ function audit(action){
 }
 
 /* ---------- permissions ---------- */
-const isAdmin = () => currentUser && currentUser.access === "Admin";
+const SUPER_ADMIN_EMAIL = "ammar.ali.khandoker.sml@gmail.com";
+const isSuperAdmin = () => !!(currentUser && String(currentUser.email || currentUser.id || "").toLowerCase() === SUPER_ADMIN_EMAIL);
+const isAdmin = () => !!(currentUser && (currentUser.access === "Admin" || currentUser.access === "Super Admin"));
+const canManageUsers = () => isSuperAdmin();
+const canManageSettings = () => isSuperAdmin();
 function canWrite(){ if(currentUser && currentUser.access !== "Viewer") return true; toast("View-only account \u2014 you cannot make changes"); return false; }
 
 /* ---------- seed data ---------- */
@@ -1323,6 +1327,7 @@ function enterApp(u){
   $("#userAv").innerHTML = u.photo ? "<img src=\""+esc(u.photo)+"\" alt=\""+esc(u.name)+" avatar\">" : esc((String(u.name||"?").trim().split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2)||"?").toUpperCase());
   $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
   document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin() ? "" : "none");
+  document.querySelectorAll(".superadmin-only").forEach(el => el.style.display = isSuperAdmin() ? "" : "none");
   renderAll();
   show(location.hash.slice(1) || "dashboard");
 }
@@ -2624,14 +2629,15 @@ function delSupplier(id){
 let ROLES = [];
 function accessOf(role){ role = String(role||"").toLowerCase(); return role==="admin" ? "Admin" : (role==="staff"||role==="store") ? "Store" : "Viewer"; }
 function renderUsers(){
+  if(!canManageUsers()){ toast("Only Super Admin can manage users"); show("dashboard"); return; }
   $("#view-users").innerHTML = `<div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Loading\u2026</p></div></div>`;
   fdb.collection("roles").get().then(s => {
     if(CURRENT_VIEW !== "users") return;
     ROLES = s.docs.map(d => Object.assign({ email: d.id }, d.data()));
     $("#view-users").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Admin: full access \u00b7 Store: daily operations \u00b7 Viewer: read-only</p></div>
+  <div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Super Admin: Users &amp; Settings \u00b7 Admin: operations \u00b7 Store: daily operations \u00b7 Viewer: read-only</p></div>
     <div class="page-actions"><button class="btn btn-primary" onclick="userModal()">+ Add User</button></div></div>
-  <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>New user = 2 steps:</b> 1) Firebase Console \u2192 Authentication \u2192 Add user (email + password) &nbsp;2) Ekhane same email add kore role din.</div></div>
+  <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>Super Admin only:</b> Create users here with email, password, name and access type — no Firebase Console step is required.</div></div>
   <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Access</th><th></th></tr></thead><tbody>
   ${ROLES.map(r => { const acc = accessOf(r.role); return `<tr><td class="type-cell">${esc(r.email)}${r.email===currentUser.id?' <span style="color:var(--faint);font-size:11px">(you)</span>':""}</td><td>${esc(r.name||"\u2014")}</td><td><span class="badge ${acc.toLowerCase()}">${acc.toUpperCase()}</span></td>
     <td style="white-space:nowrap"><button class="btn btn-sm" onclick="userModal('${esc(r.email)}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delUser('${esc(r.email)}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No users yet \u2014 add your team</td></tr>`}
@@ -2684,7 +2690,7 @@ function clearUserPhoto(){
   renderUserPhotoPreview();
 }
 function userModal(email){
-  if(!isAdmin()){ toast("Only Admin can manage users"); return; }
+  if(!canManageUsers()){ toast("Only Admin can manage users"); return; }
   const r = email ? ROLES.find(x => x.email === email) : null;
   USER_MODAL_PHOTO = r && r.photo ? String(r.photo) : "";
   openModal(`<h3>${r ? "Edit User" : "Add User"}</h3>
@@ -2712,7 +2718,7 @@ function userModal(email){
 }
 
 async function submitUser(email){
-  if(!isAdmin()){ toast("Only Admin can manage users"); return; }
+  if(!canManageUsers()){ toast("Only Admin can manage users"); return; }
   const isEdit = !!email;
   const em = (email || ($("#fEmail") ? $("#fEmail").value.trim() : "")).toLowerCase();
   if(!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return toast("Valid email is required");
@@ -2762,6 +2768,7 @@ async function submitUser(email){
 }
 
 function delUser(email){
+  if(!canManageUsers()){ toast("Only Super Admin can manage users"); return; }
   if(email === currentUser.id) return toast("You cannot delete your own account");
   if(!confirm(`Remove access for "${email}"?\nAlso delete the login from Firebase Console \u2192 Authentication.`)) return;
   fdb.collection("roles").doc(email).delete().then(() => {
@@ -2807,6 +2814,7 @@ function renderAudit(){
 
 /* ---------- settings ---------- */
 function renderSettings(){
+  if(!canManageSettings()){ toast("Only Super Admin can access Settings"); show("dashboard"); return; }
   $("#view-settings").innerHTML = `
   <div class="page-head"><div><div class="crumb">Administration / <b>Settings</b></div><h1>Settings</h1><p>Company info &amp; data management</p></div></div>
   <div class="grid-2">
@@ -2826,6 +2834,7 @@ function renderSettings(){
   </div>`;
 }
 function saveSettings(){
+  if(!canManageSettings()){ toast("Only Super Admin can change Settings"); return; }
   DB.settings.company = $("#stCompany").value.trim() || "Step Media Ltd";
   DB.settings.address = $("#stAddress").value.trim();
   DB.settings.alarmDefault = Math.max(0, Number($("#stAlarm").value)||5);
@@ -2834,14 +2843,14 @@ function saveSettings(){
   toast("Settings saved");
 }
 function backupData(){
-  if(!isAdmin()){ toast("Only Admin can download backups"); return; }
+  if(!canManageSettings()){ toast("Only Admin can download backups"); return; }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)], {type:"application/json"}));
   a.download = "sml-inventory-backup-"+todayISO()+".json"; a.click(); URL.revokeObjectURL(a.href);
   audit("Downloaded backup"); save(); toast("Backup downloaded");
 }
 function restoreData(inp){
-  if(!isAdmin()){ toast("Only Admin can restore backups"); inp.value=""; return; }
+  if(!canManageSettings()){ toast("Only Admin can restore backups"); inp.value=""; return; }
   const f = inp.files[0]; if(!f) return;
   const rd = new FileReader();
   rd.onload = async () => {
@@ -2860,7 +2869,7 @@ function restoreData(inp){
   rd.readAsText(f);
 }
 async function resetData(){
-  if(!isAdmin()){ toast("Only Admin can reset data"); return; }
+  if(!canManageSettings()){ toast("Only Admin can reset data"); return; }
   if(!confirm("Reset ALL data back to demo data? This cannot be undone and affects everyone.")) return;
   toast("Resetting\u2026 please wait");
   await wipeColl("erp_txns"); await wipeColl("erp_audit");
@@ -2869,7 +2878,7 @@ async function resetData(){
   await doSave(); renderAll(); toast("Demo data restored");
 }
 async function clearData(){
-  if(!isAdmin()){ toast("Only Admin can clear data"); return; }
+  if(!canManageSettings()){ toast("Only Admin can clear data"); return; }
   if(!confirm("Delete ALL items and stock transactions \u2014 everything? Start completely fresh? This affects everyone.")) return;
   toast("Clearing\u2026 please wait");
   await wipeColl("erp_txns"); await wipeColl("erp_audit");
@@ -2897,6 +2906,7 @@ const VIEWS = {
 function show(view){
   if(!VIEWS[view]) view = "dashboard";
   if(!isAdmin() && ["users","audit","settings"].includes(view)) view = "dashboard";
+  if(!isSuperAdmin() && ["users","settings"].includes(view)) view = "dashboard";
   CURRENT_VIEW = view;
   if(location.hash.slice(1) !== view){ try{ history.replaceState(null,"","#"+view); }catch(e){} }
   document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
@@ -2926,7 +2936,7 @@ fauth.onAuthStateChanged(async fu => {
     const rs = await fdb.collection("roles").doc(fu.email).get();
     const rd = rs.exists ? rs.data() : {};
     const role = String(rd.role || "").toLowerCase();
-    const access = role === "admin" ? "Admin" : (role === "staff" || role === "store") ? "Store" : "Viewer";
+    const access = String(fu.email || "").toLowerCase() === SUPER_ADMIN_EMAIL ? "Super Admin" : (role === "admin" ? "Admin" : (role === "staff" || role === "store") ? "Store" : "Viewer");
     await loadData();
     enterApp({ id: fu.email, email: fu.email, name: rd.name || fu.email.split("@")[0], username: fu.email.split("@")[0], access, photo: rd.photo || "" });
     attachListeners();
