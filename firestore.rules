@@ -58,7 +58,7 @@ service cloud.firestore {
         && request.resource.data.id == txId
         && request.resource.data.type in ['IN', 'OUT']
         && request.resource.data.subtype in [
-          'NORMAL', 'OPENING', 'ADJUSTMENT', 'REVERSAL'
+          'NORMAL', 'OPENING', 'ADJUSTMENT', 'REVERSAL', 'RETURN'
         ]
         && request.resource.data.date is string
         && request.resource.data.itemId is string
