@@ -11,10 +11,25 @@ service cloud.firestore {
       return /databases/$(database)/documents/roles/$(request.auth.token.email);
     }
 
+    function isSuperAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'ammar.ali.khandoker.sml@gmail.com';
+    }
+
     function isAdmin() {
       return isSignedIn()
-        && exists(roleDoc())
-        && get(roleDoc()).data.role == 'admin';
+        && (
+          isSuperAdmin()
+          || (
+            exists(roleDoc())
+            && get(roleDoc()).data.role == 'admin'
+          )
+        );
+    }
+
+    function adminMainUpdateAllowed() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['items', 'seq', 'categories', 'groups', 'suppliers', 'client', 'rev']);
     }
 
     function isStore() {
@@ -69,16 +84,29 @@ service cloud.firestore {
     }
 
     match /roles/{email} {
-      allow read: if isSignedIn() && (email == request.auth.token.email || isAdmin());
-      allow create, update, delete: if isAdmin();
+      allow read: if isSignedIn() &&
+        (email == request.auth.token.email || isSuperAdmin());
+
+      allow create, update, delete: if isSuperAdmin();
     }
 
     match /erp/{docId} {
       allow read: if isSignedIn();
-      allow create: if isAdmin();
-      allow update: if isAdmin()
+
+      allow create: if isSuperAdmin()
+        || isAdmin();
+
+      allow update: if isSuperAdmin()
+        || (
+          isAdmin()
+          && !isSuperAdmin()
+          && docId == 'main'
+          && adminMainUpdateAllowed()
+        )
         || (isStore() && docId == 'main' && storeMainUpdateAllowed());
-      allow delete: if isAdmin();
+
+      allow delete: if isSuperAdmin()
+        || isAdmin();
     }
 
     match /erp_txns/{txId} {
