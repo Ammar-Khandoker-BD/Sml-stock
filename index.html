@@ -1069,6 +1069,7 @@ body{position:relative}
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
     <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
     <div class="nav-label">Purchasing</div>
+    <button class="nav-item" data-view="stockreturn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h12a4 4 0 0 1 4 4v1"/><path d="M8 3 4 7l4 4"/><path d="M20 17H8a4 4 0 0 1-4-4v-1"/><path d="m16 21 4-4-4-4"/></svg>Returns</button>
     <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="M6 13l6-6 6 6"/><path d="M4 3h16"/></svg>Stock Out</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
@@ -1086,6 +1087,7 @@ body{position:relative}
     <div class="view" id="view-items"></div>
     <div class="view" id="view-stockin"></div>
     <div class="view" id="view-stockout"></div>
+    <div class="view" id="view-stockreturn"></div>
     <div class="view" id="view-suppliers"></div>
     <div class="view" id="view-reports"></div>
     <div class="view" id="view-users"></div>
@@ -1724,8 +1726,8 @@ function exportItems(){
 }
 
 /* ---------- stock in / out ---------- */
-let SI_F = { q:"", cat:"", item:"", from:"", to:"" }, SO_F = { q:"", cat:"", item:"", from:"", to:"" };
-const TXN_DATE_KEYS = { IN:"sml-stock-last-date-in", OUT:"sml-stock-last-date-out" };
+let SI_F = { q:"", cat:"", item:"", from:"", to:"" }, SO_F = { q:"", cat:"", item:"", from:"", to:"" }, RETURN_F = { q:"", cat:"", item:"", from:"", to:"" };
+const TXN_DATE_KEYS = { IN:"sml-stock-last-date-in", OUT:"sml-stock-last-date-out", RETURN:"sml-stock-last-date-return" };
 let TXN_MODAL_KIND = "IN";
 let TXN_ITEM_SEARCH = "";
 
@@ -1890,7 +1892,7 @@ function txnCategoryTone(category){
 }
 function txnRows(kind, f){
   return DB.txns.filter(t => {
-    if(t.type !== kind) return false;
+    if(kind==="RETURN" ? t.subtype!=="RETURN" : t.type !== kind) return false;
     if(f.cat){ const ci = itemById(t.itemId); if(!ci || (ci.category||"Board") !== f.cat) return false; }
     if(f.item && t.itemId !== f.item) return false;
     if(f.from && t.date < f.from) return false;
@@ -1901,6 +1903,25 @@ function txnRows(kind, f){
 }
 function renderStockIn(){ renderTxns("IN"); }
 function renderStockOut(){ renderTxns("OUT"); }
+function renderStockReturn(){
+  const f=RETURN_F, rows=txnRows("RETURN",f);
+  const total=rows.reduce((s,t)=>s+(Number(t.qty)||0),0);
+  $("#view-stockreturn").innerHTML=`
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Returns</b></div><h1>Stock Returns</h1><p>Material returned back to store after issue</p></div>
+    <div class="page-actions"><button class="btn" onclick="exportTxnXlsx(&quot;RETURN&quot;)">\u2913 Excel</button>${canWrite()?`<button class="btn btn-green" onclick="stockReturnModal()">+ New Return</button>`:""}</div></div>
+  <div class="filter-bar">
+    <div class="search-wrap"><input class="input" placeholder="Search item, return ref, client, note…" value="${esc(f.q)}" oninput="RETURN_F.q=this.value;renderStockReturn()"></div>
+    <select class="select" onchange="RETURN_F.cat=this.value;renderStockReturn()"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
+    <select class="select" onchange="RETURN_F.item=this.value;renderStockReturn()"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemLabel(it))}</option>`).join("")}</select>
+    <input type="date" class="input" style="max-width:160px" value="${f.from}" onchange="RETURN_F.from=this.value;renderStockReturn()">
+    <input type="date" class="input" style="max-width:160px" value="${f.to}" onchange="RETURN_F.to=this.value;renderStockReturn()">
+  </div>
+  <div class="table-card"><div style="padding:14px 16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><h3 style="font-size:14.5px">Return Entries <span style="color:var(--faint);font-weight:400">(${rows.length})</span></h3><span style="color:var(--muted);font-size:12.5px">Total returned: <b>${total}</b></span></div>
+  <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Item</th><th class="num">Qty</th><th>Return Ref</th><th>Return From / Client</th><th>Originally Issued To</th><th>Note</th><th>By</th><th></th></tr></thead><tbody>
+  ${rows.map(t=>{const it=itemById(t.itemId);return `<tr class="${txnCategoryTone(it?it.category:"Other")}"><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td>${it?`<span class="cat-chip">${esc(it.category||"Board")}</span>`:""}</td><td><b>${esc(itemName(it))}</b></td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.referenceNo||"")}</td><td class="muted">${esc(t.department||"")}</td><td class="muted">${esc(t.issuedTo||"")}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td><td class="num">${isAdmin()?`<button class="btn" style="padding:3px 10px;font-size:12px" onclick="reverseTxn(&quot;${esc(t.id)}&quot;)">Reverse</button>`:""}</td></tr>`;}).join("") || `<tr><td colspan="11" style="text-align:center;color:var(--faint);padding:28px">No returns found</td></tr>`}
+  </tbody></table></div></div>`;
+}
+
 function renderTxns(kind){
   const fin = kind === "IN", f = fin ? SI_F : SO_F, F = fin ? "SI_F" : "SO_F";
   const rows = txnRows(kind, f);
