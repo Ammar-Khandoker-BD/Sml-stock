@@ -1677,6 +1677,10 @@ async function submitItem(e,id){
       if(!snap.exists) throw new Error("Inventory database not found");
       const db=snap.data()||{};
       const items=Array.isArray(db.items)?db.items.map(it=>Object.assign({},it)):[];
+      const normalizeItemPart=v=>String(v??"").trim().replace(/\\s+/g," ").toLowerCase();
+      const makeItemKey=x=>[x.category||"Board",x.type||"",x.color||"",x.thickness||""].map(normalizeItemPart).join("|");
+      const duplicate=items.some(x=>x.id!==id && makeItemKey(x)===makeItemKey(data));
+      if(duplicate) throw new Error("An item with the same Category, Type, Color and Thickness already exists");
       const seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},db.seq||{});
       const now=Date.now();
       const auditRef=fdb.collection("erp_audit").doc();
@@ -2340,7 +2344,9 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORM
     const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
     const item=items.find(it=>it.id===itemId);
     if(!item) throw new Error("Item not found");
-    const delta=Number(qtyDelta)||0;
+    const delta=Number(qtyDelta);
+    if(!Number.isFinite(delta) || delta===0) throw new Error("Quantity must be a finite non-zero number");
+    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(date||""))) throw new Error("Invalid transaction date");
     const current=Number(item.stock)||0;
     if(delta<0 && current+delta<0) throw new Error("Not enough stock — only "+current+" "+(item.uom||"Pcs")+" left");
     item.stock=current+delta;
