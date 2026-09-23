@@ -2627,7 +2627,11 @@ function delSupplier(id){
 
 /* ---------- users (Firebase roles) ---------- */
 let ROLES = [];
-function accessOf(role){ role = String(role||"").toLowerCase(); return role==="admin" ? "Admin" : (role==="staff"||role==="store") ? "Store" : "Viewer"; }
+function accessOf(role,email){
+  if(String(email||"").toLowerCase()===SUPER_ADMIN_EMAIL) return "Super Admin";
+  role = String(role||"").toLowerCase();
+  return role==="admin" ? "Admin" : (role==="staff"||role==="store") ? "Store" : "Viewer";
+}
 function renderUsers(){
   if(!canManageUsers()){ toast("Only Super Admin can manage users"); show("dashboard"); return; }
   $("#view-users").innerHTML = `<div class="page-head"><div><div class="crumb">Administration / <b>Users</b></div><h1>Users &amp; Access</h1><p>Loading\u2026</p></div></div>`;
@@ -2639,7 +2643,7 @@ function renderUsers(){
     <div class="page-actions"><button class="btn btn-primary" onclick="userModal()">+ Add User</button></div></div>
   <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>Super Admin only:</b> Create users here with email, password, name and access type — no Firebase Console step is required.</div></div>
   <div class="table-card"><div class="table-scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Access</th><th></th></tr></thead><tbody>
-  ${ROLES.map(r => { const acc = accessOf(r.role); return `<tr><td class="type-cell">${esc(r.email)}${r.email===currentUser.id?' <span style="color:var(--faint);font-size:11px">(you)</span>':""}</td><td>${esc(r.name||"\u2014")}</td><td><span class="badge ${acc.toLowerCase()}">${acc.toUpperCase()}</span></td>
+  ${ROLES.map(r => { const acc = accessOf(r.role,r.email); return `<tr><td class="type-cell">${esc(r.email)}${r.email===currentUser.id?' <span style="color:var(--faint);font-size:11px">(you)</span>':""}</td><td>${esc(r.name||"\u2014")}</td><td><span class="badge ${acc.toLowerCase()}">${acc.toUpperCase()}</span></td>
     <td style="white-space:nowrap"><button class="btn btn-sm" onclick="userModal('${esc(r.email)}')">Edit</button> <button class="btn btn-sm btn-danger-soft" onclick="delUser('${esc(r.email)}')">Delete</button></td></tr>`; }).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:30px">No users yet \u2014 add your team</td></tr>`}
   </tbody></table></div></div>`;
   }).catch(() => { if(CURRENT_VIEW==="users") toast("Could not load users"); });
@@ -2711,7 +2715,7 @@ function userModal(email){
     </div>
   </div>
   ${r ? "" : `<div class="field"><label>Password *</label><input class="input" id="fPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Minimum 6 characters"><div class="hint">Use a strong password. The user can sign in with this email and password immediately.</div></div>`}
-  <div class="field"><label>Access Type</label><select class="select" id="fAccess">${["Admin","Store","Viewer"].map(a=>`<option ${r&&accessOf(r.role)===a?"selected":""}>${a}</option>`).join("")}</select></div>
+  <div class="field"><label>Access Type</label><select class="select" id="fAccess">${["Admin","Store","Viewer"].map(a=>`<option ${r&&accessOf(r.role,r.email)===a?"selected":""}>${a}</option>`).join("")}</select></div>
   ${r ? `<div class="note" style="margin-top:10px">Password changes are handled through Firebase Authentication's password reset flow. Edit here updates the user's ERP role/name only.</div>` : ""}
   <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="userSaveBtn" onclick="submitUser('${r?esc(r.email):""}')">${r?"Save Changes":"Create User"}</button></div>`);
   setTimeout(renderUserPhotoPreview,0);
