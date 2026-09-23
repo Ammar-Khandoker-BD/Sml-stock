@@ -1159,13 +1159,27 @@ const nowTime = () => new Date().toTimeString().slice(0,8);
 let DB = null, currentUser = null;
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
-let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null;
-
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [];
 function save(){
   if(!DB) return Promise.resolve(false);
   clearTimeout(saveTimer);
-  const promise = new Promise((resolve,reject)=>saveWaiters.push({resolve,rejecasync function doSave(){
+  const promise = new Promise((resolve,reject)=>saveWaiters.push({resolve,reject}));
+  saveTimer = setTimeout(async ()=>{
+    saveTimer = null;
+    try{
+      const ok = await doSave();
+      const waiters = saveWaiters.splice(0);
+      waiters.forEach(w=>w.resolve(ok));
+    }catch(err){
+      const waiters = saveWaiters.splice(0);
+      waiters.forEach(w=>w.reject(err));
+      console.error(err);
+    }
+  },350);
+  return promise;
+}
+function metaOf(db){ const m = Object.assign({}, db); delete m.txns; delete m.audit; delete m.users; m.client = CLIENT_ID; m.rev = Date.now(); return m; }
+async function doSave(){
   if(!DB) return false;
   const ops = [[fdb.collection("erp").doc("main"), metaOf(DB)]];
   const newTxnIds=[];
@@ -1194,18 +1208,6 @@ function save(){
   newTxnIds.forEach(id=>SAVED_TXN.add(id));
   newAuditIds.forEach(id=>SAVED_AUDIT.add(id));
   return true;
-}
-ate.now().toString(36) + Math.random().toString(36).slice(2,6);
-    if(!a.ts) a.ts = Date.now();
-    if(!SAVED_AUDIT.has(a.id)){ ops.push([fdb.collection("erp_audit").doc(a.id), a]); SAVED_AUDIT.add(a.id); }
-  });
-  const commits = [];
-  for(let i = 0; i < ops.length; i += 400){
-    const b = fdb.batch();
-    ops.slice(i, i+400).forEach(o => b.set(o[0], o[1]));
-    commits.push(b.commit());
-  }
-  return Promise.all(commits).catch(e => { console.error(e); toast("Save failed — check internet connection"); });
 }
 function sortTxns(){ DB.txns.sort((a,b) => b.date === a.date ? String(b.id).localeCompare(String(a.id)) : String(b.date).localeCompare(String(a.date))); }
 async function loadData(){
