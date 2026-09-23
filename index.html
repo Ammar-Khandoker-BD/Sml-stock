@@ -1522,6 +1522,7 @@ function renderItems(){
   $("#view-items").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
+      ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
       <button class="btn" onclick="downloadItemTemplate()">\u2913 Template</button>
       <button class="btn" onclick="exportItems()">\u2913 Export Excel</button>
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
