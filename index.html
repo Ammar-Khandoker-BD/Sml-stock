@@ -1866,7 +1866,7 @@ async function importItemRows(rows){
       transaction.update(mainRef,{items:liveItems,seq,client:CLIENT_ID,rev:now});
       newTxns.forEach(tx=>transaction.set(fdb.collection("erp_txns").doc(tx.id),tx));
       transaction.set(auditRef,audit);
-      result={items:liveItems,seq,txns:newTxns,audit,liveDuplicateCount,liveSlConflictCount};
+      result={items:liveItems,seq,txns:newTxns,audit,liveDuplicateCount,liveSlConflictCount,acceptedCount:accepted.length};
     });
   }catch(err){
     console.error(err);
@@ -1874,12 +1874,13 @@ async function importItemRows(rows){
     return;
   }
 
+  const importedCount=result.acceptedCount||0;
   DB.items=result.items; DB.seq=result.seq;
   result.txns.forEach(t=>{DB.txns.push(t); SAVED_TXN.add(t.id);});
   DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
   sortTxns(); renderItems();
   const extraLive=result.liveDuplicateCount ? " · "+result.liveDuplicateCount+" concurrent duplicate(s) skipped" : "";
-  toast("Imported "+result.items.length+" items"+(result.txns.length ? " · "+result.txns.length+" opening balance(s)" : "")+extraLive);
+  toast("Imported "+importedCount+" items"+(result.txns.length ? " · "+result.txns.length+" opening balance(s)" : "")+extraLive);
 }
 
 function downloadItemTemplate(){
