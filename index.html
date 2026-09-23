@@ -2011,12 +2011,26 @@ function rememberTxnDate(kind, date){
   try { localStorage.setItem(TXN_DATE_KEYS[kind], date); } catch(err) {}
 }
 function txnItemMatches(it, query){
-  if(!query) return true;
-  const hay = [
+  const q=String(query||"").trim().toLowerCase();
+  if(!q) return true;
+  const hay=[
     itemName(it), it.category||"", it.type||"", it.color||"",
     it.thickness||"", it.page||"", it.sl||""
   ].join(" ").toLowerCase();
-  return hay.includes(query.trim().toLowerCase());
+  return q.split(/\s+/).filter(Boolean).every(token=>hay.includes(token));
+}
+function handleTxnItemSearch(input){
+  const value=String(input&&input.value||"");
+  TXN_ITEM_SEARCH=value;
+  const hidden=$("#txItem");
+  const selected=hidden?hidden.value:"";
+  if(selected){
+    const it=itemById(selected);
+    if(!it || itemLabel(it)!==value){
+      if(hidden) hidden.value="";
+    }
+  }
+  renderTxnItemOptions(true);
 }
 function txnNoteSuggestions(kind){
   const seen = new Set();
@@ -2124,7 +2138,9 @@ function getRememberedTxnNotes(kind){
 function renderTxnItemOptions(show){
   const box = $("#txItemResults");
   if(!box) return;
-  const query = (TXN_ITEM_SEARCH || "").trim().toLowerCase();
+  const input=$("#txItemSearch");
+  const query=String(input?input.value:TXN_ITEM_SEARCH||"").trim();
+  TXN_ITEM_SEARCH=query;
   const selectedId = $("#txItem") ? $("#txItem").value : "";
   const items = DB.items.slice()
     .sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b)))
@@ -2228,6 +2244,23 @@ async function renderStockReturn(){
   </tbody></table></div></div>`;
 }
 
+function scheduleTxnFilterRender(kind,input){
+  const value=String(input&&input.value||"");
+  const caret=Number.isFinite(input&&input.selectionStart)?input.selectionStart:value.length;
+  if(window.__smlTxnFilterTimer) clearTimeout(window.__smlTxnFilterTimer);
+  window.__smlTxnFilterTimer=setTimeout(()=>{
+    window.__smlTxnFilterTimer=null;
+    const target=kind==="IN"?SI_F:SO_F;
+    target.q=value;
+    renderTxns(kind);
+    const viewId=kind==="IN"?"stockin":"stockout";
+    const next=document.querySelector("#view-"+viewId+" .search-wrap .input");
+    if(next){
+      next.focus();
+      try{ next.setSelectionRange(caret,caret); }catch(e){}
+    }
+  },120);
+}
 async function renderTxns(kind){
   const fin=kind==="IN", f=fin?SI_F:SO_F, F=fin?"SI_F":"SO_F";
   const loadId=++TXN_VIEW_LOAD_ID;
@@ -2250,7 +2283,7 @@ async function renderTxns(kind){
       ${canWrite()?`<button class="btn ${fin?"btn-green":"btn-primary"}" onclick="txnModal('${kind}')">+ New ${fin?"Stock In":"Stock Out"}</button>`:""}
     </div></div>
   <div class="filter-bar">
-    <div class="search-wrap"><input class="input" placeholder="Search item, note, user\u2026" value="${esc(f.q)}" oninput="${F}.q=this.value;renderTxns('${kind}')"></div>
+    <div class="search-wrap"><input class="input" placeholder="Search item, note, user\u2026" value="${esc(f.q)}" oninput="scheduleTxnFilterRender('${kind}',this)"></div>
 
     <select class="select" onchange="${F}.cat=this.value;renderTxns('${kind}')"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
     <select class="select" onchange="${F}.item=this.value;renderTxns('${kind}')"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemLabel(it))}</option>`).join("")}</select>
@@ -2276,7 +2309,7 @@ function txnModal(kind){
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input class="input" id="txItemSearch" type="search" placeholder="Search item…" autocomplete="off"
           onfocus="renderTxnItemOptions(true)"
-          oninput="TXN_ITEM_SEARCH=this.value;renderTxnItemOptions(true)">
+          oninput="handleTxnItemSearch(this)">
         <input id="txItem" type="hidden" value="">
         <div id="txItemResults" class="searchable-options"></div>
       </div>
