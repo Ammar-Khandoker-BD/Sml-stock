@@ -1482,10 +1482,42 @@ function renderDashboard(){
   const outCount = DB.items.filter(it => (Number(it.stock)||0) <= 0).length;
   const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
   const recent = DB.txns.slice(0,8);
+
+  const catMap = {};
+  DB.items.forEach(it => {
+    const cat = it.category || "Other";
+    if(!catMap[cat]) catMap[cat] = {items:0,stock:0,low:0,out:0,in:0,outm:0};
+    const row = catMap[cat];
+    const stock = Number(it.stock)||0;
+    row.items++;
+    row.stock += stock;
+    if(stock<=0) row.out++;
+    if(stock<=Number(it.alarm)||0) row.low++;
+  });
+  DB.txns.forEach(t => {
+    if(String(t.date||"").slice(0,7)!==month) return;
+    const it = itemById(t.itemId);
+    const cat = it ? (it.category||"Other") : "Other";
+    if(!catMap[cat]) catMap[cat] = {items:0,stock:0,low:0,out:0,in:0,outm:0};
+    const q = Math.abs(Number(t.qty)||0);
+    if(t.type==="IN") catMap[cat].in += q;
+    else if(t.type==="OUT") catMap[cat].outm += q;
+  });
+  const categoryRows = Object.keys(catMap)
+    .map(cat => ({cat,...catMap[cat],net:catMap[cat].in-catMap[cat].outm}))
+    .sort((a,b)=>b.stock-a.stock || a.cat.localeCompare(b.cat));
+
+  const totalCat = categoryRows.reduce((a,r)=>({
+    items:a.items+r.items, stock:a.stock+r.stock, low:a.low+r.low, out:a.out+r.out,
+    in:a.in+r.in, outm:a.outm+r.outm, net:a.net+r.net
+  }),{items:0,stock:0,low:0,out:0,in:0,outm:0,net:0});
+
   $("#view-dashboard").innerHTML = `
   <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Stock overview — ${esc(DB.settings.company)}</p></div>
     <div class="page-actions"><button class="btn btn-green" onclick="txnModal('IN')">+ Stock In</button><button class="btn btn-primary" onclick="txnModal('OUT')">+ Stock Out</button></div></div>
-  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items →</a></div></div>` : ""}
+
+  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 0L10.3 3.9z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items →</a></div></div>` : ""}
+
   <div class="kpi-grid">
     <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${fmtQty(DB.items.length)}</div><div class="delta">in item master</div></div>
     <div class="card kpi"><div class="label">Total Stock</div><div class="value">${fmtQty(totalStock)}</div><div class="delta">all recorded units</div></div>
@@ -1494,17 +1526,46 @@ function renderDashboard(){
     <div class="card kpi k-green"><div class="label">Stock In — this month</div><div class="value">${fmtQty(inMonth)}</div><div class="delta">material received</div></div>
     <div class="card kpi k-orange"><div class="label">Stock Out — this month</div><div class="value">${fmtQty(outMonth)}</div><div class="delta">delivered / used</div></div>
   </div>
+
   <div class="grid-2">
     <div class="card"><h3>Stock In vs Out — last 14 days</h3><div class="sub">Daily quantity</div>
       <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
-    <div class="card"><h3>Current Stock by Category</h3><div class="sub">Total quantity per category</div>
-      <div class="chart-box"><canvas id="dashBar"></canvas></div></div>
+    <div class="card"><h3>Category Overview</h3><div class="sub">Current stock distribution by category</div>
+      <div class="table-scroll"><table><thead><tr><th>Category</th><th class="num">Items</th><th class="num">Stock</th></tr></thead><tbody>
+      ${categoryRows.map(r=>`<tr><td><b>${esc(r.cat)}</b></td><td class="num">${fmtQty(r.items)}</td><td class="num"><b>${fmtQty(r.stock)}</b></td></tr>`).join("") || '<tr><td colspan="3" class="dash-empty">No categories yet.</td></tr>'}
+      </tbody></table></div></div>
   </div>
+
+  <div class="table-card">
+    <div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Category-wise Inventory Summary</h3><div class="sub">Live category performance for ${esc(month)}</div></div>
+    <div class="table-scroll"><table><thead><tr>
+      <th>Category</th><th class="num">Items</th><th class="num">Current Stock</th><th class="num">Low</th><th class="num">Out</th><th class="num">In</th><th class="num">Out</th><th class="num">Net</th>
+    </tr></thead><tbody>
+      ${categoryRows.map(r=>`<tr>
+        <td><span class="cat-chip">${esc(r.cat)}</span></td>
+        <td class="num">${fmtQty(r.items)}</td>
+        <td class="num"><b>${fmtQty(r.stock)}</b></td>
+        <td class="num ${r.low>0?"neg":""}">${fmtQty(r.low)}</td>
+        <td class="num ${r.out>0?"neg":""}">${fmtQty(r.out)}</td>
+        <td class="num pos">+${fmtQty(r.in)}</td>
+        <td class="num neg">−${fmtQty(r.outm)}</td>
+        <td class="num ${r.net>=0?"pos":"neg"}">${r.net>=0?"+":"−"}${fmtQty(Math.abs(r.net))}</td>
+      </tr>`).join("") || '<tr><td colspan="8" class="dash-empty">No inventory data yet.</td></tr>'}
+      ${categoryRows.length ? `<tr style="background:#FAF9F7;font-weight:800">
+        <td>Total</td><td class="num">${fmtQty(totalCat.items)}</td><td class="num">${fmtQty(totalCat.stock)}</td>
+        <td class="num">${fmtQty(totalCat.low)}</td><td class="num">${fmtQty(totalCat.out)}</td>
+        <td class="num pos">+${fmtQty(totalCat.in)}</td><td class="num neg">−${fmtQty(totalCat.outm)}</td>
+        <td class="num ${totalCat.net>=0?"pos":"neg"}">${totalCat.net>=0?"+":"−"}${fmtQty(Math.abs(totalCat.net))}</td>
+      </tr>` : ""}
+    </tbody></table></div>
+  </div>
+
   <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3><div class="sub">Latest stock movements</div></div>
     <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>Note</th><th>By</th></tr></thead><tbody>
     ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.subtype==="RETURN"?"RET":t.type)}</td><td class="num"><b>${fmtQty(Math.abs(t.qty))}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet — add your first Stock In</td></tr>`}
     </tbody></table></div></div>`;
+
   const labels = [], ins = [], outs = [];
   for(let d = 13; d >= 0; d--){
     const day = daysAgo(d); labels.push(fmtD(day));
@@ -1512,10 +1573,6 @@ function renderDashboard(){
     outs.push(DB.txns.filter(t => t.date===day && t.type==="OUT").reduce((s,t)=>s+Math.abs(Number(t.qty)||0),0));
   }
   drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
-  const tb = {};
-  DB.items.forEach(it => { const k = it.category || "Other"; tb[k] = (tb[k]||0) + (Number(it.stock)||0); });
-  const top = Object.keys(tb).map(k => [k, tb[k]]).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  drawBarChart($("#dashBar"), top.map(x=>x[0]), top.map(x=>x[1]), "#2F6FBF");
 }
 
 /* ---------- items ---------- */
