@@ -3129,27 +3129,67 @@ function supplierModal(id){
     <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save Supplier</button></div>
   </form>`);
 }
-function submitSupplier(e,id){
+async function submitSupplier(e,id){
   e.preventDefault(); if(!isAdmin()) return;
   const name=$("#spName").value.trim();
   if(!name){ toast("Supplier name is required"); return; }
   const data={name,contact:$("#spContact").value.trim(),phone:$("#spPhone").value.trim(),email:$("#spEmail").value.trim(),address:$("#spAddress").value.trim(),active:$("#spActive").value==="1"};
-  const duplicate=(DB.suppliers||[]).some(s=>s.id!==id && String(s.name||"").trim().toLowerCase()===name.toLowerCase());
-  if(duplicate){ toast("Supplier already exists"); return; }
-  if(id){ Object.assign(supplierById(id),data); audit("Updated supplier: "+name); }
-  else { DB.suppliers.push(Object.assign({id:"sp"+Date.now()},data)); audit("Added supplier: "+name); }
-  save(); closeModal(); renderSuppliers(); toast(id?"Supplier updated":"Supplier added");
+  try{
+    const mainRef=fdb.collection("erp").doc("main");
+    let result=null;
+    await fdb.runTransaction(async transaction=>{
+      const snap=await transaction.get(mainRef);
+      if(!snap.exists) throw new Error("Inventory database not found");
+      const db=snap.data()||{};
+      const suppliers=Array.isArray(db.suppliers)?db.suppliers.map(x=>Object.assign({},x)):[];
+      const duplicate=suppliers.some(s=>s.id!==id && String(s.name||"").trim().toLowerCase()===name.toLowerCase());
+      if(duplicate) throw new Error("Supplier already exists");
+      const now=Date.now();
+      let supplier;
+      if(id){
+        supplier=suppliers.find(x=>x.id===id);
+        if(!supplier) throw new Error("Supplier not found");
+        Object.assign(supplier,data);
+      }else{
+        supplier=Object.assign({id:"sp"+now.toString(36)+"_"+Math.random().toString(36).slice(2,6)},data);
+        suppliers.push(supplier);
+      }
+      const auditRef=fdb.collection("erp_audit").doc();
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(id?"Updated supplier: ":"Added supplier: ")+name};
+      transaction.update(mainRef,{suppliers,client:CLIENT_ID,rev:now});
+      transaction.set(auditRef,audit);
+      result={suppliers,audit};
+    });
+    DB.suppliers=result.suppliers; DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
+    closeModal(); renderSuppliers(); toast(id?"Supplier updated":"Supplier added");
+  }catch(err){ console.error(err); toast(err.message||"Could not save supplier"); }
 }
-function delSupplier(id){
+async function delSupplier(id){
   if(!isAdmin()) return;
   const s=supplierById(id); if(!s) return;
-  if(DB.txns.some(t=>t.supplierId===id)){ toast("Cannot delete — supplier is used in stock history"); return; }
-  if(!confirm("Delete supplier \""+s.name+"?\"")) return;
-  DB.suppliers=DB.suppliers.filter(x=>x.id!==id);
-  audit("Deleted supplier: "+s.name);
-  save(); renderSuppliers(); toast("Supplier deleted");
+  if(!confirm("Delete supplier \""+s.name+"\"?")) return;
+  try{
+    const mainRef=fdb.collection("erp").doc("main");
+    let result=null;
+    await fdb.runTransaction(async transaction=>{
+      const snap=await transaction.get(mainRef);
+      if(!snap.exists) throw new Error("Inventory database not found");
+      const usedSnap=await transaction.get(fdb.collection("erp_txns").where("supplierId","==",id).limit(1));
+      if(!usedSnap.empty) throw new Error("Cannot delete — supplier is used in stock history");
+      const db=snap.data()||{};
+      const suppliers=Array.isArray(db.suppliers)?db.suppliers.filter(x=>x.id!==id):[];
+      if(suppliers.length===(Array.isArray(db.suppliers)?db.suppliers.length:0)) throw new Error("Supplier not found");
+      const now=Date.now();
+      const auditRef=fdb.collection("erp_audit").doc();
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Deleted supplier: "+s.name};
+      transaction.update(mainRef,{suppliers,client:CLIENT_ID,rev:now});
+      transaction.set(auditRef,audit);
+      result={suppliers,audit};
+    });
+    DB.suppliers=result.suppliers; DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
+    renderSuppliers(); toast("Supplier deleted");
+  }catch(err){ console.error(err); toast(err.message||"Could not delete supplier"); }
 }
-
 /* ---------- users (Firebase roles) ---------- */
 let ROLES = [];
 function accessOf(role,email){
