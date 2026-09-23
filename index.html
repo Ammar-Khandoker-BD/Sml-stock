@@ -1944,6 +1944,7 @@ function renderTxns(kind){
   $(fin ? "#view-stockin" : "#view-stockout").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>${fin?"Stock In":"Stock Out"}</b></div><h1>${fin?"Stock In":"Stock Out"}</h1><p>${fin?"Material received into store":"Material issued / delivered from store"}</p></div>
     <div class="page-actions">
+      ${fin?`<button class="btn" onclick="downloadStockInImportTemplate()">\u2913 Import Template</button><label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importStockInSmart(this)"></label>`:""}
       <button class="btn" onclick="exportTxnXlsx('${kind}')">\u2913 Excel</button>
       ${canWrite()?`<button class="btn ${fin?"btn-green":"btn-primary"}" onclick="txnModal('${kind}')">+ New ${fin?"Stock In":"Stock Out"}</button>`:""}
     </div></div>
@@ -2142,6 +2143,91 @@ function prepareNextTxnEntry(kind){
   setTimeout(()=>{ const s=$("#txItemSearch"); if(s){ s.focus(); s.select(); } },40);
 }
 
+function normalizeImportDate(value){
+  const s=String(value??"").trim();
+  if(!s) return todayISO();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(m){
+    const a=Number(m[1]), b=Number(m[2]), y=Number(m[3]);
+    let d, mon; if(a>12){d=a;mon=b;} else if(b>12){d=b;mon=a;} else {d=a;mon=b;}
+    const iso=y+"-"+String(mon).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    const dt=new Date(iso+"T00:00:00");
+    if(!Number.isNaN(dt.getTime())&&dt.getFullYear()===y&&dt.getMonth()+1===mon&&dt.getDate()===d) return iso;
+  }
+  const parsed=new Date(s);
+  if(!Number.isNaN(parsed.getTime())) return parsed.getFullYear()+"-"+String(parsed.getMonth()+1).padStart(2,"0")+"-"+String(parsed.getDate()).padStart(2,"0");
+  throw new Error("Invalid date: "+s);
+}
+function parseStockInImportRows(rows){
+  if(!Array.isArray(rows)||!rows.length) throw new Error("Excel/CSV is empty");
+  const head=(rows[0]||[]).map(v=>String(v??"").trim().toLowerCase());
+  const col=(...names)=>{for(const n of names){const i=head.findIndex(h=>h===n||h.includes(n));if(i>=0)return i;}return -1;};
+  const cDate=col("date"), cSl=col("item sl","sl"), cQty=col("quantity","qty"), cSupplier=col("supplier"), cRef=col("challan / reference","challan","reference"), cNote=col("note");
+  if(cSl<0) throw new Error('Import needs an "Item SL" column');
+  if(cQty<0) throw new Error('Import needs a "Quantity" column');
+  const out=[];
+  rows.slice(1).forEach((r,rowIndex)=>{
+    const cells=r||[], rawSl=String(cells[cSl]??"").trim(), rawQty=String(cells[cQty]??"").replace(/,/g,"").trim();
+    if(!rawSl&&!rawQty&&cells.every(v=>String(v??"").trim()==="")) return;
+    if(!rawSl) throw new Error("Row "+(rowIndex+2)+": Item SL is required");
+    const sl=Number(rawSl); if(!Number.isInteger(sl)||sl<1) throw new Error("Row "+(rowIndex+2)+": invalid Item SL "+rawSl);
+    const qty=Number(rawQty); if(!Number.isFinite(qty)||qty<=0) throw new Error("Row "+(rowIndex+2)+": Quantity must be greater than 0");
+    out.push({row:rowIndex+2,date:normalizeImportDate(cDate>=0?cells[cDate]:""),sl,qty,supplier:String(cSupplier>=0?cells[cSupplier]??"":"").trim(),referenceNo:String(cRef>=0?cells[cRef]??"":"").trim(),note:String(cNote>=0?cells[cNote]??"":"").trim()});
+  });
+  if(!out.length) throw new Error("No Stock In rows found");
+  if(out.length>200) throw new Error("Maximum 200 Stock In rows per upload");
+  return out;
+}
+async function importStockInSmart(inp){
+  const file=inp&&inp.files&&inp.files[0]; if(!file)return;
+  if(!canWrite()){inp.value="";return;}
+  try{
+    const rows=/\.csv$/i.test(file.name||"")?parseCSV(await file.text()):await readXlsxRows(file);
+    const entries=parseStockInImportRows(rows);
+    const slMap=new Map(DB.items.map(it=>[Number(it.sl),it]));
+    const supplierMap=new Map((DB.suppliers||[]).map(s=>[String(s.name||"").trim().toLowerCase(),s]));
+    for(const e of entries){
+      if(!slMap.get(e.sl)) throw new Error("Row "+e.row+": Item SL "+e.sl+" was not found in Items");
+      if(e.supplier){const s=supplierMap.get(e.supplier.toLowerCase());if(!s)throw new Error("Row "+e.row+": Supplier not found — "+e.supplier);if(s.active===false)throw new Error("Row "+e.row+": Supplier is inactive — "+e.supplier);}
+    }
+    if(!confirm("Import "+entries.length+" Stock In entries?\n\nStock will be increased and each row will be added to Stock In history. Existing items are matched by Item SL.")) return;
+    toast("Importing Stock In… please wait");
+    const mainRef=fdb.collection("erp").doc("main"); let result=null;
+    await fdb.runTransaction(async transaction=>{
+      const snap=await transaction.get(mainRef); if(!snap.exists) throw new Error("Inventory database not found");
+      const data=snap.data()||{}, items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[], liveBySl=new Map(items.map(it=>[Number(it.sl),it]));
+      let seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{}), si=Number(seq.si)||0, now=Date.now(), txns=[];
+      entries.forEach(e=>{
+        const item=liveBySl.get(e.sl); if(!item) throw new Error("Item SL "+e.sl+" was not found in live inventory");
+        si++; item.stock=(Number(item.stock)||0)+e.qty;
+        const supplierId=e.supplier?((supplierMap.get(e.supplier.toLowerCase())||{}).id||""):"";
+        const txId="SI-"+String(si).padStart(4,"0");
+        const txn={id:txId,type:"IN",subtype:"NORMAL",referenceId:"",supplierId,referenceNo:e.referenceNo,department:"",issuedTo:"",purpose:"",date:e.date,itemId:item.id,qty:e.qty,note:e.note,by:currentUser?currentUser.username:"system",createdAt:now};
+        transaction.set(fdb.collection("erp_txns").doc(txId),txn); txns.push(txn);
+      });
+      seq.si=si;
+      const auditRef=fdb.collection("erp_audit").doc(), total=entries.reduce((s,e)=>s+e.qty,0);
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Bulk Stock In import · "+entries.length+" entries · "+total+" Pcs"};
+      transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now}); transaction.set(auditRef,audit); result={items,seq,txns,audit};
+    });
+    DB.items=result.items; DB.seq=result.seq; (result.txns||[]).forEach(txn=>{DB.txns.push(txn);SAVED_TXN.add(txn.id);});
+    DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id); if(DB.audit.length>1000)DB.audit.length=1000;
+    sortTxns(); renderAll(); toast("Stock In imported successfully · "+entries.length+" entries");
+  }catch(err){console.error(err);toast(err.message||"Could not import Stock In file");}finally{inp.value="";}
+}
+async function downloadStockInImportTemplate(){
+  if(!canWrite()){toast("You do not have permission to download the Stock In template");return;}
+  if(typeof ExcelJS==="undefined"){toast("Excel export library is still loading — try again");return;}
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet("Stock In Import"), head=["Date","Item SL","Quantity","Supplier","Challan / Reference No.","Note"];
+  ws.addRow(head); ws.addRow([todayISO(),1,25,"Example Supplier","CH-1025","New material received"]); ws.addRow(["",2,10,"","CH-1026","Received against reference"]);
+  ws.getRow(1).eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};});
+  [15,12,14,24,26,34].forEach((w,i)=>ws.getColumn(i+1).width=w); ws.getRange("A2:A200").numFmt="yyyy-mm-dd"; ws.getRange("C2:C200").numFmt="0.00"; ws.views=[{state:"frozen",ySplit:1}];
+  const ins=wb.addWorksheet("Instructions"); ins.addRow(["Column","What to enter"]); [["Date","YYYY-MM-DD. Leave blank to use today."],["Item SL","ERP Item SL number. Required."],["Quantity","Positive received quantity. Required."],["Supplier","Optional. Must match an active Supplier in ERP."],["Challan / Reference No.","Optional."],["Note","Optional."]].forEach(r=>ins.addRow(r));
+  ins.getRow(1).eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};}); ins.getColumn(1).width=28; ins.getColumn(2).width=80;
+  const buffer=await wb.xlsx.writeBuffer(), url=URL.createObjectURL(new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  const a=document.createElement("a"); a.href=url; a.download="SML_Stock_In_Import_Template.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("Stock In import template downloaded");
+}
 async function submitTxn(e,kind){
   e.preventDefault(); if(!canWrite()) return;
   const fin=kind==="IN";
