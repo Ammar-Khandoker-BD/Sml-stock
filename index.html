@@ -1472,14 +1472,14 @@ function renderDashboard(){
   ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items \u2192</a></div></div>` : ""}
   <div class="kpi-grid">
     <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${DB.items.length}</div><div class="delta">in item master</div></div>
-    <div class="card kpi"><div class="label">Total Stock</div><div class="value">${totalStock}</div><div class="delta">all items combined · Pcs</div></div>
+    <div class="card kpi"><div class="label">Total Stock</div><div class="value">${fmtQty(totalStock)}</div><div class="delta">all items combined · Pcs</div></div>
     <div class="card kpi k-blue"><div class="label">Stock Value</div><div class="value">Tk ${DB.items.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0).toLocaleString("en-IN",{maximumFractionDigits:0})}</div><div class="delta">current valuation</div></div>
     <div class="card kpi k-red"><div class="label">Out of Stock</div><div class="value">${DB.items.filter(it=>(Number(it.stock)||0)<=0).length}</div><div class="delta">items at zero</div></div>
-    <div class="card kpi k-green"><div class="label">Stock In \u2014 this month</div><div class="value">${inMonth}</div><div class="delta">material received</div></div>
-    <div class="card kpi k-orange"><div class="label">Stock Out \u2014 this month</div><div class="value">${outMonth}</div><div class="delta">delivered / used</div></div>
+    <div class="card kpi k-green"><div class="label">Stock In \u2014 this month</div><div class="value">${fmtQty(inMonth)}</div><div class="delta">material received</div></div>
+    <div class="card kpi k-orange"><div class="label">Stock Out \u2014 this month</div><div class="value">${fmtQty(outMonth)}</div><div class="delta">delivered / used</div></div>
     <div class="card kpi ${low.length?"k-red":"k-green"}"><div class="label">Low Stock</div><div class="value">${low.length}</div><div class="delta">at or below alarm qty</div></div>
-    <div class="card kpi k-green"><div class="label">Today In</div><div class="value">${movementTotals(DB.txns.filter(t=>t.date===todayISO())).in}</div><div class="delta">Pcs received</div></div>
-    <div class="card kpi k-orange"><div class="label">Today Out</div><div class="value">${movementTotals(DB.txns.filter(t=>t.date===todayISO())).out}</div><div class="delta">Pcs issued</div></div>
+    <div class="card kpi k-green"><div class="label">Today In</div><div class="value">${fmtQty(movementTotals(DB.txns.filter(t=>t.date===todayISO())).in)}</div><div class="delta">Pcs received</div></div>
+    <div class="card kpi k-orange"><div class="label">Today Out</div><div class="value">${fmtQty(movementTotals(DB.txns.filter(t=>t.date===todayISO())).out)}</div><div class="delta">Pcs issued</div></div>
   </div>
   <div class="grid-2">
     <div class="card"><h3>Stock In vs Out \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
@@ -2597,6 +2597,13 @@ function exportTxns(kind){
     rows.map(t => { const it = itemById(t.itemId); return [t.id, t.date, it?it.category||"":"", it?it.type||"":"", it?it.color||"":"", it?it.thickness||"":"", itemName(it), Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; }));
 }
 
+function roundQty(n){
+  const v=Number(n)||0;
+  return Math.round((v + Number.EPSILON) * 100) / 100;
+}
+function fmtQty(n){
+  return roundQty(n).toLocaleString("en-IN",{minimumFractionDigits:0,maximumFractionDigits:2});
+}
 function movementTotals(rows){
   return rows.reduce((acc,t)=>{
     const q=Number(t.qty)||0;
