@@ -2131,7 +2131,18 @@ function txnCategoryTone(category){
   for(let i=0;i<value.length;i++) hash=(hash*31+value.charCodeAt(i))>>>0;
   return "txn-row-cat-"+String.fromCharCode(97+(hash%6));
 }
+const TXN_VIEW_EXTRA_LIMIT=3000;
 let TXN_VIEW_EXTRA=new Map(), TXN_VIEW_LOAD_ID=0;
+function rememberTxnViewExtra(t){
+  if(!t || !t.id) return;
+  rememberTxnViewExtra(t);
+  if(TXN_VIEW_EXTRA.size>TXN_VIEW_EXTRA_LIMIT){
+    const keep=[...TXN_VIEW_EXTRA.values()]
+      .sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))||String(b.id||"").localeCompare(String(a.id||"")))
+      .slice(0,TXN_VIEW_EXTRA_LIMIT);
+    TXN_VIEW_EXTRA=new Map(keep.map(t=>[t.id,t]));
+  }
+}
 function txnRows(kind,f,source=DB.txns){
   return source.filter(t=>{
     if(kind==="RETURN" ? t.subtype!=="RETURN" : t.type!==kind) return false;
