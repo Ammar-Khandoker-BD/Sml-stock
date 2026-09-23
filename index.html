@@ -2269,24 +2269,29 @@ async function downloadStockInImportTemplate(){
   if(typeof ExcelJS==="undefined"){toast("Excel export library is still loading — try again");return;}
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet("Stock In Import");
   const head=["Date","Item SL","Page","Category","Type","Color","Thickness","Unit","Quantity","Alarm Qty","Supplier","Challan / Reference No.","Note"];
-  ws.addRow(head); ws.addRow(["","","","","","","","",null,null,"","",""]);
+  ws.addRow(head);
+  // Safe examples: these are clearly marked SAMPLE rows and should be replaced before upload.
+  ws.addRow(["","","","","MDF","","2.5/3 mm","Pcs",10,5,"","","SAMPLE — replace this row"]);
+  ws.addRow(["","","","","Acrylic","","3 mm","Pcs",20,5,"","","SAMPLE — replace this row"]);
+  ws.addRow(["","","","","PVC","","5 mm","Pcs",15,5,"","","SAMPLE — replace this row"]);
   ws.getRow(1).eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};});
-  ws.getRow(2).height=22; ws.getRow(2).getCell(3).value="Fill this row";
+  ws.getRows(2,3).forEach(row=>{row.height=22;row.eachCell(cell=>{cell.font={name:"Aptos",size:10,color:{argb:"FF8A3B2B"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFFF3CD"}};});});
   [15,12,14,16,20,18,16,10,14,12,24,28,34].forEach((w,i)=>ws.getColumn(i+1).width=w);
-  ws.getColumn(1).numFmt="yyyy-mm-dd"; ws.getColumn(9).numFmt="0.00"; ws.views=[{state:"frozen",ySplit:1}];
+  ws.getColumn(1).numFmt="yyyy-mm-dd"; ws.getColumn(9).numFmt="0.00"; ws.getColumn(10).numFmt="0.00";
+  ws.views=[{state:"frozen",ySplit:1}];
   const ins=wb.addWorksheet("Instructions");
   ins.addRow(["How to use the Stock In bulk import"]);
-  ins.addRow(["Existing item","Put the existing Item SL and Quantity. Leave item-detail columns blank."]);
-  ins.addRow(["New item","Leave Item SL blank and fill Page, Category, Type, Color, Thickness, Unit, Quantity and optional Alarm Qty. ERP will assign the next available SL automatically."]);
-  ins.addRow(["Date","Leave blank to use today's date, or enter YYYY-MM-DD."]);
-  ins.addRow(["Supplier","Optional; must match an active Supplier name in ERP."]);
-  ins.addRow(["Challan / Reference No.","Optional."]);
-  ins.addRow(["Note","Optional."]);
-  ins.addRow(["Important","Maximum 200 rows per upload. This import adds stock and creates Stock In history for every row."]);
+  ins.addRow(["NEW ITEM — one or many","Leave Item SL blank. Fill Page, Category, Type, Color, Thickness, Unit and Quantity. ERP assigns the next available SL automatically. You can add up to 200 new items in one upload."]);
+  ins.addRow(["EXISTING ITEM","Enter the existing Item SL and Quantity. Leave the item-detail columns blank. The quantity is added to that item's current stock."]);
+  ins.addRow(["DATE","Leave Date blank and ERP uses today's date automatically. Or enter a date such as 2026-09-23."]);
+  ins.addRow(["SUPPLIER","Optional. If filled, it must exactly match an active Supplier name in ERP."]);
+  ins.addRow(["REFERENCE","Challan / Reference No. is optional."]);
+  ins.addRow(["NOTE","Optional."]);
+  ins.addRow(["IMPORTANT","Delete/replace all yellow SAMPLE rows before uploading. Uploading the sample rows will create those items and stock entries. Maximum 200 rows per upload."]);
   ins.getRange("A1:B1").merge();
   ins.getRow(1).getCell(1).font={bold:true,size:14,color:{argb:"FFFFFFFF"}};
   ins.getRow(1).getCell(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
-  ins.getColumn(1).width=30; ins.getColumn(2).width=100; ins.views=[{state:"frozen",ySplit:1}];
+  ins.getColumn(1).width=32; ins.getColumn(2).width=115; ins.views=[{state:"frozen",ySplit:1}];
   const buffer=await wb.xlsx.writeBuffer(), url=URL.createObjectURL(new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   const a=document.createElement("a"); a.href=url; a.download="SML_Stock_In_Bulk_Import_Template.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("Stock In bulk import template downloaded");
 }
