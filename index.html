@@ -1259,6 +1259,8 @@ function attachListeners(){
     if(changed){
       sortTxns();
       DASH_MONTH_LOADED_AT=0;
+      TXN_VIEW_EXTRA_FROM="";
+      TXN_VIEW_EXTRA_TO="";
       renderAll();
     }
   });
@@ -2132,16 +2134,29 @@ function txnCategoryTone(category){
   return "txn-row-cat-"+String.fromCharCode(97+(hash%6));
 }
 const TXN_VIEW_EXTRA_LIMIT=3000;
-let TXN_VIEW_EXTRA=new Map(), TXN_VIEW_LOAD_ID=0;
+let TXN_VIEW_EXTRA=new Map(), TXN_VIEW_LOAD_ID=0, TXN_VIEW_EXTRA_FROM="", TXN_VIEW_EXTRA_TO="";
 function rememberTxnViewExtra(t){
   if(!t || !t.id) return;
-  rememberTxnViewExtra(t);
+  TXN_VIEW_EXTRA.set(t.id,t);
   if(TXN_VIEW_EXTRA.size>TXN_VIEW_EXTRA_LIMIT){
     const keep=[...TXN_VIEW_EXTRA.values()]
       .sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))||String(b.id||"").localeCompare(String(a.id||"")))
       .slice(0,TXN_VIEW_EXTRA_LIMIT);
     TXN_VIEW_EXTRA=new Map(keep.map(t=>[t.id,t]));
   }
+}
+async function loadTxnViewSource(f){
+  const from=f.from||"0000-01-01", to=f.to||todayISO();
+  const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
+  TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
+  const covered=TXN_VIEW_EXTRA_FROM && TXN_VIEW_EXTRA_TO && from>=TXN_VIEW_EXTRA_FROM && to<=TXN_VIEW_EXTRA_TO;
+  if(!covered){
+    const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
+    snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); rememberTxnViewExtra(t); });
+    if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
+    if(!TXN_VIEW_EXTRA_TO || to>TXN_VIEW_EXTRA_TO) TXN_VIEW_EXTRA_TO=to;
+  }
+  return [...sourceMap.values()];
 }
 function txnRows(kind,f,source=DB.txns){
   return source.filter(t=>{
@@ -2165,19 +2180,7 @@ async function renderStockReturn(){
   const loadId=++TXN_VIEW_LOAD_ID;
   let source=DB.txns;
   try{
-    const dates=DB.txns.map(t=>String(t.date||"")).filter(Boolean);
-    const oldest=dates.length?dates.reduce((a,b)=>a<b?a:b):"";
-    const newest=dates.length?dates.reduce((a,b)=>a>b?a:b):"";
-    const needFrom=!!f.from && (!oldest || f.from<oldest);
-    const needTo=!!f.to && (!newest || f.to>newest);
-    const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
-    if(needFrom || needTo){
-      const from=f.from||"0000-01-01", to=f.to||todayISO();
-      const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
-      snap.docs.forEach(d=>{const t=d.data();sourceMap.set(t.id,t);TXN_VIEW_EXTRA.set(t.id,t);});
-    }
-    TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
-    source=[...sourceMap.values()];
+    source=await loadTxnViewSource(f);
   }catch(err){
     console.error(err);
     toast("Could not load return history");
@@ -2207,19 +2210,7 @@ async function renderTxns(kind){
   const loadId=++TXN_VIEW_LOAD_ID;
   let source=DB.txns;
   try{
-    const dates=DB.txns.map(t=>String(t.date||"")).filter(Boolean);
-    const oldest=dates.length?dates.reduce((a,b)=>a<b?a:b):"";
-    const newest=dates.length?dates.reduce((a,b)=>a>b?a:b):"";
-    const needFrom=!!f.from && (!oldest || f.from<oldest);
-    const needTo=!!f.to && (!newest || f.to>newest);
-    const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
-    if(needFrom || needTo){
-      const from=f.from||"0000-01-01", to=f.to||todayISO();
-      const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
-      snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); TXN_VIEW_EXTRA.set(t.id,t); });
-    }
-    TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
-    source=[...sourceMap.values()];
+    source=await loadTxnViewSource(f);
   }catch(err){
     console.error(err);
     toast("Could not load transaction history");
