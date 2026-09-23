@@ -25,7 +25,7 @@ jobs:
           node <<'NODE'
           const fs=require("fs");
           const html=fs.readFileSync("index.html","utf8");
-          const blocks=[...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/gi)]
+          const blocks=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
             .map(m=>m[1]).filter(s=>s.trim());
           if(!blocks.length) throw new Error("No inline script blocks found");
           blocks.forEach((code,i)=>fs.writeFileSync(`/tmp/erp-scripts/block-${i+1}.js`,code));
