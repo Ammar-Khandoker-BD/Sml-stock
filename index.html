@@ -1611,6 +1611,22 @@ function renderDashboard(){
 }
 /* ---------- items ---------- */
 let ITEM_F = { q:"", cat:"", type:"" };
+let ITEM_RENDER_TIMER = null;
+function scheduleItemsRender(input){
+  if(ITEM_RENDER_TIMER) clearTimeout(ITEM_RENDER_TIMER);
+  const value = String(input && input.value || "");
+  const caret = Number.isFinite(input && input.selectionStart) ? input.selectionStart : value.length;
+  ITEM_RENDER_TIMER = setTimeout(()=>{
+    ITEM_RENDER_TIMER = null;
+    ITEM_F.q = value;
+    renderItems();
+    const next = document.querySelector("#view-items .search-wrap .input");
+    if(next){
+      next.focus();
+      try{ next.setSelectionRange(caret, caret); }catch(e){}
+    }
+  }, 120);
+}
 function itemTypes(){ return [...new Set(DB.items.map(it => it.type).filter(Boolean))].sort(); }
 function itemCats(){ return [...new Set(DB.items.map(it => it.category).filter(Boolean))].sort(); }
 function catSuggest(){ return [...new Set(["Board","Acrylic","PVC","ACP","Ink"].concat(itemCats()))]; }
@@ -1631,7 +1647,7 @@ function renderItems(){
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
     </div></div>
   <div class="filter-bar">
-    <div class="search-wrap"><input class="input" placeholder="Search category, type, color, thickness, page\u2026" value="${esc(f.q)}" oninput="ITEM_F.q=this.value;renderItems()"></div>
+    <div class="search-wrap"><input class="input" placeholder="Search category, type, color, thickness, page\u2026" value="${esc(f.q)}" oninput="scheduleItemsRender(this)"></div>
     <select class="select" onchange="ITEM_F.cat=this.value;renderItems()"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
     <select class="select" onchange="ITEM_F.type=this.value;renderItems()"><option value="">All Types</option>${itemTypes().map(t=>`<option value="${esc(t)}" ${f.type===t?"selected":""}>${esc(t)}</option>`).join("")}</select>
   </div>
