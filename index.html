@@ -1522,8 +1522,7 @@ function renderItems(){
   $("#view-items").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
-      <label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>
-      ${isSuperAdmin()?`<label class="btn btn-primary" style="cursor:pointer">Replace Board Stock<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="replaceBoardStockSmart(this)"></label>`:""}<button class="btn" onclick="downloadItemTemplate()">\u2913 Template</button>
+      <button class="btn" onclick="downloadItemTemplate()">\u2913 Template</button>
       <button class="btn" onclick="exportItems()">\u2913 Export Excel</button>
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
     </div></div>
@@ -1741,113 +1740,6 @@ function exportItems(){
     DB.items.map(it => [it.sl, it.page||"", it.category||"Board", it.type||itemName(it), it.color||"", it.thickness||"", it.uom||"Pcs", it.stock, it.alarm, it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]));
 }
 
-/* ---------- board stock replacement ---------- */
-function boardStockKey(type,color,thickness){
-  return [type,color,thickness].map(v=>String(v||"").trim().toLowerCase()).join("|");
-}
-async function readBoardStockFile(file){
-  if(/\.csv$/i.test(file.name||"")) return parseBoardStockRows(parseCSV(await file.text()));
-  return parseBoardStockRows(await readXlsxRows(file));
-}
-function parseBoardStockRows(rows){
-  let hi=-1;
-  for(let i=0;i<Math.min(rows.length,30);i++){
-    const h=(rows[i]||[]).map(v=>String(v||"").trim().toLowerCase());
-    if(h.includes("sl") && h.includes("type") && h.includes("color") && h.includes("thickness") && h.includes("stock")){ hi=i; break; }
-  }
-  if(hi<0) throw new Error("Could not find SL / Type / Color / Thickness / Stock header");
-  const head=rows[hi].map(v=>String(v||"").trim().toLowerCase());
-  const col=name=>head.findIndex(h=>h===name||h.includes(name));
-  const cSl=col("sl"), cType=col("type"), cColor=col("color"), cThick=col("thickness"), cStock=col("stock");
-  const out=[], slSeen=new Set();
-  let nextAutoSl=1;
-  rows.slice(hi+1).forEach(r=>{
-    const rawSl=String(r[cSl]||"").trim(), type=String(r[cType]||"").trim(), color=cColor>=0?String(r[cColor]||"").trim():"", thickness=String(r[cThick]||"").trim();
-    if(!rawSl && !type) return;
-    let sl=rawSl ? Number(rawSl) : NaN;
-    const stock=Number(String(r[cStock]??"").replace(/,/g,"").trim());
-    if(!type) return;
-    if(rawSl && (!Number.isInteger(sl)||sl<1)) throw new Error("Invalid SL: "+rawSl);
-    if(!rawSl){
-      while(slSeen.has(nextAutoSl)) nextAutoSl++;
-      sl=nextAutoSl++;
-    }
-    nextAutoSl=Math.max(nextAutoSl,Number.isInteger(sl)?sl+1:nextAutoSl);
-    if(!Number.isFinite(stock)||stock<0) throw new Error("Invalid Stock at SL "+(rawSl||("auto "+sl)));
-    if(slSeen.has(sl)) throw new Error("Duplicate SL "+sl);
-    slSeen.add(sl); out.push({sl,type,color,thickness,stock,slWasBlank:!rawSl});
-  });
-  if(!out.length) throw new Error("No Board Stock rows found");
-  return out.sort((a,b)=>a.sl-b.sl);
-}
-async function replaceBoardStockSmart(inp){
-  const file=inp&&inp.files&&inp.files[0]; if(!file) return;
-  if(!isSuperAdmin()){ inp.value=""; return toast("Only Super Admin can replace Board stock"); }
-  try{
-    const rows=await readBoardStockFile(file);
-    const total=rows.reduce((s,r)=>s+r.stock,0);
-    const autoSl=rows.filter(r=>r.slWasBlank).length;
-    const note=autoSl?"\\n\\nNote: "+autoSl+" row(s) had blank SL; an internal SL number will be assigned automatically for those new items.":"";
-    if(!confirm("Load "+rows.length+" Board items with current stock "+total+"?"+note+"\\n\\nExisting Board items not in this file will have their current stock set to 0. Their history will be preserved. Matching items will be updated and new Board items will be added.")) return;
-    toast("Updating Board stock… please wait");
-    const mainRef=fdb.collection("erp").doc("main");
-    let result=null;
-    await fdb.runTransaction(async transaction=>{
-      const snap=await transaction.get(mainRef);
-      if(!snap.exists) throw new Error("Inventory database not found");
-      const data=snap.data()||{};
-      const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
-      const board=items.filter(it=>(it.category||"Board")==="Board");
-      const bySl=new Map();
-      board.forEach(it=>{ if(Number.isInteger(Number(it.sl))) bySl.set(Number(it.sl),it); });
-      const used=new Set(), changes=[], syncTxns=[];
-      rows.forEach(row=>{
-        let it=bySl.get(row.sl);
-        if(it && used.has(it.id)) it=null;
-        if(!it){
-          it={id:"i"+Date.now().toString(36)+"_"+row.sl,sl:row.sl,page:"",category:"Board",type:row.type,color:row.color,thickness:row.thickness,uom:"Pcs",alarm:Number((data.settings&&data.settings.alarmDefault)||5),stock:0};
-          items.push(it); changes.push({kind:"added",item:it,before:0,after:row.stock});
-        }else{
-          const before=Number(it.stock)||0;
-          it.sl=row.sl; it.category="Board"; it.type=row.type; it.color=row.color; it.thickness=row.thickness; it.uom="Pcs"; it.stock=row.stock;
-          changes.push({kind:"updated",item:it,before,after:row.stock});
-        }
-        used.add(it.id);
-      });
-      board.forEach(it=>{
-        if(!used.has(it.id)){
-          const before=Number(it.stock)||0;
-          it.stock=0;
-          if(before!==0) changes.push({kind:"cleared",item:it,before,after:0});
-        }
-      });
-      const seq=Object.assign({si:0,so:0,adj:0,rv:0},data.seq||{});
-      let adj=Number(seq.adj)||0; const now=Date.now();
-      changes.forEach(ch=>{
-        const delta=Number(ch.after)-Number(ch.before); if(delta===0) return;
-        adj++; const id="ADJ-"+String(adj).padStart(4,"0");
-        const txn={id,type:"IN",subtype:"ADJUSTMENT",referenceId:"",supplierId:"",referenceNo:"BOARD-REPLACEMENT",department:"",issuedTo:"",purpose:"",date:todayISO(),itemId:ch.item.id,qty:delta,note:"Board stock replacement from Excel — SL "+ch.item.sl,by:currentUser?currentUser.username:"system",createdAt:now};
-        transaction.set(fdb.collection("erp_txns").doc(id),txn); syncTxns.push(txn);
-      });
-      seq.adj=adj;
-      const auditRef=fdb.collection("erp_audit").doc();
-      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Replaced Board current stock from Excel · "+rows.length+" rows · "+changes.filter(x=>x.kind==="added").length+" new · "+changes.filter(x=>x.kind==="cleared").length+" cleared · "+changes.filter(x=>Number(x.after)!==Number(x.before)).length+" adjusted"};
-      transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
-      transaction.set(auditRef,audit);
-      result={items,seq,audit,txns:syncTxns,changes};
-    });
-    DB.items=result.items; DB.seq=result.seq; DB.audit.unshift(result.audit);
-    (result.txns||[]).forEach(txn=>{ DB.txns.push(txn); SAVED_TXN.add(txn.id); });
-    SAVED_AUDIT.add(result.audit.id);
-    sortTxns();
-    renderAll();
-    const added=result.changes.filter(x=>x.kind==="added").length;
-    const cleared=result.changes.filter(x=>x.kind==="cleared").length;
-    const adjusted=result.changes.filter(x=>Number(x.after)!==Number(x.before)).length;
-    toast("Board stock updated · "+rows.length+" rows · "+added+" new · "+cleared+" old stock cleared · "+adjusted+" adjusted");
-  }catch(err){ console.error(err); toast(err.message||"Could not update Board stock"); }
-  finally{ inp.value=""; }
-}
 /* ---------- stock in / out ---------- */
 let SI_F = { q:"", cat:"", item:"", from:"", to:"" }, SO_F = { q:"", cat:"", item:"", from:"", to:"" }, RETURN_F = { q:"", cat:"", item:"", from:"", to:"" };
 const TXN_DATE_KEYS = { IN:"sml-stock-last-date-in", OUT:"sml-stock-last-date-out", RETURN:"sml-stock-last-date-return" };
