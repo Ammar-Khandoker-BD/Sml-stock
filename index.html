@@ -2154,8 +2154,31 @@ function txnRows(kind,f,source=DB.txns){
 }
 function renderStockIn(){ renderTxns("IN"); }
 function renderStockOut(){ renderTxns("OUT"); }
-function renderStockReturn(){
-  const f=RETURN_F, rows=txnRows("RETURN",f);
+async function renderStockReturn(){
+  const f=RETURN_F;
+  const loadId=++TXN_VIEW_LOAD_ID;
+  let source=DB.txns;
+  try{
+    const dates=DB.txns.map(t=>String(t.date||"")).filter(Boolean);
+    const oldest=dates.length?dates.reduce((a,b)=>a<b?a:b):"";
+    const newest=dates.length?dates.reduce((a,b)=>a>b?a:b):"";
+    const needFrom=!!f.from && (!oldest || f.from<oldest);
+    const needTo=!!f.to && (!newest || f.to>newest);
+    const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
+    if(needFrom || needTo){
+      const from=f.from||"0000-01-01", to=f.to||todayISO();
+      const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
+      snap.docs.forEach(d=>{const t=d.data();sourceMap.set(t.id,t);TXN_VIEW_EXTRA.set(t.id,t);});
+    }
+    TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
+    source=[...sourceMap.values()];
+  }catch(err){
+    console.error(err);
+    toast("Could not load return history");
+    return;
+  }
+  if(loadId!==TXN_VIEW_LOAD_ID) return;
+  const rows=txnRows("RETURN",f,source);
   const total=rows.reduce((s,t)=>s+(Number(t.qty)||0),0);
   $("#view-stockreturn").innerHTML=`
   <div class="page-head"><div><div class="crumb">Inventory / <b>Returns</b></div><h1>Stock Returns</h1><p>Material returned back to store after issue</p></div>
