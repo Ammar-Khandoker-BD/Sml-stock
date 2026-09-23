@@ -1103,6 +1103,7 @@ body{position:relative}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 /* Firebase project: stepmedia-stock */
@@ -1610,20 +1611,34 @@ function parseCSV(text){
   if(cur !== "" || row.length){ row.push(cur); rows.push(row); }
   return rows.filter(r => r.some(c => String(c).trim() !== ""));
 }
+async function readXlsxRows(file){
+  const buf=await file.arrayBuffer();
+  if(typeof XLSX!=="undefined"){
+    const book=XLSX.read(buf,{type:"array",cellDates:false,raw:false});
+    const names=book.SheetNames||[];
+    if(!names.length) throw new Error("Workbook has no sheet");
+    const ws=book.Sheets[names[0]];
+    if(!ws) throw new Error("Workbook sheet could not be opened");
+    return XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false});
+  }
+  if(typeof ExcelJS!=="undefined"){
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(buf);
+    const ws=wb.worksheets[0];
+    if(!ws) throw new Error("Workbook has no sheet");
+    const rows=[]; ws.eachRow({includeEmpty:false},row=>rows.push(row.values.slice(1).map(v=>v==null?"":String(v))));
+    return rows;
+  }
+  throw new Error("No Excel reader is available");
+}
 async function importItemsSmart(inp){
   const f=inp.files[0]; if(!f) return;
   if(!isAdmin()){ toast("Only Admin can import items"); inp.value=""; return; }
   try{
     if(/\.csv$/i.test(f.name)){ importItems(inp); return; }
-    if(typeof ExcelJS==="undefined") throw new Error("ExcelJS unavailable");
-    const wb=new ExcelJS.Workbook();
-    await wb.xlsx.load(await f.arrayBuffer());
-    const ws=wb.worksheets[0];
-    if(!ws) throw new Error("Workbook has no sheet");
-    const rows=[]; ws.eachRow({includeEmpty:false},row=>rows.push(row.values.slice(1).map(v=>v==null?"":String(v))));
+    const rows=await readXlsxRows(f);
     if(rows.length<2) throw new Error("Excel file is empty");
     await importItemRows(rows);
-  }catch(err){ console.error(err); toast("Could not read Excel file — check the template"); }
+  }catch(err){ console.error(err); toast(err.message||"Could not read Excel file"); }
   finally{ inp.value=""; }
 }
 
@@ -1732,11 +1747,7 @@ function boardStockKey(type,color,thickness){
 }
 async function readBoardStockFile(file){
   if(/\.csv$/i.test(file.name||"")) return parseBoardStockRows(parseCSV(await file.text()));
-  if(typeof ExcelJS==="undefined") throw new Error("ExcelJS unavailable");
-  const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
-  const ws=wb.worksheets[0]; if(!ws) throw new Error("Workbook has no sheet");
-  const rows=[]; ws.eachRow({includeEmpty:false},row=>rows.push(row.values.slice(1).map(v=>v==null?"":String(v))));
-  return parseBoardStockRows(rows);
+  return parseBoardStockRows(await readXlsxRows(file));
 }
 function parseBoardStockRows(rows){
   let hi=-1;
