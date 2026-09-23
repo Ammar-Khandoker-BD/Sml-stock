@@ -2163,17 +2163,39 @@ function parseStockInImportRows(rows){
   if(!Array.isArray(rows)||!rows.length) throw new Error("Excel/CSV is empty");
   const head=(rows[0]||[]).map(v=>String(v??"").trim().toLowerCase());
   const col=(...names)=>{for(const n of names){const i=head.findIndex(h=>h===n||h.includes(n));if(i>=0)return i;}return -1;};
-  const cDate=col("date"), cSl=col("item sl","sl"), cQty=col("quantity","qty"), cSupplier=col("supplier"), cRef=col("challan / reference","challan","reference"), cNote=col("note");
-  if(cSl<0) throw new Error('Import needs an "Item SL" column');
+  const cDate=col("date"), cSl=col("item sl","sl"), cPage=col("page"), cCat=col("category"), cType=col("type"), cColor=col("color"), cThick=col("thickness"), cUnit=col("unit","uom"), cQty=col("quantity","qty"), cAlarm=col("alarm qty","alarm"), cSupplier=col("supplier"), cRef=col("challan / reference","challan","reference"), cNote=col("note");
   if(cQty<0) throw new Error('Import needs a "Quantity" column');
+  if(cSl<0) throw new Error('Import needs an "Item SL" column — leave it blank for a new item');
   const out=[];
   rows.slice(1).forEach((r,rowIndex)=>{
     const cells=r||[], rawSl=String(cells[cSl]??"").trim(), rawQty=String(cells[cQty]??"").replace(/,/g,"").trim();
-    if(!rawSl&&!rawQty&&cells.every(v=>String(v??"").trim()==="")) return;
-    if(!rawSl) throw new Error("Row "+(rowIndex+2)+": Item SL is required");
-    const sl=Number(rawSl); if(!Number.isInteger(sl)||sl<1) throw new Error("Row "+(rowIndex+2)+": invalid Item SL "+rawSl);
+    const hasAny=cells.some(v=>String(v??"").trim()!=="");
+    if(!hasAny) return;
+    if(!rawQty) throw new Error("Row "+(rowIndex+2)+": Quantity is required");
     const qty=Number(rawQty); if(!Number.isFinite(qty)||qty<=0) throw new Error("Row "+(rowIndex+2)+": Quantity must be greater than 0");
-    out.push({row:rowIndex+2,date:normalizeImportDate(cDate>=0?cells[cDate]:""),sl,qty,supplier:String(cSupplier>=0?cells[cSupplier]??"":"").trim(),referenceNo:String(cRef>=0?cells[cRef]??"":"").trim(),note:String(cNote>=0?cells[cNote]??"":"").trim()});
+    let sl=null;
+    if(rawSl){
+      sl=Number(rawSl);
+      if(!Number.isInteger(sl)||sl<1) throw new Error("Row "+(rowIndex+2)+": invalid Item SL "+rawSl);
+    }
+    const type=String(cType>=0?cells[cType]??"":"").trim();
+    if(!sl && !type) throw new Error("Row "+(rowIndex+2)+": New item needs a Type (or provide an existing Item SL)");
+    out.push({
+      row:rowIndex+2,
+      date:normalizeImportDate(cDate>=0?cells[cDate]:""),
+      sl,
+      page:String(cPage>=0?cells[cPage]??"":"").trim(),
+      category:(String(cCat>=0?cells[cCat]??"":"").trim()||"Board"),
+      type,
+      color:String(cColor>=0?cells[cColor]??"":"").trim(),
+      thickness:String(cThick>=0?cells[cThick]??"":"").trim(),
+      unit:(String(cUnit>=0?cells[cUnit]??"":"").trim()||"Pcs"),
+      alarm:cAlarm>=0?Math.max(0,Number(cells[cAlarm])||0):null,
+      qty,
+      supplier:String(cSupplier>=0?cells[cSupplier]??"":"").trim(),
+      referenceNo:String(cRef>=0?cells[cRef]??"":"").trim(),
+      note:String(cNote>=0?cells[cNote]??"":"").trim()
+    });
   });
   if(!out.length) throw new Error("No Stock In rows found");
   if(out.length>200) throw new Error("Maximum 200 Stock In rows per upload");
@@ -2188,45 +2210,85 @@ async function importStockInSmart(inp){
     const slMap=new Map(DB.items.map(it=>[Number(it.sl),it]));
     const supplierMap=new Map((DB.suppliers||[]).map(s=>[String(s.name||"").trim().toLowerCase(),s]));
     for(const e of entries){
-      if(!slMap.get(e.sl)) throw new Error("Row "+e.row+": Item SL "+e.sl+" was not found in Items");
-      if(e.supplier){const s=supplierMap.get(e.supplier.toLowerCase());if(!s)throw new Error("Row "+e.row+": Supplier not found — "+e.supplier);if(s.active===false)throw new Error("Row "+e.row+": Supplier is inactive — "+e.supplier);}
+      if(e.sl && !slMap.get(e.sl)) throw new Error("Row "+e.row+": Item SL "+e.sl+" was not found in Items");
+      if(e.sl===null && !e.type) throw new Error("Row "+e.row+": New item needs Type");
+      if(e.supplier){
+        const s=supplierMap.get(e.supplier.toLowerCase());
+        if(!s) throw new Error("Row "+e.row+": Supplier not found — "+e.supplier);
+        if(s.active===false) throw new Error("Row "+e.row+": Supplier is inactive — "+e.supplier);
+      }
     }
-    if(!confirm("Import "+entries.length+" Stock In entries?\n\nStock will be increased and each row will be added to Stock In history. Existing items are matched by Item SL.")) return;
+    const newCount=entries.filter(e=>e.sl===null).length, existingCount=entries.length-newCount;
+    if(!confirm("Import "+entries.length+" Stock In entries?\n\n"+newCount+" new item(s) will be added automatically and receive the next available SL. "+existingCount+" existing item(s) will receive additional stock. Each row will be added to Stock In history.")) return;
     toast("Importing Stock In… please wait");
     const mainRef=fdb.collection("erp").doc("main"); let result=null;
     await fdb.runTransaction(async transaction=>{
       const snap=await transaction.get(mainRef); if(!snap.exists) throw new Error("Inventory database not found");
-      const data=snap.data()||{}, items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[], liveBySl=new Map(items.map(it=>[Number(it.sl),it]));
-      let seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{}), si=Number(seq.si)||0, now=Date.now(), txns=[];
+      const data=snap.data()||{}, items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
+      const liveBySl=new Map(items.map(it=>[Number(it.sl),it]));
+      let nextSl=items.reduce((m,it)=>Math.max(m,Number(it.sl)||0),0);
+      let seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{}), si=Number(seq.si)||0, now=Date.now(), txns=[], created=0;
       entries.forEach(e=>{
-        const item=liveBySl.get(e.sl); if(!item) throw new Error("Item SL "+e.sl+" was not found in live inventory");
-        si++; item.stock=(Number(item.stock)||0)+e.qty;
+        let item=null;
+        if(e.sl!==null){
+          item=liveBySl.get(e.sl);
+          if(!item) throw new Error("Item SL "+e.sl+" was not found in live inventory");
+        }else{
+          nextSl++;
+          const id="i"+Date.now().toString(36)+"_"+nextSl;
+          item={id,sl:nextSl,page:e.page||"",category:e.category||"Board",type:e.type||"",color:e.color||"",thickness:e.thickness||"",uom:(e.category||"Board")==="Board"?"Pcs":(e.unit||"Pcs"),alarm:e.alarm===null?Number((data.settings&&data.settings.alarmDefault)||5):e.alarm,stock:0};
+          items.push(item); liveBySl.set(nextSl,item); created++;
+        }
+        item.stock=(Number(item.stock)||0)+e.qty;
+        if(e.sl===null){
+          if(e.page) item.page=e.page;
+          if(e.category) item.category=e.category;
+          if(e.type) item.type=e.type;
+          if(e.color) item.color=e.color;
+          if(e.thickness) item.thickness=e.thickness;
+          item.uom=(item.category||"Board")==="Board"?"Pcs":(e.unit||item.uom||"Pcs");
+          if(e.alarm!==null) item.alarm=e.alarm;
+        }
         const supplierId=e.supplier?((supplierMap.get(e.supplier.toLowerCase())||{}).id||""):"";
-        const txId="SI-"+String(si).padStart(4,"0");
+        si++; const txId="SI-"+String(si).padStart(4,"0");
         const txn={id:txId,type:"IN",subtype:"NORMAL",referenceId:"",supplierId,referenceNo:e.referenceNo,department:"",issuedTo:"",purpose:"",date:e.date,itemId:item.id,qty:e.qty,note:e.note,by:currentUser?currentUser.username:"system",createdAt:now};
         transaction.set(fdb.collection("erp_txns").doc(txId),txn); txns.push(txn);
       });
       seq.si=si;
       const auditRef=fdb.collection("erp_audit").doc(), total=entries.reduce((s,e)=>s+e.qty,0);
-      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Bulk Stock In import · "+entries.length+" entries · "+total+" Pcs"};
-      transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now}); transaction.set(auditRef,audit); result={items,seq,txns,audit};
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Bulk Stock In import · "+entries.length+" entries · "+created+" new items · "+total+" Pcs"};
+      transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now}); transaction.set(auditRef,audit); result={items,seq,txns,audit,created};
     });
     DB.items=result.items; DB.seq=result.seq; (result.txns||[]).forEach(txn=>{DB.txns.push(txn);SAVED_TXN.add(txn.id);});
     DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id); if(DB.audit.length>1000)DB.audit.length=1000;
-    sortTxns(); renderAll(); toast("Stock In imported successfully · "+entries.length+" entries");
+    sortTxns(); renderAll(); toast("Stock In imported successfully · "+entries.length+" entries · "+result.created+" new item(s)");
   }catch(err){console.error(err);toast(err.message||"Could not import Stock In file");}finally{inp.value="";}
 }
 async function downloadStockInImportTemplate(){
   if(!canWrite()){toast("You do not have permission to download the Stock In template");return;}
   if(typeof ExcelJS==="undefined"){toast("Excel export library is still loading — try again");return;}
-  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet("Stock In Import"), head=["Date","Item SL","Quantity","Supplier","Challan / Reference No.","Note"];
-  ws.addRow(head); ws.addRow([todayISO(),1,25,"Example Supplier","CH-1025","New material received"]); ws.addRow(["",2,10,"","CH-1026","Received against reference"]);
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet("Stock In Import");
+  const head=["Date","Item SL","Page","Category","Type","Color","Thickness","Unit","Quantity","Alarm Qty","Supplier","Challan / Reference No.","Note"];
+  ws.addRow(head); ws.addRow(["","","","","","","","",null,null,"","",""]);
   ws.getRow(1).eachCell(cell=>{cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle",wrapText:true};});
-  [15,12,14,24,26,34].forEach((w,i)=>ws.getColumn(i+1).width=w); ws.getColumn(1).numFmt="yyyy-mm-dd"; ws.getColumn(3).numFmt="0.00"; ws.views=[{state:"frozen",ySplit:1}];
-  const ins=wb.addWorksheet("Instructions"); ins.addRow(["Column","What to enter"]); [["Date","YYYY-MM-DD. Leave blank to use today."],["Item SL","ERP Item SL number. Required."],["Quantity","Positive received quantity. Required."],["Supplier","Optional. Must match an active Supplier in ERP."],["Challan / Reference No.","Optional."],["Note","Optional."]].forEach(r=>ins.addRow(r));
-  ins.getRow(1).eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};}); ins.getColumn(1).width=28; ins.getColumn(2).width=80;
+  ws.getRow(2).height=22; ws.getRow(2).getCell(3).value="Fill this row";
+  [15,12,14,16,20,18,16,10,14,12,24,28,34].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  ws.getColumn(1).numFmt="yyyy-mm-dd"; ws.getColumn(9).numFmt="0.00"; ws.views=[{state:"frozen",ySplit:1}];
+  const ins=wb.addWorksheet("Instructions");
+  ins.addRow(["How to use the Stock In bulk import"]);
+  ins.addRow(["Existing item","Put the existing Item SL and Quantity. Leave item-detail columns blank."]);
+  ins.addRow(["New item","Leave Item SL blank and fill Page, Category, Type, Color, Thickness, Unit, Quantity and optional Alarm Qty. ERP will assign the next available SL automatically."]);
+  ins.addRow(["Date","Leave blank to use today's date, or enter YYYY-MM-DD."]);
+  ins.addRow(["Supplier","Optional; must match an active Supplier name in ERP."]);
+  ins.addRow(["Challan / Reference No.","Optional."]);
+  ins.addRow(["Note","Optional."]);
+  ins.addRow(["Important","Maximum 200 rows per upload. This import adds stock and creates Stock In history for every row."]);
+  ins.getRange("A1:B1").merge();
+  ins.getRow(1).getCell(1).font={bold:true,size:14,color:{argb:"FFFFFFFF"}};
+  ins.getRow(1).getCell(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
+  ins.getColumn(1).width=30; ins.getColumn(2).width=100; ins.views=[{state:"frozen",ySplit:1}];
   const buffer=await wb.xlsx.writeBuffer(), url=URL.createObjectURL(new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
-  const a=document.createElement("a"); a.href=url; a.download="SML_Stock_In_Import_Template.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("Stock In import template downloaded");
+  const a=document.createElement("a"); a.href=url; a.download="SML_Stock_In_Bulk_Import_Template.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("Stock In bulk import template downloaded");
 }
 async function submitTxn(e,kind){
   e.preventDefault(); if(!canWrite()) return;
