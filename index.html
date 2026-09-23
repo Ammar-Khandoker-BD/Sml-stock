@@ -2014,6 +2014,51 @@ function txnModal(kind){
   setTimeout(()=>{ const s=$("#txItemSearch"); if(s){ s.focus(); s.select(); } },40);
 }
 
+function stockReturnModal(){
+  if(!canWrite()) return;
+  TXN_MODAL_KIND="RETURN";
+  TXN_ITEM_SEARCH="";
+  const rememberedDate=getRememberedTxnDate("RETURN");
+  openModal(`<h2>New Stock Return</h2><div class="hint" style="margin-bottom:14px">Receive previously issued material back into store</div>
+  <form onsubmit="submitReturn(event)">
+    <div class="field"><label for="txItemSearch">Item *</label><div class="searchable-item"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="input" id="txItemSearch" type="search" placeholder="Search item…" autocomplete="off" onfocus="renderTxnItemOptions(true)" oninput="TXN_ITEM_SEARCH=this.value;renderTxnItemOptions(true)"><input id="txItem" type="hidden" value=""><div id="txItemResults" class="searchable-options"></div></div><div class="hint">Search by item, category, type, color, thickness, page or SL.</div></div>
+    <div class="row-2"><div class="field"><label for="txDate">Date</label><input class="input" type="date" id="txDate" value="${rememberedDate}" onchange="rememberTxnDate(TXN_MODAL_KIND,this.value)" required><div class="hint">Last used date is remembered in this browser.</div></div><div class="field"><label for="txQty">Quantity *</label><input class="input" type="number" id="txQty" min="1" step="any" required placeholder="0"></div></div>
+    <div class="row-2"><div class="field"><label for="txRef">Return Ref No.</label><input class="input" id="txRef" placeholder="e.g. RET-2026-014" autocomplete="off"></div><div class="field"><label for="txDepartment">Return From / Client</label><input class="input" id="txDepartment" placeholder="e.g. Client / Company Name" autocomplete="off"></div></div>
+    <div class="field"><label for="txIssuedTo">Originally Issued To</label><input class="input" id="txIssuedTo" placeholder="Person / Team / Section" autocomplete="off"></div>
+    <div class="field"><label for="txNote">Note (optional)</label><input class="input" id="txNote" list="txNoteSuggestions" placeholder="e.g. Material returned from client" autocomplete="off"><datalist id="txNoteSuggestions">${getRememberedTxnNotes("RETURN").map(note=>`<option value="${esc(note)}">`).join("")}</datalist><div class="hint">Previous return notes are suggested as you type.</div></div>
+    <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Done</button><button id="txSaveBtn" class="btn btn-green">Save &amp; Continue</button></div>
+    <div class="hint" style="margin-top:8px">Stock is increased and the return remains separately traceable in Return Register.</div>
+  </form>`);
+  setTimeout(()=>{ const s=$("#txItemSearch"); if(s){ s.focus(); s.select(); } },40);
+}
+
+async function submitReturn(e){
+  e.preventDefault(); if(!canWrite()) return;
+  const it=itemById($("#txItem").value);
+  if(!it){ toast("Please search and select an item"); return; }
+  const qty=Number($("#txQty").value);
+  if(!(qty>0)){ toast("Quantity must be greater than 0"); return; }
+  const date=$("#txDate").value || getRememberedTxnDate("RETURN"); rememberTxnDate("RETURN",date);
+  const note=$("#txNote").value.trim(); rememberTxnNote("RETURN",note);
+  const saveBtn=$("#txSaveBtn");
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent="Saving…"; }
+  try{
+    const referenceNo=(($("#txRef") && $("#txRef").value)||"").trim();
+    const department=(($("#txDepartment") && $("#txDepartment").value)||"").trim();
+    const issuedTo=(($("#txIssuedTo") && $("#txIssuedTo").value)||"").trim();
+    rememberTxnMeta("RETURN","referenceNo",referenceNo);
+    rememberTxnMeta("RETURN","department",department);
+    rememberTxnMeta("RETURN","issuedTo",issuedTo);
+    const result=await commitStockMovement({type:"IN",qtyDelta:qty,date,itemId:it.id,note,subtype:"RETURN",referenceNo,department,issuedTo});
+    applyCommittedMovement(result,"Stock Return saved safely");
+    prepareNextTxnEntry("RETURN");
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent="Save & Continue"; }
+  }catch(err){
+    console.error(err);
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent="Save & Continue"; }
+    toast(err.message||"Could not save stock return");
+  }
+}
 async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORMAL",referenceId="",supplierId="",referenceNo="",department="",issuedTo="",purpose=""}){
   const mainRef=fdb.collection("erp").doc("main");
   const auditRef=fdb.collection("erp_audit").doc();
@@ -2029,14 +2074,14 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORM
     const current=Number(item.stock)||0;
     if(delta<0 && current+delta<0) throw new Error("Not enough stock — only "+current+" "+(item.uom||"Pcs")+" left");
     item.stock=current+delta;
-    const seq=Object.assign({si:0,so:0,adj:0,rv:0},data.seq||{});
-    const key=subtype==="ADJUSTMENT"?"adj":subtype==="REVERSAL"?"rv":(type==="IN"?"si":"so");
+    const seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{});
+    const key=subtype==="RETURN"?"ret":subtype==="ADJUSTMENT"?"adj":subtype==="REVERSAL"?"rv":(type==="IN"?"si":"so");
     seq[key]=(Number(seq[key])||0)+1;
-    const prefix=subtype==="ADJUSTMENT"?"ADJ-":subtype==="REVERSAL"?"RV-":(type==="IN"?"SI-":"SO-");
+    const prefix=subtype==="RETURN"?"RET-":subtype==="ADJUSTMENT"?"ADJ-":subtype==="REVERSAL"?"RV-":(type==="IN"?"SI-":"SO-");
     const txId=prefix+String(seq[key]).padStart(4,"0");
     const now=Date.now();
     const txn={id:txId,type,subtype,referenceId:referenceId||"",supplierId:supplierId||"",referenceNo:referenceNo||"",department:department||"",issuedTo:issuedTo||"",purpose:purpose||"",date,itemId,qty:delta,note:note||"",by:currentUser?currentUser.username:"system",createdAt:now};
-    const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(subtype==="ADJUSTMENT"?"Stock Adjustment: ":subtype==="REVERSAL"?"Reversal: ":(type==="IN"?"Stock In: ":"Stock Out: "))+((delta>0)?"+":"")+delta+" "+itemName(item)};
+    const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:(subtype==="RETURN"?"Stock Return: ":subtype==="ADJUSTMENT"?"Stock Adjustment: ":subtype==="REVERSAL"?"Reversal: ":(type==="IN"?"Stock In: ":"Stock Out: "))+((delta>0)?"+":"")+delta+" "+itemName(item)};
     transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now});
     transaction.set(fdb.collection("erp_txns").doc(txId),txn);
     transaction.set(auditRef,audit);
