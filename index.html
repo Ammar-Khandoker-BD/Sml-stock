@@ -1908,6 +1908,8 @@ function renderTxns(kind){
     </div></div>
   <div class="filter-bar">
     <div class="search-wrap"><input class="input" placeholder="Search item, note, user\u2026" value="${esc(f.q)}" oninput="${F}.q=this.value;renderTxns('${kind}')"></div>
+      <input class="input" style="max-width:180px" placeholder="Job No" value="${esc(REP.job||"")}" ${["stock","valuation","low"].includes(REP.type)?"disabled":""} oninput="REP.job=this.value;runReport()">
+      <input class="input" style="max-width:180px" placeholder="Client Name" value="${esc(REP.client||"")}" ${["stock","valuation","low"].includes(REP.type)?"disabled":""} oninput="REP.client=this.value;runReport()">
     <select class="select" onchange="${F}.cat=this.value;renderTxns('${kind}')"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
     <select class="select" onchange="${F}.item=this.value;renderTxns('${kind}')"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemLabel(it))}</option>`).join("")}</select>
     <input type="date" class="input" style="max-width:160px" value="${f.from}" onchange="${F}.from=this.value;renderTxns('${kind}')">
@@ -2239,7 +2241,7 @@ function reportClosingStock(itemId,from,to){
   return opening+net;
 }
 /* ---------- reports ---------- */
-let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"" }, REP_OUT = null;
+let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"", job:"", client:"" }, REP_OUT = null;
 const REP_TYPES = [
   ["txns","All Transactions (date range)"],
   ["itemwise","Item-wise In / Out / Net"],
@@ -2253,12 +2255,16 @@ const REP_TYPES = [
 ];
 function runReport(){
   const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
+  const job = (REP.job||"").trim().toLowerCase();
+  const client = (REP.client||"").trim().toLowerCase();
   const inRange = t => t.date >= from && t.date <= to;
-  const hay = t => { const it = itemById(t.itemId); return (itemName(it)+" "+(it?it.category||"":"")+" "+(it?it.page||"":"")+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); };
+  const hay = t => { const it = itemById(t.itemId); return (itemName(it)+" "+(it?it.category||"":"")+" "+(it?it.page||"":"")+" "+(t.referenceNo||"")+" "+(t.department||"")+" "+(t.issuedTo||"")+" "+(t.note||"")+" "+(t.by||"")+" "+t.id).toLowerCase(); };
   const ihay = it => (itemName(it)+" "+(it.page||"")+" "+(it.category||"")+" "+(it.type||"")).toLowerCase();
   const catOk = it => !REP.cat || ((it ? (it.category||"Board") : "") === REP.cat);
-  const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && (!q || hay(t).includes(q)));
-  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","valuation","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "");
+  const jobOk = t => !job || String(t.referenceNo||"").toLowerCase().includes(job);
+  const clientOk = t => !client || String(t.department||"").toLowerCase().includes(client);
+  const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && jobOk(t) && clientOk(t) && (!q || hay(t).includes(q)));
+  let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","valuation","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "") + (job ? ` \u00b7 Job No: ${REP.job}` : "") + (client ? ` \u00b7 Client: ${REP.client}` : "");
   let head = [], rows = [];
   if(REP.type==="txns"){
     head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Reference","Department / Project","Issued To","Purpose","Note","By"];
