@@ -1742,11 +1742,11 @@ async function importItemsSmart(inp){
 
 async function importItemRows(rows){
   if(!Array.isArray(rows) || rows.length < 2) throw new Error("Excel/CSV file is empty");
-  const dataRows = rows.slice(1);
-  if(dataRows.length > 1000) throw new Error("Maximum 1,000 data rows per import");
+  const dataRows=rows.slice(1);
+  if(dataRows.length>240) throw new Error("Maximum 240 data rows per import to keep the operation atomic");
 
   const head=(rows[0]||[]).map(h=>String(h??"").replace(/^\\uFEFF/,"").trim().toLowerCase());
-  const col=name=>head.findIndex(h=>h===name||h.includes(name));
+  const col=name=>head.findIndex(h=>h===name || h.includes(name));
   const cSl=col("sl"), cPage=col("page"), cCat=col("category"), cType=col("type"), cColor=col("color"), cThick=col("thickness");
   const cUnit=Math.max(col("unit"),col("uom"));
   const cStock=col("opening stock")>=0?col("opening stock"):col("stock");
@@ -1756,160 +1756,132 @@ async function importItemRows(rows){
   const norm=v=>String(v??"").trim();
   const keyPart=v=>norm(v).replace(/\\s+/g," ").toLowerCase();
   const itemKey=(cat,type,color,thick)=>[cat,type,color,thick].map(keyPart).join("|");
-
-  const existingKeys=new Set(
-    DB.items.map(it=>itemKey(it.category||"Board",it.type||"",it.color||"",it.thickness||""))
-  );
+  const existingKeys=new Set(DB.items.map(it=>itemKey(it.category||"Board",it.type||"",it.color||"",it.thickness||"")));
   const fileKeys=new Set();
   const usedSl=new Set(DB.items.map(it=>Number(it.sl)).filter(Number.isInteger));
   const fileSlSeen=new Set();
   let nextSl=DB.items.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
-
-  const pendingItems=[];
-  const pendingTxns=[];
+  const candidates=[];
   const errors=[];
-  let skippedBlank=0;
-  let skippedDuplicate=0;
-  let openingAdded=0;
-  let conflicts=0;
-  let blankSlAdded=0;
+  let skippedBlank=0, skippedDuplicate=0, conflicts=0, blankSlAdded=0, openingAdded=0;
 
   const makeId=sl=>"i"+Date.now().toString(36)+"_"+sl+"_"+Math.random().toString(36).slice(2,6);
 
   for(let i=0;i<dataRows.length;i++){
-    const rowNo=i+2;
-    const r=dataRows[i]||[];
-
+    const rowNo=i+2, r=dataRows[i]||[];
     const type=norm(cType>=0?r[cType]:"");
     if(!type){ skippedBlank++; continue; }
-
     const page=norm(cPage>=0?r[cPage]:"");
     const cat=norm(cCat>=0?r[cCat]:"")||"Board";
     const color=norm(cColor>=0?r[cColor]:"");
     const thick=norm(cThick>=0?r[cThick]:"");
     const key=itemKey(cat,type,color,thick);
-
-    if(existingKeys.has(key) || fileKeys.has(key)){
-      skippedDuplicate++;
-      continue;
-    }
+    if(existingKeys.has(key) || fileKeys.has(key)){ skippedDuplicate++; continue; }
 
     const rawSl=norm(cSl>=0?r[cSl]:"");
-    let requestedSl=rawSl ? Number(rawSl) : null;
+    const requestedSl=rawSl ? Number(rawSl) : null;
     if(rawSl && (!Number.isInteger(requestedSl) || requestedSl<1)){
-      errors.push("Row "+rowNo+": invalid SL \""+rawSl+"\"");
-      continue;
+      errors.push("Row "+rowNo+": invalid SL \""+rawSl+"\""); continue;
     }
-
-    let sl;
-    if(requestedSl!==null && !usedSl.has(requestedSl) && !fileSlSeen.has(requestedSl)){
-      sl=requestedSl;
-    }else{
+    let previewSl=requestedSl;
+    if(previewSl===null || usedSl.has(previewSl) || fileSlSeen.has(previewSl)){
       while(usedSl.has(nextSl) || fileSlSeen.has(nextSl)) nextSl++;
-      sl=nextSl++;
-      if(requestedSl!==null) conflicts++;
-      else blankSlAdded++;
+      previewSl=nextSl++;
+      if(requestedSl!==null) conflicts++; else blankSlAdded++;
     }
-    usedSl.add(sl);
-    fileSlSeen.add(sl);
-    fileKeys.add(key);
+    usedSl.add(previewSl); fileSlSeen.add(previewSl); fileKeys.add(key);
 
     const openingRaw=norm(cStock>=0?r[cStock]:"").replace(/,/g,"");
     const opening=openingRaw==="" ? 0 : Number(openingRaw);
-    if(!Number.isFinite(opening) || opening<0){
-      errors.push("Row "+rowNo+": invalid Opening Stock \""+openingRaw+"\"");
-      continue;
-    }
-
+    if(!Number.isFinite(opening) || opening<0){ errors.push("Row "+rowNo+": invalid Opening Stock \""+openingRaw+"\""); continue; }
     const rawDate=norm(cDate>=0?r[cDate]:"");
-    if(rawDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)){
-      errors.push("Row "+rowNo+": invalid Opening Date \""+rawDate+"\"");
-      continue;
-    }
+    if(rawDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)){ errors.push("Row "+rowNo+": invalid Opening Date \""+rawDate+"\""); continue; }
     const openDate=rawDate || todayISO();
-
     const unit=norm(cUnit>=0?r[cUnit]:"") || "Pcs";
     const alarmRaw=norm(cAlarm>=0?r[cAlarm]:"");
     const alarm=alarmRaw==="" ? (DB.settings.alarmDefault||5) : Number(alarmRaw);
-    if(!Number.isFinite(alarm) || alarm<0){
-      errors.push("Row "+rowNo+": invalid Alarm Qty \""+alarmRaw+"\"");
-      continue;
-    }
+    if(!Number.isFinite(alarm) || alarm<0){ errors.push("Row "+rowNo+": invalid Alarm Qty \""+alarmRaw+"\""); continue; }
 
-    const it={
-      id:makeId(sl),
-      sl,
-      page,
-      category:cat,
-      type,
-      color,
-      thickness:thick,
-      uom:cat==="Board" ? "Pcs" : unit,
-      alarm,
-      stock:opening
-    };
-    pendingItems.push(it);
-
-    if(opening>0){
-      const txId=nextSeq("si","SI-");
-      pendingTxns.push({
-        id:txId,type:"IN",subtype:"OPENING",
-        referenceId:"",supplierId:"",referenceNo:"",
-        department:"",issuedTo:"",purpose:"",
-        date:openDate,itemId:it.id,qty:opening,
-        note:"Opening Balance",
-        by:currentUser?currentUser.username:"system",
-        createdAt:Date.now()
-      });
-      openingAdded++;
-    }
+    candidates.push({
+      item:{id:makeId(previewSl),sl:previewSl,page,category:cat,type,color,thickness:thick,uom:cat==="Board"?"Pcs":unit,alarm,stock:opening},
+      key, requestedSl, opening, openDate
+    });
+    if(opening>0) openingAdded++;
   }
 
   if(errors.length){
-    const preview=errors.slice(0,5).join(" | ");
     const more=errors.length>5 ? " | +"+(errors.length-5)+" more error(s)" : "";
-    throw new Error("Import validation failed: "+preview+more);
+    throw new Error("Import validation failed: "+errors.slice(0,5).join(" | ")+more);
   }
-
-  const added=pendingItems.length;
-  if(!added){
-    toast("No new items to import"+(skippedDuplicate ? " · "+skippedDuplicate+" duplicate item(s) skipped" : ""));
+  if(!candidates.length){
+    toast("No new items to import"+(skippedDuplicate ? " · skipped "+skippedDuplicate+" duplicate item(s)" : ""));
     return;
   }
 
   const summary=[
-    "Import "+added+" new item(s)?",
+    "Import "+candidates.length+" new item(s)?",
     openingAdded ? openingAdded+" opening balance(s) will be recorded." : "No opening balance will be recorded.",
     skippedDuplicate ? skippedDuplicate+" duplicate item(s) will be skipped." : "",
-    conflicts ? conflicts+" conflicting SL(s) will get new available SL numbers." : "",
-    blankSlAdded ? blankSlAdded+" blank SL row(s) will get new SL numbers." : ""
+    conflicts ? conflicts+" conflicting SL(s) will be auto-assigned." : "",
+    blankSlAdded ? blankSlAdded+" blank SL(s) will be auto-assigned." : ""
   ].filter(Boolean).join("\n");
-
   if(!confirm(summary)) return;
 
-  DB.items.push(...pendingItems);
-  DB.txns.push(...pendingTxns);
-  sortTxns();
+  const mainRef=fdb.collection("erp").doc("main");
+  let result=null;
+  try{
+    await fdb.runTransaction(async transaction=>{
+      const snap=await transaction.get(mainRef);
+      if(!snap.exists) throw new Error("Inventory database not found");
+      const data=snap.data()||{};
+      const liveItems=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
+      const liveKeys=new Set(liveItems.map(it=>itemKey(it.category||"Board",it.type||"",it.color||"",it.thickness||"")));
+      const liveUsedSl=new Set(liveItems.map(it=>Number(it.sl)).filter(Number.isInteger));
+      let liveNextSl=liveItems.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0);
+      const seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{});
+      const newTxns=[]; const accepted=[];
+      let liveDuplicateCount=0, liveSlConflictCount=0;
 
-  audit(
-    "Imported "+added+" new items from Excel/CSV"+
-    (openingAdded ? " · "+openingAdded+" opening balances" : "")+
-    (skippedDuplicate ? " · "+skippedDuplicate+" duplicates skipped" : "")+
-    (conflicts ? " · "+conflicts+" SL conflicts auto-assigned" : "")+
-    (blankSlAdded ? " · "+blankSlAdded+" blank SLs auto-assigned" : "")
-  );
+      for(const candidate of candidates){
+        if(liveKeys.has(candidate.key)){ liveDuplicateCount++; continue; }
+        let sl=candidate.requestedSl;
+        if(sl===null || liveUsedSl.has(sl)){
+          while(liveUsedSl.has(liveNextSl)) liveNextSl++;
+          sl=liveNextSl++;
+          if(candidate.requestedSl!==null) liveSlConflictCount++;
+        }
+        liveUsedSl.add(sl); liveKeys.add(candidate.key);
+        const item=Object.assign({},candidate.item,{sl});
+        liveItems.push(item); accepted.push(item);
+        if(candidate.opening>0){
+          seq.si=(Number(seq.si)||0)+1;
+          const txId="SI-"+String(seq.si).padStart(4,"0");
+          newTxns.push({id:txId,type:"IN",subtype:"OPENING",referenceId:"",supplierId:"",referenceNo:"",department:"",issuedTo:"",purpose:"",date:candidate.openDate,itemId:item.id,qty:candidate.opening,note:"Opening Balance",by:currentUser?currentUser.username:"system",createdAt:Date.now()});
+        }
+      }
+      if(!accepted.length) throw new Error("All selected items already exist. Nothing was imported.");
+      const now=Date.now();
+      const auditRef=fdb.collection("erp_audit").doc();
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Imported "+accepted.length+" new items from Excel/CSV"};
+      transaction.update(mainRef,{items:liveItems,seq,client:CLIENT_ID,rev:now});
+      newTxns.forEach(tx=>transaction.set(fdb.collection("erp_txns").doc(tx.id),tx));
+      transaction.set(auditRef,audit);
+      result={items:liveItems,seq,txns:newTxns,audit,liveDuplicateCount,liveSlConflictCount};
+    });
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Could not import items");
+    return;
+  }
 
-  const saved=save();
-  if(saved && typeof saved.then==="function") await saved;
-  renderItems();
-
-  let msg="Imported "+added+" new item"+(added===1 ? "" : "s");
-  if(openingAdded) msg+=" · "+openingAdded+" opening balance"+(openingAdded===1 ? "" : "s");
-  if(skippedDuplicate) msg+=" · skipped "+skippedDuplicate+" duplicate"+(skippedDuplicate===1 ? "" : "s");
-  if(conflicts) msg+=" · "+conflicts+" SL conflict"+(conflicts===1 ? "" : "s")+" auto-assigned";
-  if(blankSlAdded) msg+=" · "+blankSlAdded+" blank SL"+(blankSlAdded===1 ? "" : "s")+" auto-assigned";
-  toast(msg);
+  DB.items=result.items; DB.seq=result.seq;
+  result.txns.forEach(t=>{DB.txns.push(t); SAVED_TXN.add(t.id);});
+  DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
+  sortTxns(); renderItems();
+  const extraLive=result.liveDuplicateCount ? " · "+result.liveDuplicateCount+" concurrent duplicate(s) skipped" : "";
+  toast("Imported "+result.items.length+" items"+(result.txns.length ? " · "+result.txns.length+" opening balance(s)" : "")+extraLive);
 }
+
 function downloadItemTemplate(){
   if(!isAdmin()){ toast("Only Admin can download the item template"); return; }
   if(typeof ExcelJS==="undefined"){ toast("Excel export library is still loading — try again"); return; }
