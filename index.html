@@ -3439,14 +3439,30 @@ function renderSettings(){
       <div class="hint" style="margin-top:12px">Backup file contains inventory, transactions, settings and audit log. User logins and access are managed from the Users screen.</div></div>
   </div>`;
 }
-function saveSettings(){
+async function saveSettings(){
   if(!canManageSettings()){ toast("Only Super Admin can change Settings"); return; }
-  DB.settings.company = $("#stCompany").value.trim() || "Step Media Ltd";
-  DB.settings.address = $("#stAddress").value.trim();
-  DB.settings.alarmDefault = Math.max(0, Number($("#stAlarm").value)||5);
-  audit("Updated settings"); save();
-  $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
-  toast("Settings saved");
+  const company=$("#stCompany").value.trim() || "Step Media Ltd";
+  const address=$("#stAddress").value.trim();
+  const alarmDefault=Math.max(0,Number($("#stAlarm").value)||5);
+  try{
+    const mainRef=fdb.collection("erp").doc("main");
+    let result=null;
+    await fdb.runTransaction(async transaction=>{
+      const snap=await transaction.get(mainRef);
+      if(!snap.exists) throw new Error("Inventory database not found");
+      const db=snap.data()||{};
+      const settings=Object.assign({},db.settings||{}, {company,address,alarmDefault});
+      const now=Date.now(), auditRef=fdb.collection("erp_audit").doc();
+      const audit={id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),user:currentUser?currentUser.username:"system",action:"Updated settings"};
+      transaction.update(mainRef,{settings,client:CLIENT_ID,rev:now});
+      transaction.set(auditRef,audit);
+      result={settings,audit};
+    });
+    DB.settings=Object.assign({},DB.settings||{},result.settings);
+    DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
+    $("#tbCompany").textContent="\u00b7 "+DB.settings.company;
+    toast("Settings saved");
+  }catch(err){ console.error(err); toast(err.message||"Could not save settings"); }
 }
 function backupData(){
   if(!canManageSettings()){ toast("Only Admin can download backups"); return; }
