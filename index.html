@@ -1489,7 +1489,7 @@ function renderDashboard(){
   </div>
   <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3></div>
     <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>Note</th><th>By</th></tr></thead><tbody>
-    ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.type)}</td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet \u2014 add your first Stock In</td></tr>`}
+    ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.subtype==="RETURN"?"RET":t.type)}</td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet \u2014 add your first Stock In</td></tr>`}
     </tbody></table></div></div>`;
   const labels = [], ins = [], outs = [];
   for(let d = 13; d >= 0; d--){
@@ -2318,6 +2318,7 @@ function reportClosingStock(itemId,from,to){
 let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"", job:"", client:"" }, REP_OUT = null;
 const REP_TYPES = [
   ["txns","All Transactions (date range)"],
+  ["return","Return Register"],
   ["itemwise","Item-wise In / Out / Net"],
   ["catwise","Category-wise Summary"],
   ["typewise","Type-wise Summary"],
@@ -2340,10 +2341,13 @@ function runReport(){
   const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && jobOk(t) && clientOk(t) && (!q || hay(t).includes(q)));
   let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","valuation","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "") + (job ? ` \u00b7 Job No: ${REP.job}` : "") + (client ? ` \u00b7 Client: ${REP.client}` : "");
   let head = [], rows = [];
-  if(REP.type==="txns"){
+  if(REP.type==="return"){
+    head=["ID","Date","Category","Item","Qty","Unit","Return Ref","Return From / Client","Originally Issued To","Note","By"];
+    rows=T.filter(t=>t.subtype==="RETURN").slice().sort((a,b)=>a.date===b.date?String(a.id).localeCompare(String(b.id)):String(a.date).localeCompare(String(b.date))).map(t=>{const it=itemById(t.itemId);return [t.id,t.date,it?it.category||"":"",itemName(it),Math.abs(Number(t.qty)||0),it?it.uom||"Pcs":"",t.referenceNo||"",t.department||"",t.issuedTo||"",t.note||"",t.by||""];});
+  } else if(REP.type==="txns"){
     head = ["ID","Date","Category","Item","Type","Qty","Unit","Supplier","Job No","Client Name","Issued To","Purpose","Note","By"];
     rows = T.slice().sort((a,b) => a.date === b.date ? String(a.id).localeCompare(String(b.id)) : String(a.date).localeCompare(String(b.date)))
-      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="REVERSAL"?"Reversal":t.subtype==="OPENING"?"Opening Balance":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; });
+      .map(t => { const it = itemById(t.itemId); const label=t.subtype==="RETURN"?"Return":t.subtype==="REVERSAL"?"Reversal":t.subtype==="OPENING"?"Opening Balance":(t.type==="IN"?"Stock In":"Stock Out"); return [t.id, t.date, it?it.category||"":"", itemName(it), label, Math.abs(t.qty), it?it.uom||"Pcs":"", supplierName(t.supplierId), t.referenceNo||"", t.department||"", t.issuedTo||"", t.purpose||"", t.note||"", t.by||""]; });
   } else if(REP.type==="itemwise"){
     head = ["Item","Category","Type","Thickness","Opening Stock","Stock In","Stock Out","Net","Closing Stock","Current Stock","Unit"];
     const map = {};
@@ -2967,11 +2971,12 @@ document.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
   if(k==="i"){ e.preventDefault(); txnModal("IN"); }
   if(k==="o"){ e.preventDefault(); txnModal("OUT"); }
+  if(k==="r"){ e.preventDefault(); stockReturnModal(); }
 });
 /* ---------- router & init ---------- */
 const VIEWS = {
   dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers,
-  reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings
+  reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings, stockreturn:renderStockReturn
 };
 function show(view){
   if(!VIEWS[view]) view = "dashboard";
