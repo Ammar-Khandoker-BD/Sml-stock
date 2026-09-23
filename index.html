@@ -1522,9 +1522,8 @@ function renderItems(){
   $("#view-items").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
-      ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
-      <button class="btn" onclick="downloadItemTemplate()">\u2913 Template</button>
-      <button class="btn" onclick="exportItems()">\u2913 Export Excel</button>
+      ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Add Item Attach<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
+      <button class="btn" onclick="downloadItemTemplate()">\u2913 Add Item Sample File</button>
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
     </div></div>
   <div class="filter-bar">
@@ -1819,8 +1818,10 @@ function downloadItemTemplate(){
   const ws=wb.addWorksheet("Item Import");
   const head=["SL","Page","Category","Type","Color","Thickness","Unit","Opening Stock","Opening Date","Alarm Qty"];
   ws.addRow(head);
-  ws.addRow([1,"521","Board","Melamine","Elegant","18 mm","Pcs",24,todayISO(),5]);
-  ws.addRow([2,"293","Board","Melamine","Antik","18 mm","Pcs",10,todayISO(),5]);
+  // SL and Opening Date intentionally stay blank.
+  // The importer assigns the next available SL and uses today's date automatically.
+  ws.addRow(["","","Board","Melamine","Elegant","18 mm","Pcs",24,"",5]);
+  ws.addRow(["","","Board","Melamine","Antik","18 mm","Pcs",10,"",5]);
   ws.getRow(1).eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF3F7D5A"}};cell.alignment={horizontal:"center",vertical:"middle"}});
   ws.views=[{state:"frozen",ySplit:1}];
   [8,12,18,22,18,16,12,16,16,12].forEach((w,i)=>ws.getColumn(i+1).width=w);
