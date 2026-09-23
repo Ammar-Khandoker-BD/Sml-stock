@@ -1162,44 +1162,42 @@ let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = ""
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [];
-function save(){
+function queueSave(writeMain){
   if(!DB) return Promise.resolve(false);
   clearTimeout(saveTimer);
-  const promise = new Promise((resolve,reject)=>saveWaiters.push({resolve,reject}));
-  saveTimer = setTimeout(async ()=>{
-    saveTimer = null;
+  const promise=new Promise((resolve,reject)=>saveWaiters.push({resolve,reject}));
+  saveTimer=setTimeout(async ()=>{
+    saveTimer=null;
     try{
-      const ok = await doSave();
-      const waiters = saveWaiters.splice(0);
+      const ok=await doSave(writeMain);
+      const waiters=saveWaiters.splice(0);
       waiters.forEach(w=>w.resolve(ok));
     }catch(err){
-      const waiters = saveWaiters.splice(0);
+      const waiters=saveWaiters.splice(0);
       waiters.forEach(w=>w.reject(err));
       console.error(err);
     }
   },350);
   return promise;
 }
+function save(){ return queueSave(true); }
+function saveAudit(){ return queueSave(false); }
 function metaOf(db){ const m = Object.assign({}, db); delete m.txns; delete m.audit; delete m.users; m.client = CLIENT_ID; m.rev = Date.now(); return m; }
-async function doSave(){
+async function doSave(writeMain=true){
   if(!DB) return false;
-  const ops = [[fdb.collection("erp").doc("main"), metaOf(DB)]];
+  const ops=[];
+  if(writeMain) ops.push([fdb.collection("erp").doc("main"),metaOf(DB)]);
   const newTxnIds=[];
   const newAuditIds=[];
   DB.txns.forEach(t=>{
-    if(!SAVED_TXN.has(t.id)){
-      ops.push([fdb.collection("erp_txns").doc(t.id),t]);
-      newTxnIds.push(t.id);
-    }
+    if(!SAVED_TXN.has(t.id)){ ops.push([fdb.collection("erp_txns").doc(t.id),t]); newTxnIds.push(t.id); }
   });
   DB.audit.forEach(a=>{
     if(!a.id) a.id="a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     if(!a.ts) a.ts=Date.now();
-    if(!SAVED_AUDIT.has(a.id)){
-      ops.push([fdb.collection("erp_audit").doc(a.id),a]);
-      newAuditIds.push(a.id);
-    }
+    if(!SAVED_AUDIT.has(a.id)){ ops.push([fdb.collection("erp_audit").doc(a.id),a]); newAuditIds.push(a.id); }
   });
+  if(!ops.length) return true;
   const commits=[];
   for(let i=0;i<ops.length;i+=400){
     const b=fdb.batch();
@@ -1393,7 +1391,7 @@ function logout(){
   const done = () => { location.hash = ""; location.reload(); };
   if(currentUser){
     audit("Logged out");
-    const p = save();
+    const p = saveAudit();
     Promise.resolve(p).catch(()=>false).then(() => fauth.signOut()).then(done, done);
   } else fauth.signOut().then(done, done);
 }
@@ -3341,7 +3339,7 @@ async function submitUser(email){
     if(isEdit){
       await fdb.collection("roles").doc(em).set({ role, name, photo: USER_MODAL_PHOTO || "" }, { merge:true });
       audit("Edited user: "+em);
-      save(); closeModal(); toast("User updated"); renderUsers();
+      saveAudit(); closeModal(); toast("User updated"); renderUsers();
       return;
     }
 
@@ -3361,7 +3359,7 @@ async function submitUser(email){
     }
 
     audit("Created user: "+em+" · "+acc);
-    save(); closeModal(); toast("User created successfully"); renderUsers();
+    saveAudit(); closeModal(); toast("User created successfully"); renderUsers();
   }catch(err){
     console.error(err);
     let msg="Could not create user";
@@ -3380,7 +3378,7 @@ function delUser(email){
   if(email === currentUser.id) return toast("You cannot delete your own account");
   if(!confirm(`Remove access for "${email}"?\nAlso delete the login from Firebase Console \u2192 Authentication.`)) return;
   fdb.collection("roles").doc(email).delete().then(() => {
-    audit("Removed user: " + email); save(); toast("User removed"); renderUsers();
+    audit("Removed user: " + email); saveAudit(); toast("User removed"); renderUsers();
   }).catch(() => toast("Could not remove user"));
 }
 
@@ -3455,7 +3453,7 @@ function backupData(){
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)], {type:"application/json"}));
   a.download = "sml-inventory-backup-"+todayISO()+".json"; a.click(); URL.revokeObjectURL(a.href);
-  audit("Downloaded backup"); save(); toast("Backup downloaded");
+  audit("Downloaded backup"); saveAudit(); toast("Backup downloaded");
 }
 function restoreData(inp){
   if(!canManageSettings()){ toast("Only Admin can restore backups"); inp.value=""; return; }
@@ -3550,7 +3548,7 @@ fauth.onAuthStateChanged(async fu => {
     enterApp({ id: fu.email, email: fu.email, name: rd.name || fu.email.split("@")[0], username: fu.email.split("@")[0], access, photo: rd.photo || "" });
     attachListeners();
     if(!rs.exists) toast("No role assigned \u2014 view-only. Ask admin to add you in Users.");
-    audit("Logged in"); save();
+    audit("Logged in"); saveAudit();
   }catch(err){
     console.error(err);
     const el = $("#loginErr"); el.style.display = "block";
