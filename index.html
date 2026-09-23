@@ -1146,15 +1146,18 @@ const TXN_CACHE_LIMIT = 1000;
 let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = "";
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
-let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [];
+let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [], pendingMainSave = false;
 function queueSave(writeMain){
   if(!DB) return Promise.resolve(false);
+  if(writeMain) pendingMainSave=true;
   clearTimeout(saveTimer);
   const promise=new Promise((resolve,reject)=>saveWaiters.push({resolve,reject}));
   saveTimer=setTimeout(async ()=>{
     saveTimer=null;
+    const writeMainNow=pendingMainSave;
+    pendingMainSave=false;
     try{
-      const ok=await doSave(writeMain);
+      const ok=await doSave(writeMainNow);
       const waiters=saveWaiters.splice(0);
       waiters.forEach(w=>w.resolve(ok));
     }catch(err){
@@ -1315,7 +1318,7 @@ function seedData(){
       const it = items[Math.floor(rnd()*items.length)];
       const q = 10 + Math.floor(rnd()*40);
       seq.si++;
-      txns.push({ id:"SI-"+String(seq.si).padStart(4,"0"), type:"IN", date:daysAgo(d), itemId:it.id, qty:q, note:"", by:"admin" });
+      txns.push({ id:"SI-"+String(seq.si).padStart(4,"0"), type:"IN", date:daysAgo(d), itemId:it.id, qty:q, note:"", by:"admin", createdAt:Date.now() });
       it.stock += q;
     }
     const n = 1 + Math.floor(rnd()*2);
@@ -1324,7 +1327,7 @@ function seedData(){
       const q = 1 + Math.floor(rnd()*8);
       if(it.stock - q < 0) continue;
       seq.so++;
-      txns.push({ id:"SO-"+String(seq.so).padStart(4,"0"), type:"OUT", date:daysAgo(d), itemId:it.id, qty:-q, note:"", by:"admin" });
+      txns.push({ id:"SO-"+String(seq.so).padStart(4,"0"), type:"OUT", date:daysAgo(d), itemId:it.id, qty:-q, note:"", by:"admin", createdAt:Date.now() });
       it.stock -= q;
     }
   }
