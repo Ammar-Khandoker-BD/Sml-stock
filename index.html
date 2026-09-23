@@ -2232,9 +2232,9 @@ async function renderStockReturn(){
   <div class="page-head"><div><div class="crumb">Inventory / <b>Returns</b></div><h1>Stock Returns</h1><p>Material returned back to store after issue</p></div>
     <div class="page-actions"><button class="btn" onclick="exportTxnXlsx(&quot;RETURN&quot;)">\u2913 Excel</button>${canWrite()?`<button class="btn btn-green" onclick="stockReturnModal()">+ New Return</button>`:""}</div></div>
   <div class="filter-bar">
-    <div class="search-wrap"><input class="input" placeholder="Search item, return ref, client, note…" value="${esc(f.q)}" oninput="RETURN_F.q=this.value;renderStockReturn()"></div>
+    <div class="search-wrap"><input class="input" placeholder="Search item, return ref, client, note…" value="${esc(f.q)}" oninput="scheduleReturnFilterRender(this)"></div>
     <select class="select" onchange="RETURN_F.cat=this.value;renderStockReturn()"><option value="">All Categories</option>${itemCats().map(c=>`<option value="${esc(c)}" ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
-    <select class="select" onchange="RETURN_F.item=this.value;renderStockReturn()"><option value="">All Items</option>${DB.items.slice().sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemLabel(it))}</option>`).join("")}</select>
+    <select class="select" onchange="RETURN_F.item=this.value;renderStockReturn()"><option value="">All Items</option>${DB.items.filter(it=>!f.cat || (it.category||"Board")===f.cat).slice().sort((a,b)=>itemName(a).localeCompare(itemName(b))).map(it=>`<option value="${it.id}" ${f.item===it.id?"selected":""}>${esc(itemName(it))}</option>`).join("")}</select>
     <input type="date" class="input" style="max-width:160px" value="${f.from}" onchange="RETURN_F.from=this.value;renderStockReturn()">
     <input type="date" class="input" style="max-width:160px" value="${f.to}" onchange="RETURN_F.to=this.value;renderStockReturn()">
   </div>
@@ -2248,17 +2248,29 @@ function scheduleTxnFilterRender(kind,input){
   const value=String(input&&input.value||"");
   const caret=Number.isFinite(input&&input.selectionStart)?input.selectionStart:value.length;
   if(window.__smlTxnFilterTimer) clearTimeout(window.__smlTxnFilterTimer);
-  window.__smlTxnFilterTimer=setTimeout(()=>{
+  window.__smlTxnFilterTimer=setTimeout(async()=>{
     window.__smlTxnFilterTimer=null;
     const target=kind==="IN"?SI_F:SO_F;
     target.q=value;
-    renderTxns(kind);
+    try{ await renderTxns(kind); }catch(err){ console.error(err); return; }
     const viewId=kind==="IN"?"stockin":"stockout";
     const next=document.querySelector("#view-"+viewId+" .search-wrap .input");
     if(next){
       next.focus();
       try{ next.setSelectionRange(caret,caret); }catch(e){}
     }
+  },120);
+}
+function scheduleReturnFilterRender(input){
+  const value=String(input&&input.value||"");
+  const caret=Number.isFinite(input&&input.selectionStart)?input.selectionStart:value.length;
+  if(window.__smlReturnFilterTimer) clearTimeout(window.__smlReturnFilterTimer);
+  window.__smlReturnFilterTimer=setTimeout(async()=>{
+    window.__smlReturnFilterTimer=null;
+    RETURN_F.q=value;
+    try{ await renderStockReturn(); }catch(err){ console.error(err); return; }
+    const next=document.querySelector("#view-stockreturn .search-wrap .input");
+    if(next){ next.focus(); try{ next.setSelectionRange(caret,caret); }catch(e){} }
   },120);
 }
 async function renderTxns(kind){
