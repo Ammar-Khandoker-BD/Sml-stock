@@ -1157,6 +1157,8 @@ const fmtD = iso => { if(!iso) return "\u2014"; const d = new Date(iso+"T00:00:0
 const nowTime = () => new Date().toTimeString().slice(0,8);
 
 let DB = null, currentUser = null;
+const TXN_CACHE_LIMIT = 1000;
+let REPORT_TXNS = [];
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [];
@@ -1215,7 +1217,7 @@ async function loadData(){
   if(snap.exists){
     DB = snap.data();
     const [txSnap, auSnap] = await Promise.all([
-      fdb.collection("erp_txns").get(),
+      fdb.collection("erp_txns").orderBy("createdAt","desc").limit(TXN_CACHE_LIMIT).get(),
       fdb.collection("erp_audit").orderBy("ts","desc").limit(500).get()
     ]);
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
@@ -1259,7 +1261,7 @@ function attachListeners(){
     SAVED_AUDIT=new Set(DB.audit.map(a=>a.id));
     renderAll();
   });
-  fdb.collection("erp_txns").onSnapshot(snap => {
+  fdb.collection("erp_txns").orderBy("createdAt","desc").limit(TXN_CACHE_LIMIT).onSnapshot(snap => {
     if(!currentUser || snap.metadata.hasPendingWrites) return;
     let changed = false;
     snap.docChanges().forEach(ch => {
@@ -2692,7 +2694,8 @@ function reportMovementAmounts(t){
 function reportStockBeforeDate(itemId,date){
   const it=itemById(itemId);
   if(!it) return 0;
-  const movementAfterStart=DB.txns.filter(t=>t.itemId===itemId && String(t.date||"")>=date).reduce((s,t)=>s+(Number(t.qty)||0),0);
+  const source=REPORT_TXNS.length ? REPORT_TXNS : DB.txns;
+  const movementAfterStart=source.filter(t=>t.itemId===itemId && String(t.date||"")>=date).reduce((s,t)=>s+(Number(t.qty)||0),0);
   return Number(it.stock||0)-movementAfterStart;
 }
 function reportClosingStock(itemId,from,to){
@@ -2702,6 +2705,13 @@ function reportClosingStock(itemId,from,to){
 }
 /* ---------- reports ---------- */
 let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"", job:"", client:"" }, REP_OUT = null;
+let REPORT_RUN_ID = 0;
+async function loadReportTransactions(from){
+  const to=todayISO();
+  if(from>to) return [];
+  const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
+  return snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.id||"").localeCompare(String(a.id||"")));
+}
 const REP_TYPES = [
   ["txns","All Transactions (date range)"],
   ["return","Return Register"],
@@ -2714,8 +2724,15 @@ const REP_TYPES = [
   ["supplier","Supplier-wise Received"],
   ["low","Low Stock Report"]
 ];
-function runReport(){
+async function runReport(){
+  const runId=++REPORT_RUN_ID;
   const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
+  if(from>to){ toast("Report start date cannot be after end date"); return; }
+  if(!["stock","valuation","low"].includes(REP.type)){
+    try{ REPORT_TXNS=await loadReportTransactions(from); }
+    catch(err){ console.error(err); toast("Could not load report data — check internet connection"); return; }
+    if(runId!==REPORT_RUN_ID) return;
+  }else REPORT_TXNS=[];
   const job = (REP.job||"").trim().toLowerCase();
   const client = (REP.client||"").trim().toLowerCase();
   const inRange = t => t.date >= from && t.date <= to;
@@ -2724,7 +2741,7 @@ function runReport(){
   const catOk = it => !REP.cat || ((it ? (it.category||"Board") : "") === REP.cat);
   const jobOk = t => !job || String(t.referenceNo||"").toLowerCase().includes(job);
   const clientOk = t => !client || String(t.department||"").toLowerCase().includes(client);
-  const T = DB.txns.filter(t => inRange(t) && catOk(itemById(t.itemId)) && jobOk(t) && clientOk(t) && (!q || hay(t).includes(q)));
+  const T = REPORT_TXNS.filter(t => inRange(t) && catOk(itemById(t.itemId)) && jobOk(t) && clientOk(t) && (!q || hay(t).includes(q)));
   let title = REP_TYPES.find(x=>x[0]===REP.type)[1] + (["stock","valuation","low"].includes(REP.type) ? "" : ` (${fmtD(from)} \u2013 ${fmtD(to)})`) + (REP.cat ? ` \u00b7 ${REP.cat}` : "") + (q ? ` \u00b7 search: "${REP.q}"` : "") + (job ? ` \u00b7 Job No: ${REP.job}` : "") + (client ? ` \u00b7 Client: ${REP.client}` : "");
   let head = [], rows = [];
   if(REP.type==="return"){
