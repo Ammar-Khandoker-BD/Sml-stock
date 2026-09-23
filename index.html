@@ -1144,6 +1144,8 @@ const nowTime = () => new Date().toTimeString().slice(0,8);
 let DB = null, currentUser = null;
 const TXN_CACHE_LIMIT = 1000;
 let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = "";
+let DASH_MONTH_TXNS=[], DASH_MONTH_KEY="", DASH_MONTH_LOADED_AT=0, DASH_RENDER_ID=0;
+
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [], pendingMainSave = false;
@@ -1254,7 +1256,11 @@ function attachListeners(){
       if(ch.type === "added" && !SAVED_TXN.has(ch.doc.id)){ DB.txns.push(ch.doc.data()); SAVED_TXN.add(ch.doc.id); changed = true; }
       if(ch.type === "removed" && SAVED_TXN.has(ch.doc.id)){ DB.txns = DB.txns.filter(t => t.id !== ch.doc.id); SAVED_TXN.delete(ch.doc.id); changed = true; }
     });
-    if(changed){ sortTxns(); renderAll(); }
+    if(changed){
+      sortTxns();
+      DASH_MONTH_LOADED_AT=0;
+      renderAll();
+    }
   });
 }
 
@@ -1500,49 +1506,53 @@ function exportCSV(name, head, rows){
 }
 
 /* ---------- dashboard ---------- */
+async function loadDashboardMonthTxns(month,today){
+  const key=month+'|'+today;
+  if(DASH_MONTH_KEY===key && DASH_MONTH_LOADED_AT && (Date.now()-DASH_MONTH_LOADED_AT)<30000) return DASH_MONTH_TXNS;
+  const from=month+'-01';
+  const snap=await fdb.collection('erp_txns').where('date','>=',from).where('date','<=',today).get();
+  DASH_MONTH_TXNS=snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
+  DASH_MONTH_KEY=key; DASH_MONTH_LOADED_AT=Date.now();
+  return DASH_MONTH_TXNS;
+}
 function renderDashboard(){
-  const month = todayISO().slice(0,7);
-  const inMonth = movementTotals(DB.txns.filter(t => t.type==="IN" && String(t.date).slice(0,7)===month)).in;
-  const outMonth = movementTotals(DB.txns.filter(t => t.type==="OUT" && String(t.date).slice(0,7)===month)).out;
-  const low = lowItems();
-  const outCount = DB.items.filter(it => (Number(it.stock)||0) <= 0).length;
-  const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
-  const recent = DB.txns.slice(0,8);
+  const renderId=++DASH_RENDER_ID;
+  const today=todayISO();
+  const month=today.slice(0,7);
+  loadDashboardMonthTxns(month,today).then(monthRows=>{
+    if(renderId!==DASH_RENDER_ID || !currentUser) return;
+    const inMonth=movementTotals(monthRows.filter(t=>t.type==='IN')).in;
+    const outMonth=movementTotals(monthRows.filter(t=>t.type==='OUT')).out;
+    const low=lowItems();
+    const outCount=DB.items.filter(it=>(Number(it.stock)||0)<=0).length;
+    const totalStock=DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
+    const recent=DB.txns.slice(0,8);
 
-  const catMap = {};
-  DB.items.forEach(it => {
-    const cat = it.category || "Other";
-    if(!catMap[cat]) catMap[cat] = {items:0,stock:0,low:0,out:0,in:0,outm:0};
-    const row = catMap[cat];
-    const stock = Number(it.stock)||0;
-    row.items++;
-    row.stock += stock;
-    if(stock<=0) row.out++;
-    if(stock<=Number(it.alarm)||0) row.low++;
-  });
-  DB.txns.forEach(t => {
-    if(String(t.date||"").slice(0,7)!==month) return;
-    const it = itemById(t.itemId);
-    const cat = it ? (it.category||"Other") : "Other";
-    if(!catMap[cat]) catMap[cat] = {items:0,stock:0,low:0,out:0,in:0,outm:0};
-    const q = Math.abs(Number(t.qty)||0);
-    if(t.type==="IN") catMap[cat].in += q;
-    else if(t.type==="OUT") catMap[cat].outm += q;
-  });
-  const categoryRows = Object.keys(catMap)
-    .map(cat => ({cat,...catMap[cat],net:catMap[cat].in-catMap[cat].outm}))
-    .sort((a,b)=>b.stock-a.stock || a.cat.localeCompare(b.cat));
+    const catMap={};
+    DB.items.forEach(it=>{
+      const cat=it.category||'Other';
+      if(!catMap[cat]) catMap[cat]={items:0,stock:0,low:0,out:0,in:0,outm:0};
+      const row=catMap[cat], stock=Number(it.stock)||0;
+      row.items++; row.stock+=stock;
+      if(stock<=0) row.out++;
+      if(stock<=Number(it.alarm)||0) row.low++;
+    });
+    monthRows.forEach(t=>{
+      const it=itemById(t.itemId);
+      const cat=it?(it.category||'Other'):'Other';
+      if(!catMap[cat]) catMap[cat]={items:0,stock:0,low:0,out:0,in:0,outm:0};
+      const q=Math.abs(Number(t.qty)||0);
+      if(t.type==='IN') catMap[cat].in+=q;
+      else if(t.type==='OUT') catMap[cat].outm+=q;
+    });
+    const categoryRows=Object.keys(catMap).map(cat=>({cat,...catMap[cat],net:catMap[cat].in-catMap[cat].outm})).sort((a,b)=>b.stock-a.stock||a.cat.localeCompare(b.cat));
+    const totalCat=categoryRows.reduce((a,r)=>({items:a.items+r.items,stock:a.stock+r.stock,low:a.low+r.low,out:a.out+r.out,in:a.in+r.in,outm:a.outm+r.outm,net:a.net+r.net}),{items:0,stock:0,low:0,out:0,in:0,outm:0,net:0});
 
-  const totalCat = categoryRows.reduce((a,r)=>({
-    items:a.items+r.items, stock:a.stock+r.stock, low:a.low+r.low, out:a.out+r.out,
-    in:a.in+r.in, outm:a.outm+r.outm, net:a.net+r.net
-  }),{items:0,stock:0,low:0,out:0,in:0,outm:0,net:0});
-
-  $("#view-dashboard").innerHTML = `
+    $('#view-dashboard').innerHTML=`
   <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Stock overview — ${esc(DB.settings.company)}</p></div>
     <div class="page-actions"><button class="btn btn-green" onclick="txnModal('IN')">+ Stock In</button><button class="btn btn-primary" onclick="txnModal('OUT')">+ Stock Out</button></div></div>
 
-  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 0L10.3 3.9z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items →</a></div></div>` : ""}
+  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 0L10.3 3.9z"/></svg><div><b>${low.length} item${low.length>1?'s are':' is'} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items →</a></div></div>` : ''}
 
   <div class="kpi-grid">
     <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${fmtQty(DB.items.length)}</div><div class="delta">in item master</div></div>
@@ -1559,7 +1569,7 @@ function renderDashboard(){
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
     <div class="card"><h3>Category Overview</h3><div class="sub">Current stock distribution by category</div>
       <div class="table-scroll"><table><thead><tr><th>Category</th><th class="num">Items</th><th class="num">Stock</th></tr></thead><tbody>
-      ${categoryRows.map(r=>`<tr><td><b>${esc(r.cat)}</b></td><td class="num">${fmtQty(r.items)}</td><td class="num"><b>${fmtQty(r.stock)}</b></td></tr>`).join("") || '<tr><td colspan="3" class="dash-empty">No categories yet.</td></tr>'}
+      ${categoryRows.map(r=>`<tr><td><b>${esc(r.cat)}</b></td><td class="num">${fmtQty(r.items)}</td><td class="num"><b>${fmtQty(r.stock)}</b></td></tr>`).join('') || '<tr><td colspan="3" class="dash-empty">No categories yet.</td></tr>'}
       </tbody></table></div></div>
   </div>
 
@@ -1568,46 +1578,28 @@ function renderDashboard(){
     <div class="table-scroll"><table><thead><tr>
       <th>Category</th><th class="num">Items</th><th class="num">Current Stock</th><th class="num">Low</th><th class="num">Out</th><th class="num">In</th><th class="num">Out</th><th class="num">Net</th>
     </tr></thead><tbody>
-      ${categoryRows.map(r=>`<tr>
-        <td><span class="cat-chip">${esc(r.cat)}</span></td>
-        <td class="num">${fmtQty(r.items)}</td>
-        <td class="num"><b>${fmtQty(r.stock)}</b></td>
-        <td class="num ${r.low>0?"neg":""}">${fmtQty(r.low)}</td>
-        <td class="num ${r.out>0?"neg":""}">${fmtQty(r.out)}</td>
-        <td class="num pos">+${fmtQty(r.in)}</td>
-        <td class="num neg">−${fmtQty(r.outm)}</td>
-        <td class="num ${r.net>=0?"pos":"neg"}">${r.net>=0?"+":"−"}${fmtQty(Math.abs(r.net))}</td>
-      </tr>`).join("") || '<tr><td colspan="8" class="dash-empty">No inventory data yet.</td></tr>'}
-      ${categoryRows.length ? `<tr style="background:#FAF9F7;font-weight:800">
-        <td>Total</td><td class="num">${fmtQty(totalCat.items)}</td><td class="num">${fmtQty(totalCat.stock)}</td>
-        <td class="num">${fmtQty(totalCat.low)}</td><td class="num">${fmtQty(totalCat.out)}</td>
-        <td class="num pos">+${fmtQty(totalCat.in)}</td><td class="num neg">−${fmtQty(totalCat.outm)}</td>
-        <td class="num ${totalCat.net>=0?"pos":"neg"}">${totalCat.net>=0?"+":"−"}${fmtQty(Math.abs(totalCat.net))}</td>
-      </tr>` : ""}
+      ${categoryRows.map(r=>`<tr><td><span class="cat-chip">${esc(r.cat)}</span></td><td class="num">${fmtQty(r.items)}</td><td class="num"><b>${fmtQty(r.stock)}</b></td><td class="num ${r.low>0?'neg':''}">${fmtQty(r.low)}</td><td class="num ${r.out>0?'neg':''}">${fmtQty(r.out)}</td><td class="num pos">+${fmtQty(r.in)}</td><td class="num neg">−${fmtQty(r.outm)}</td><td class="num ${r.net>=0?'pos':'neg'}">${r.net>=0?'+':'−'}${fmtQty(Math.abs(r.net))}</td></tr>`).join('') || '<tr><td colspan="8" class="dash-empty">No inventory data yet.</td></tr>'}
+      ${categoryRows.length ? `<tr style="background:#FAF9F7;font-weight:800"><td>Total</td><td class="num">${fmtQty(totalCat.items)}</td><td class="num">${fmtQty(totalCat.stock)}</td><td class="num">${fmtQty(totalCat.low)}</td><td class="num">${fmtQty(totalCat.out)}</td><td class="num pos">+${fmtQty(totalCat.in)}</td><td class="num neg">−${fmtQty(totalCat.outm)}</td><td class="num ${totalCat.net>=0?'pos':'neg'}">${totalCat.net>=0?'+':'−'}${fmtQty(Math.abs(totalCat.net))}</td></tr>` : ''}
     </tbody></table></div>
   </div>
 
   <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3><div class="sub">Latest stock movements</div></div>
     <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>Note</th><th>By</th></tr></thead><tbody>
-    ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.subtype==="RETURN"?"RET":t.type)}</td><td class="num"><b>${fmtQty(Math.abs(t.qty))}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet — add your first Stock In</td></tr>`}
+    ${recent.map(t=>{const it=itemById(t.itemId);return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.subtype==='RETURN'?'RET':t.type)}</td><td class="num"><b>${fmtQty(Math.abs(t.qty))}</b> ${it?esc(it.uom||'Pcs'):''}</td><td class="muted">${esc(t.note||'')}</td><td class="muted">${esc(t.by||'')}</td></tr>`}).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet — add your first Stock In</td></tr>`}
     </tbody></table></div></div>`;
 
-  const labels = [], ins = [], outs = [];
-  const dailyIn={}, dailyOut={};
-  DB.txns.forEach(t=>{
-    if(String(t.date||"")>=daysAgo(13) && String(t.date||"")<=today){
-      const q=Math.abs(Number(t.qty)||0);
-      if(t.type==="IN") dailyIn[t.date]=(dailyIn[t.date]||0)+q;
-      else if(t.type==="OUT") dailyOut[t.date]=(dailyOut[t.date]||0)+q;
-    }
-  });
-  for(let d=13;d>=0;d--){
-    const day=daysAgo(d); labels.push(fmtD(day));
-    ins.push(dailyIn[day]||0); outs.push(dailyOut[day]||0);
-  }
-  drawLineChart($("#dashLine"), labels, [{data:ins,color:"#3F7D5A"},{data:outs,color:"#C74634"}]);
+    const labels=[],ins=[],outs=[],dailyIn={},dailyOut={};
+    DB.txns.forEach(t=>{
+      if(String(t.date||'')>=daysAgo(13) && String(t.date||'')<=today){
+        const q=Math.abs(Number(t.qty)||0);
+        if(t.type==='IN') dailyIn[t.date]=(dailyIn[t.date]||0)+q;
+        else if(t.type==='OUT') dailyOut[t.date]=(dailyOut[t.date]||0)+q;
+      }
+    });
+    for(let d=13;d>=0;d--){const day=daysAgo(d);labels.push(fmtD(day));ins.push(dailyIn[day]||0);outs.push(dailyOut[day]||0);}
+    drawLineChart($('#dashLine'),labels,[{data:ins,color:'#3F7D5A'},{data:outs,color:'#C74634'}]);
+  }).catch(err=>{ console.error(err); toast('Could not load dashboard data'); });
 }
-
 /* ---------- items ---------- */
 let ITEM_F = { q:"", cat:"", type:"" };
 function itemTypes(){ return [...new Set(DB.items.map(it => it.type).filter(Boolean))].sort(); }
