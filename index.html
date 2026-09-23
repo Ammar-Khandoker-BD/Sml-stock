@@ -3525,12 +3525,30 @@ async function saveSettings(){
     toast("Settings saved");
   }catch(err){ console.error(err); toast(err.message||"Could not save settings"); }
 }
-function backupData(){
+async function backupData(){
   if(!canManageSettings()){ toast("Only Admin can download backups"); return; }
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(DB,null,1)], {type:"application/json"}));
-  a.download = "sml-inventory-backup-"+todayISO()+".json"; a.click(); URL.revokeObjectURL(a.href);
-  audit("Downloaded backup"); saveAudit(); toast("Backup downloaded");
+  try{
+    toast("Preparing full backup… please wait");
+    const snapshot=JSON.parse(JSON.stringify(DB));
+    const [txSnap,auditSnap]=await Promise.all([
+      fdb.collection("erp_txns").get(),
+      fdb.collection("erp_audit").get()
+    ]);
+    snapshot.txns=txSnap.docs.map(d=>d.data());
+    snapshot.audit=auditSnap.docs.map(d=>d.data()).sort((a,b)=>(Number(b.ts)||0)-(Number(a.ts)||0));
+    const blob=new Blob([JSON.stringify(snapshot,null,1)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="sml-inventory-backup-"+todayISO()+".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    audit("Downloaded full backup"); await saveAudit();
+    toast("Full backup downloaded · "+snapshot.txns.length+" transactions · "+snapshot.audit.length+" audit records");
+  }catch(err){
+    console.error(err);
+    toast("Could not create full backup");
+  }
 }
 function restoreData(inp){
   if(!canManageSettings()){ toast("Only Admin can restore backups"); inp.value=""; return; }
