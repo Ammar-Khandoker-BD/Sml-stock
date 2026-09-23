@@ -1481,49 +1481,29 @@ function renderDashboard(){
   const low = lowItems();
   const outCount = DB.items.filter(it => (Number(it.stock)||0) <= 0).length;
   const totalStock = DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0);
-  const pricedItems = DB.items.filter(it => (Number(it.price)||0) > 0).length;
-  const totalValue = DB.items.reduce((s,it) => s + (Number(it.stock)||0)*(Number(it.price)||0), 0);
-  const healthyCount = DB.items.filter(it => (Number(it.stock)||0) > (Number(it.alarm)||0)).length;
-  const healthPct = DB.items.length ? Math.round(healthyCount / DB.items.length * 100) : 0;
-  const lowOnly = Math.max(0, low.length - outCount);
-  const netMonth = inMonth - outMonth;
-  const categoryTotals = {};
-  DB.items.forEach(it => { const k = it.category || "Other"; categoryTotals[k] = (categoryTotals[k]||0) + (Number(it.stock)||0); });
-  const topCategory = Object.keys(categoryTotals).map(k => [k,categoryTotals[k]]).sort((a,b)=>b[1]-a[1])[0];
-  const topCategoryName = topCategory ? topCategory[0] : "—";
-  const topCategoryQty = topCategory ? topCategory[1] : 0;
-  const healthSummary =
-    '<div class="dash-insight-grid">'+
-      '<div class="dash-insight green"><div class="top"><span class="label">Inventory Health</span><span class="badge ok">LIVE</span></div><div class="value">'+fmtQty(healthPct)+'%</div><div class="sub">'+fmtQty(healthyCount)+' healthy items · '+fmtQty(lowOnly)+' low · '+fmtQty(outCount)+' out</div></div>'+
-      '<div class="dash-insight orange"><div class="top"><span class="label">Monthly Net Movement</span><span class="badge pending">'+(netMonth>=0?'POSITIVE':'NEGATIVE')+'</span></div><div class="value">'+(netMonth>=0?'+':'−')+fmtQty(Math.abs(netMonth))+'</div><div class="sub">Net units for '+esc(month)+'</div><div class="mini"><span>In<b style="color:var(--green)">+'+fmtQty(inMonth)+'</b></span><span>Out<b style="color:var(--red)">−'+fmtQty(outMonth)+'</b></span></div></div>'+
-      '<div class="dash-insight blue"><div class="top"><span class="label">Data & Stock Focus</span><span class="badge approved">'+fmtQty(pricedItems)+' priced</span></div><div class="value">'+fmtQty(topCategoryQty)+'</div><div class="sub">Top category: <b style="color:var(--text)">'+esc(topCategoryName)+'</b></div><div class="mini"><span>Items<b>'+fmtQty(DB.items.length)+'</b></span><span>Value<b>'+(pricedItems ? 'Tk '+totalValue.toLocaleString("en-IN",{maximumFractionDigits:0}) : 'Not configured')+'</b></span></div></div>'+
-    '</div>';
   const recent = DB.txns.slice(0,8);
   $("#view-dashboard").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Stock overview \u2014 ${esc(DB.settings.company)}</p></div>
+  <div class="page-head"><div><div class="crumb">Home / <b>Dashboard</b></div><h1>Dashboard</h1><p>Stock overview — ${esc(DB.settings.company)}</p></div>
     <div class="page-actions"><button class="btn btn-green" onclick="txnModal('IN')">+ Stock In</button><button class="btn btn-primary" onclick="txnModal('OUT')">+ Stock Out</button></div></div>
-  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items \u2192</a></div></div>` : ""}
-  ${healthSummary}\n  <div class="dash-live-note">Smart view: health, monthly movement and pricing coverage are calculated from the live transaction ledger.</div>\n<div class="kpi-grid">
-    <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${DB.items.length}</div><div class="delta">in item master</div></div>
+  ${low.length ? `<div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><b>${low.length} item${low.length>1?"s are":" is"} low on stock.</b> <a href="#items" style="color:var(--orange)">Check items →</a></div></div>` : ""}
+  <div class="kpi-grid">
+    <div class="card kpi k-blue"><div class="label">Items</div><div class="value">${fmtQty(DB.items.length)}</div><div class="delta">in item master</div></div>
     <div class="card kpi"><div class="label">Total Stock</div><div class="value">${fmtQty(totalStock)}</div><div class="delta">all recorded units</div></div>
-    <div class="card kpi k-blue"><div class="label">Stock Value</div><div class="value">Tk ${DB.items.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0).toLocaleString("en-IN",{maximumFractionDigits:0})}</div><div class="delta">current valuation</div></div>
-    <div class="card kpi k-red"><div class="label">Out of Stock</div><div class="value">${DB.items.filter(it=>(Number(it.stock)||0)<=0).length}</div><div class="delta">items at zero</div></div>
-    <div class="card kpi k-green"><div class="label">Stock In \u2014 this month</div><div class="value">${fmtQty(inMonth)}</div><div class="delta">material received</div></div>
-    <div class="card kpi k-orange"><div class="label">Stock Out \u2014 this month</div><div class="value">${fmtQty(outMonth)}</div><div class="delta">delivered / used</div></div>
-    <div class="card kpi ${low.length?"k-red":"k-green"}"><div class="label">Low Stock</div><div class="value">${low.length}</div><div class="delta">at or below alarm qty</div></div>
-    <div class="card kpi k-green"><div class="label">Today In</div><div class="value">${fmtQty(movementTotals(DB.txns.filter(t=>t.date===todayISO())).in)}</div><div class="delta">Pcs received</div></div>
-    <div class="card kpi k-orange"><div class="label">Today Out</div><div class="value">${fmtQty(movementTotals(DB.txns.filter(t=>t.date===todayISO())).out)}</div><div class="delta">Pcs issued</div></div>
+    <div class="card kpi k-red"><div class="label">Out of Stock</div><div class="value">${fmtQty(outCount)}</div><div class="delta">items at zero</div></div>
+    <div class="card kpi k-orange"><div class="label">Low Stock</div><div class="value">${fmtQty(low.length)}</div><div class="delta">at or below alarm qty</div></div>
+    <div class="card kpi k-green"><div class="label">Stock In — this month</div><div class="value">${fmtQty(inMonth)}</div><div class="delta">material received</div></div>
+    <div class="card kpi k-orange"><div class="label">Stock Out — this month</div><div class="value">${fmtQty(outMonth)}</div><div class="delta">delivered / used</div></div>
   </div>
   <div class="grid-2">
-    <div class="card"><h3>Stock In vs Out \u2014 last 14 days</h3><div class="sub">Daily quantity</div>
+    <div class="card"><h3>Stock In vs Out — last 14 days</h3><div class="sub">Daily quantity</div>
       <div class="legend"><span><i style="background:var(--green)"></i>Stock In</span><span><i style="background:var(--accent)"></i>Stock Out</span></div>
       <div class="chart-box"><canvas id="dashLine"></canvas></div></div>
     <div class="card"><h3>Current Stock by Category</h3><div class="sub">Total quantity per category</div>
       <div class="chart-box"><canvas id="dashBar"></canvas></div></div>
   </div>
-  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3></div>
+  <div class="table-card"><div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3><div class="sub">Latest stock movements</div></div>
     <div class="table-scroll"><table><thead><tr><th>ID</th><th>Date</th><th>Item</th><th>Type</th><th class="num">Qty</th><th>Note</th><th>By</th></tr></thead><tbody>
-    ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.subtype==="RETURN"?"RET":t.type)}</td><td class="num"><b>${Math.abs(t.qty)}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet \u2014 add your first Stock In</td></tr>`}
+    ${recent.map(t => { const it = itemById(t.itemId); return `<tr><td class="muted">${esc(t.id)}</td><td>${fmtD(t.date)}</td><td><b>${esc(itemName(it))}</b></td><td>${typeBadge(t.subtype==="RETURN"?"RET":t.type)}</td><td class="num"><b>${fmtQty(Math.abs(t.qty))}</b> ${it?esc(it.uom||"Pcs"):""}</td><td class="muted">${esc(t.note||"")}</td><td class="muted">${esc(t.by||"")}</td></tr>`; }).join("") || `<tr><td colspan="7" style="text-align:center;color:var(--faint);padding:30px">No transactions yet — add your first Stock In</td></tr>`}
     </tbody></table></div></div>`;
   const labels = [], ins = [], outs = [];
   for(let d = 13; d >= 0; d--){
