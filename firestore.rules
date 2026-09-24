@@ -27,11 +27,6 @@ service cloud.firestore {
         );
     }
 
-    function adminMainUpdateAllowed() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['items', 'seq', 'categories', 'groups', 'suppliers', 'client', 'rev']);
-    }
-
     function isStore() {
       return isSignedIn()
         && exists(roleDoc())
@@ -39,6 +34,11 @@ service cloud.firestore {
           get(roleDoc()).data.role == 'staff'
           || get(roleDoc()).data.role == 'store'
         );
+    }
+
+    function adminMainUpdateAllowed() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['items', 'seq', 'categories', 'groups', 'suppliers', 'settings', 'client', 'rev']);
     }
 
     function storeMainUpdateAllowed() {
@@ -61,68 +61,7 @@ service cloud.firestore {
           'NORMAL', 'OPENING', 'ADJUSTMENT', 'REVERSAL', 'RETURN'
         ]
         && request.resource.data.date is string
-        && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}
-    }
-
-    function validAuditCreate(auditId) {
-      return request.resource.data.keys().hasAll([
-          'id', 'ts', 'date', 'time', 'user', 'action'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'id', 'ts', 'date', 'time', 'user', 'action'
-        ])
-        && request.resource.data.id == auditId
-        && request.resource.data.ts is number
-        && request.resource.data.date is string
-        && request.resource.data.time is string
-        && request.resource.data.user is string
-        && request.resource.data.action is string;
-    }
-
-    match /roles/{email} {
-      allow read: if isSignedIn() &&
-        (email == request.auth.token.email || isSuperAdmin());
-
-      allow create, update, delete: if isSuperAdmin();
-    }
-
-    match /erp/{docId} {
-      allow read: if isSignedIn();
-
-      allow create: if isSuperAdmin()
-        || isAdmin();
-
-      allow update: if isSuperAdmin()
-        || (
-          isAdmin()
-          && !isSuperAdmin()
-          && docId == 'main'
-          && adminMainUpdateAllowed()
-        )
-        || (isStore() && docId == 'main' && storeMainUpdateAllowed());
-
-      allow delete: if isSuperAdmin()
-        || isAdmin();
-    }
-
-    match /erp_txns/{txId} {
-      allow read: if isSignedIn();
-      allow create: if (isAdmin() || isStore()) && validTxnCreate(txId);
-      allow update, delete: if false;
-    }
-
-    match /erp_audit/{auditId} {
-      allow read: if isAdmin() || isStore();
-      allow create: if (isAdmin() || isStore()) && validAuditCreate(auditId);
-      allow update, delete: if false;
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-)
+        && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.itemId is string
         && request.resource.data.qty is number
         && request.resource.data.qty != 0
@@ -151,8 +90,8 @@ service cloud.firestore {
     }
 
     match /roles/{email} {
-      allow read: if isSignedIn() &&
-        (email == request.auth.token.email || isSuperAdmin());
+      allow read: if isSignedIn()
+        && (email == request.auth.token.email || isSuperAdmin());
 
       allow create, update, delete: if isSuperAdmin();
     }
@@ -160,8 +99,7 @@ service cloud.firestore {
     match /erp/{docId} {
       allow read: if isSignedIn();
 
-      allow create: if isSuperAdmin()
-        || isAdmin();
+      allow create: if isSuperAdmin() || isAdmin();
 
       allow update: if isSuperAdmin()
         || (
@@ -170,10 +108,13 @@ service cloud.firestore {
           && docId == 'main'
           && adminMainUpdateAllowed()
         )
-        || (isStore() && docId == 'main' && storeMainUpdateAllowed());
+        || (
+          isStore()
+          && docId == 'main'
+          && storeMainUpdateAllowed()
+        );
 
-      allow delete: if isSuperAdmin()
-        || isAdmin();
+      allow delete: if isSuperAdmin() || isAdmin();
     }
 
     match /erp_txns/{txId} {
