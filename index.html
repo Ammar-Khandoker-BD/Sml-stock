@@ -1150,7 +1150,7 @@ const fmtD = iso => { if(!iso) return "\u2014"; const d = new Date(iso+"T00:00:0
 const nowTime = () => new Date().toTimeString().slice(0,8);
 
 let DB = null, currentUser = null;
-const TXN_CACHE_LIMIT = 100;
+const TXN_CACHE_LIMIT = 30;
 let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = "";
 let DASH_MONTH_TXNS=[], DASH_MONTH_KEY="", DASH_MONTH_LOADED_AT=0, DASH_RENDER_ID=0;
 
@@ -1212,12 +1212,11 @@ async function loadData(){
   const snap = await fdb.collection("erp").doc("main").get();
   if(snap.exists){
     DB = snap.data();
-    const [txSnap, auSnap] = await Promise.all([
-      fdb.collection("erp_txns").orderBy("date","desc").limit(TXN_CACHE_LIMIT).get(),
-      fdb.collection("erp_audit").orderBy("ts","desc").limit(100).get()
-    ]);
+    // Load only a small recent transaction cache at login.
+    // Full history is fetched only when the user asks for a date range.
+    const txSnap = await fdb.collection("erp_txns").orderBy("date","desc").limit(TXN_CACHE_LIMIT).get();
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
-    DB.audit = auSnap.docs.map(d => d.data());
+    // Audit history is not loaded at startup because Audit Trail is not an operational view.
     const migrated = migrateDB();
     SAVED_TXN = new Set(DB.txns.map(t => t.id));
     SAVED_AUDIT = new Set(DB.audit.map(a => a.id));
@@ -2179,20 +2178,22 @@ async function loadTxnViewSource(f){
   const from=f.from||"0000-01-01", to=f.to||todayISO();
   const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
   TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
-  const covered=TXN_VIEW_EXTRA_FROM && TXN_VIEW_EXTRA_TO && hasRange && from>=TXN_VIEW_EXTRA_FROM && to<=TXN_VIEW_EXTRA_TO;
+
+  // No date filter: use the already-loaded recent cache.
+  // This prevents an extra 100-read query every time Stock In/Out/Returns is opened.
+  if(!hasRange) return [...sourceMap.values()];
+
+  const covered=TXN_VIEW_EXTRA_FROM && TXN_VIEW_EXTRA_TO && from>=TXN_VIEW_EXTRA_FROM && to<=TXN_VIEW_EXTRA_TO;
   if(!covered){
-    let query=fdb.collection("erp_txns");
-    if(hasRange){
-      query=query.where("date",">=",from).where("date","<=",to).orderBy("date","desc").limit(300);
-    }else{
-      query=query.orderBy("date","desc").limit(100);
-    }
+    const query=fdb.collection("erp_txns")
+      .where("date",">=",from)
+      .where("date","<=",to)
+      .orderBy("date","desc")
+      .limit(300);
     const snap=await query.get();
     snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); rememberTxnViewExtra(t); });
-    if(hasRange){
-      if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
-      if(!TXN_VIEW_EXTRA_TO || to>TXN_VIEW_EXTRA_TO) TXN_VIEW_EXTRA_TO=to;
-    }
+    if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
+    if(!TXN_VIEW_EXTRA_TO || to>TXN_VIEW_EXTRA_TO) TXN_VIEW_EXTRA_TO=to;
   }
   return [...sourceMap.values()];
 }
