@@ -2928,10 +2928,10 @@ function reportClosingStock(itemId,from,to){
 /* ---------- reports ---------- */
 let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"", job:"", client:"" }, REP_OUT = null;
 let REPORT_RUN_ID = 0;
-async function loadReportTransactions(from){
-  const to=todayISO();
-  if(from>to) return [];
-  const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
+async function loadReportTransactions(from,to){
+  const end=to||todayISO();
+  if(from>end) return [];
+  const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",end).get();
   return snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.id||"").localeCompare(String(a.id||"")));
 }
 const REP_TYPES = [
@@ -2952,7 +2952,7 @@ async function runReport(){
   if(from>to){ toast("Report start date cannot be after end date"); return; }
   if(!["valuation"].includes(REP.type)){
     try{
-      REPORT_TXNS=await loadReportTransactions(from);
+      REPORT_TXNS=await loadReportTransactions(from,to);
       rebuildReportOpeningStock(from);
     }catch(err){ console.error(err); toast("Could not load report data — check internet connection"); return; }
     if(runId!==REPORT_RUN_ID) return;
