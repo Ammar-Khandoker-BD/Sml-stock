@@ -2775,6 +2775,8 @@ async function submitStockAdjustment(e,id){
   const reason=$("#adjReason").value.trim();
   if(!reason){ toast("Reason is required"); return; }
   const date=$("#adjDate").value || todayISO();
+  const btn=e.submitter;
+  if(btn){ btn.disabled=true; btn.textContent="Posting…"; }
   try{
     const result=await commitStockMovement({
       type:delta>0?"IN":"OUT",
@@ -2787,8 +2789,15 @@ async function submitStockAdjustment(e,id){
     closeModal();
     applyCommittedMovement(result,"Stock adjustment posted");
   }catch(err){
-    console.error(err);
-    toast(err.message||"Could not post adjustment");
+    console.error("Stock adjustment failed:",err);
+    if(btn){ btn.disabled=false; btn.textContent="Post Adjustment"; }
+    if(err && err.code==="permission-denied"){
+      toast("Adjustment blocked by Firestore rules — publish the latest firestore.rules");
+    }else if(err && err.code==="failed-precondition"){
+      toast("Adjustment could not be committed because the inventory changed — please try again");
+    }else{
+      toast(err.message||"Could not post adjustment");
+    }
   }
 }
 async function exportReturnXlsx(){
