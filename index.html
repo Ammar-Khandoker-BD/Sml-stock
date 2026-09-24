@@ -2749,7 +2749,7 @@ function openStockAdjustmentModal(id){
   openModal(`
     <h2>Stock Adjustment</h2>
     <div class="hint" style="margin-bottom:14px">Match the system balance with the physical count without deleting history.</div>
-    <form onsubmit="submitStockAdjustment(event,${JSON.stringify(id)})">
+    <form novalidate onsubmit="submitStockAdjustment(event,${JSON.stringify(id)})">
       <div class="field"><label>Item</label><input class="input" value="${esc(itemName(it))}" disabled></div>
       <div class="row-2">
         <div class="field"><label>System Stock</label><input class="input" value="${formatQty(it.stock)} ${esc(it.uom||"Pcs")}" disabled></div>
@@ -2759,7 +2759,7 @@ function openStockAdjustmentModal(id){
         <div class="field"><label for="adjDate">Date</label><input class="input" id="adjDate" type="date" value="${todayISO()}" required></div>
         <div class="field"><label for="adjReason">Reason *</label><input class="input" id="adjReason" class="input" placeholder="Physical count, damage, loss, correction…" required></div>
       </div>
-      <div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Post Adjustment</button></div>
+      <div id="adjError" style="display:none;margin-top:10px;padding:9px 11px;border-radius:8px;background:var(--red-soft);border:1px solid #F2C9C2;color:var(--red);font-size:12px"></div><div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button type="submit" id="adjPostBtn" class="btn btn-primary">Post Adjustment</button></div>
     </form>`);
 }
 
@@ -2775,8 +2775,10 @@ async function submitStockAdjustment(e,id){
   const reason=$("#adjReason").value.trim();
   if(!reason){ toast("Reason is required"); return; }
   const date=$("#adjDate").value || todayISO();
-  const btn=e.submitter;
+  const btn=$("#adjPostBtn");
+  const errBox=$("#adjError");
   if(btn){ btn.disabled=true; btn.textContent="Posting…"; }
+  if(errBox){ errBox.style.display="none"; errBox.textContent=""; }
   try{
     const result=await commitStockMovement({
       type:delta>0?"IN":"OUT",
@@ -2791,13 +2793,14 @@ async function submitStockAdjustment(e,id){
   }catch(err){
     console.error("Stock adjustment failed:",err);
     if(btn){ btn.disabled=false; btn.textContent="Post Adjustment"; }
-    if(err && err.code==="permission-denied"){
-      toast("Adjustment blocked by Firestore rules — publish the latest firestore.rules");
-    }else if(err && err.code==="failed-precondition"){
-      toast("Adjustment could not be committed because the inventory changed — please try again");
-    }else{
-      toast(err.message||"Could not post adjustment");
+    const code=err&&err.code?String(err.code):"unknown";
+    const message=err&&err.message?String(err.message):"Could not post adjustment";
+    const detail="Adjustment failed ["+code+"]: "+message;
+    if(errBox){
+      errBox.style.display="block";
+      errBox.textContent=detail;
     }
+    toast(detail);
   }
 }
 async function exportReturnXlsx(){
