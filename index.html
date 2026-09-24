@@ -3517,8 +3517,20 @@ async function exportAuditXlsx(){
     toast("Audit Excel downloaded");
   }catch(err){ console.error(err); toast("Could not create audit Excel"); }
 }
-function renderAudit(){
-  const rows = DB.audit.filter(a => !AUDIT_Q || a.action.toLowerCase().includes(AUDIT_Q) || a.user.toLowerCase().includes(AUDIT_Q)).slice(0,300);
+let AUDIT_LOAD_PROMISE = null;
+async function loadAuditLog(){
+  if(AUDIT_LOAD_PROMISE) return AUDIT_LOAD_PROMISE;
+  AUDIT_LOAD_PROMISE = fdb.collection("erp_audit").orderBy("ts","desc").limit(300).get().then(s=>{
+    DB.audit=s.docs.map(d=>d.data()).sort((a,b)=>Number(b.ts||0)-Number(a.ts||0));
+    SAVED_AUDIT=new Set(DB.audit.map(a=>a.id).filter(Boolean));
+    return true;
+  }).catch(err=>{ console.error(err); AUDIT_LOAD_PROMISE=null; toast("Could not load activity log"); return false; });
+  return AUDIT_LOAD_PROMISE;
+}
+async function renderAudit(){
+  const loaded=await loadAuditLog();
+  if(!loaded || CURRENT_VIEW!=="audit") return;
+  const rows = DB.audit.filter(a => !AUDIT_Q || String(a.action||"").toLowerCase().includes(AUDIT_Q) || String(a.user||"").toLowerCase().includes(AUDIT_Q)).slice(0,300);
   $("#view-audit").innerHTML = `
   <div class="page-head"><div><div class="crumb">Administration / <b>Audit Trail</b></div><h1>Audit Trail</h1><p>Who did what, and when</p></div>
     <div class="page-actions"><button class="btn" onclick="exportAuditXlsx()">\u2913 Export CSV</button></div></div>
@@ -3542,6 +3554,9 @@ function renderSettings(){
     <div class="card"><h3>Users &amp; Access</h3><div class="sub">Manage ERP users, roles and access permissions</div>
       <button class="btn btn-primary" onclick="show('users')">Manage Users</button>
       <div class="hint" style="margin-top:10px">Super Admin only. Users is kept inside Settings to keep the main navigation focused.</div></div>
+    <div class="card"><h3>Activity Log</h3><div class="sub">See who changed inventory, settings and access, and when</div>
+      <button class="btn" onclick="show('audit')">Open Activity Log</button>
+      <div class="hint" style="margin-top:10px">Loads only when opened, so it does not add startup Firestore reads.</div></div>
     <div class="card"><h3>Data Backup</h3><div class="sub">All data is saved in Firebase cloud \u2014 still, regular backups are a good habit</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-green" onclick="backupData()">\u2913 Download Backup (JSON)</button>
@@ -3659,9 +3674,10 @@ const VIEWS = {
 };
 function show(view){
   const allowedViews=["stockin","stockout","reports","suppliers","stockreturn","settings"];
-  if(!allowedViews.includes(view)) view = "stockin";
+  const internalSuperAdminViews=["users","audit"];
+  if(!allowedViews.includes(view) && !(isSuperAdmin() && internalSuperAdminViews.includes(view))) view = "stockin";
   if(view==="settings" && !isSuperAdmin()) view = "stockin";
-  if(!isAdmin() && ["users","audit"].includes(view)) view = "stockin";
+  if(["users","audit"].includes(view) && !isSuperAdmin()) view = "stockin";
   CURRENT_VIEW = view;
   if(location.hash.slice(1) !== view){ try{ history.replaceState(null,"","#"+view); }catch(e){} }
   document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
