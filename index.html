@@ -1149,7 +1149,7 @@ const fmtD = iso => { if(!iso) return "\u2014"; const d = new Date(iso+"T00:00:0
 const nowTime = () => new Date().toTimeString().slice(0,8);
 
 let DB = null, currentUser = null;
-const TXN_CACHE_LIMIT = 1000;
+const TXN_CACHE_LIMIT = 100;
 let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = "";
 let DASH_MONTH_TXNS=[], DASH_MONTH_KEY="", DASH_MONTH_LOADED_AT=0, DASH_RENDER_ID=0;
 
@@ -1213,7 +1213,7 @@ async function loadData(){
     DB = snap.data();
     const [txSnap, auSnap] = await Promise.all([
       fdb.collection("erp_txns").orderBy("date","desc").limit(TXN_CACHE_LIMIT).get(),
-      fdb.collection("erp_audit").orderBy("ts","desc").limit(500).get()
+      fdb.collection("erp_audit").orderBy("ts","desc").limit(100).get()
     ]);
     DB.txns = txSnap.docs.map(d => d.data()); sortTxns();
     DB.audit = auSnap.docs.map(d => d.data());
@@ -1248,21 +1248,11 @@ function attachListeners(){
     const migrated = migrateDB();
     if(migrated) save();
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
-    renderAll();
+    DASH_MONTH_LOADED_AT=0;
+    if(!["stockin","stockout","stockreturn"].includes(CURRENT_VIEW)) renderAll();
   });
-  fdb.collection("erp_audit").orderBy("ts","desc").limit(500).onSnapshot(snap => {
-    if(!currentUser || snap.metadata.hasPendingWrites) return;
-    DB.audit=snap.docs.map(d=>d.data());
-    SAVED_AUDIT=new Set(DB.audit.map(a=>a.id));
-    renderAll();
-  });
-  fdb.collection("erp_txns").orderBy("date","desc").limit(TXN_CACHE_LIMIT).onSnapshot(snap => {
-    if(!currentUser || snap.metadata.hasPendingWrites) return;
-    let changed = false;
-    snap.docChanges().forEach(ch => {
-      if(ch.type === "added" && !SAVED_TXN.has(ch.doc.id)){ DB.txns.push(ch.doc.data()); SAVED_TXN.add(ch.doc.id); changed = true; }
-      if(ch.type === "removed" && SAVED_TXN.has(ch.doc.id)){ DB.txns = DB.txns.filter(t => t.id !== ch.doc.id); SAVED_TXN.delete(ch.doc.id); changed = true; }
-    });
+
+
     if(changed){
       sortTxns();
       DASH_MONTH_LOADED_AT=0;
@@ -1517,7 +1507,7 @@ function exportCSV(name, head, rows){
 /* ---------- dashboard ---------- */
 async function loadDashboardMonthTxns(month,today){
   const key=month+'|'+today;
-  if(DASH_MONTH_KEY===key && DASH_MONTH_LOADED_AT && (Date.now()-DASH_MONTH_LOADED_AT)<30000) return DASH_MONTH_TXNS;
+  if(DASH_MONTH_KEY===key && DASH_MONTH_LOADED_AT && (Date.now()-DASH_MONTH_LOADED_AT)<600000) return DASH_MONTH_TXNS;
   const from=month+'-01';
   const snap=await fdb.collection('erp_txns').where('date','>=',from).where('date','<=',today).get();
   DASH_MONTH_TXNS=snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.id||'').localeCompare(String(a.id||'')));
@@ -2185,15 +2175,24 @@ function rememberTxnViewExtra(t){
   }
 }
 async function loadTxnViewSource(f){
+  const hasRange=!!(f.from||f.to);
   const from=f.from||"0000-01-01", to=f.to||todayISO();
   const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
   TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
-  const covered=TXN_VIEW_EXTRA_FROM && TXN_VIEW_EXTRA_TO && from>=TXN_VIEW_EXTRA_FROM && to<=TXN_VIEW_EXTRA_TO;
+  const covered=TXN_VIEW_EXTRA_FROM && TXN_VIEW_EXTRA_TO && hasRange && from>=TXN_VIEW_EXTRA_FROM && to<=TXN_VIEW_EXTRA_TO;
   if(!covered){
-    const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",to).get();
+    let query=fdb.collection("erp_txns");
+    if(hasRange){
+      query=query.where("date",">=",from).where("date","<=",to).orderBy("date","desc").limit(300);
+    }else{
+      query=query.orderBy("date","desc").limit(100);
+    }
+    const snap=await query.get();
     snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); rememberTxnViewExtra(t); });
-    if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
-    if(!TXN_VIEW_EXTRA_TO || to>TXN_VIEW_EXTRA_TO) TXN_VIEW_EXTRA_TO=to;
+    if(hasRange){
+      if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
+      if(!TXN_VIEW_EXTRA_TO || to>TXN_VIEW_EXTRA_TO) TXN_VIEW_EXTRA_TO=to;
+    }
   }
   return [...sourceMap.values()];
 }
