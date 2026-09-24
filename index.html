@@ -1070,7 +1070,7 @@ body{position:relative}
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="nav-label">Overview</div>
-    <button class="nav-item" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+    <button class="nav-item" data-view="dashboard" style="display:none" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <div class="nav-label">Inventory</div>
     <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
@@ -1377,7 +1377,7 @@ function enterApp(u){
   document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin() ? "" : "none");
   document.querySelectorAll(".superadmin-only").forEach(el => el.style.display = isSuperAdmin() ? "" : "none");
   renderAll();
-  show(location.hash.slice(1) || "dashboard");
+  show(location.hash.slice(1) || "items");
 }
 function logout(){
   const done = () => { location.hash = ""; location.reload(); };
@@ -1476,7 +1476,7 @@ function drawBarChart(c, labels, values, color){
 /* =====================================================
    Views, CRUD & router
    ===================================================== */
-let CURRENT_VIEW = "dashboard";
+let CURRENT_VIEW = "items";
 const lowItems = () => DB.items.filter(it => it.stock <= it.alarm);
 const stockValue = () => DB.items.reduce((s,it) => s + it.stock*(it.price/(it.mult||1)), 0);
 function statusBadge(it){
@@ -3678,13 +3678,14 @@ document.addEventListener("keydown",e=>{
 });
 /* ---------- router & init ---------- */
 const VIEWS = {
-  dashboard:renderDashboard, items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers,
+  items:renderItems, stockin:renderStockIn, stockout:renderStockOut, suppliers:renderSuppliers,
   reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings, stockreturn:renderStockReturn
 };
 function show(view){
-  if(!VIEWS[view]) view = "dashboard";
-  if(!isAdmin() && ["users","audit","settings"].includes(view)) view = "dashboard";
-  if(!isSuperAdmin() && ["users","settings"].includes(view)) view = "dashboard";
+  if(view==="dashboard") view = "items";
+  if(!VIEWS[view]) view = "items";
+  if(!isAdmin() && ["users","audit","settings"].includes(view)) view = "items";
+  if(!isSuperAdmin() && ["users","settings"].includes(view)) view = "items";
   CURRENT_VIEW = view;
   if(location.hash.slice(1) !== view){ try{ history.replaceState(null,"","#"+view); }catch(e){} }
   document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
@@ -3698,10 +3699,10 @@ function renderAll(){
   if(currentUser && VIEWS[CURRENT_VIEW]) VIEWS[CURRENT_VIEW]();
 }
 document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
-window.addEventListener("hashchange", () => { if(currentUser) show(location.hash.slice(1) || "dashboard"); });
+window.addEventListener("hashchange", () => { if(currentUser) show(location.hash.slice(1) || "items"); });
 $("#hamburger").addEventListener("click", () => { $("#sidebar").classList.toggle("open"); $("#scrim").classList.toggle("open"); });
 $("#scrim").addEventListener("click", () => { $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open"); });
-let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if(currentUser && CURRENT_VIEW==="dashboard") renderDashboard(); }, 200); });
+let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { /* dashboard intentionally disabled to avoid Firestore-heavy reads */ }, 200); });
 function tick(){
   $("#clock").textContent = new Date().toLocaleString("en-GB",{weekday:"short",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
 }
