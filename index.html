@@ -1248,7 +1248,6 @@ function attachListeners(){
     const migrated = migrateDB();
     if(migrated) save();
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
-    DASH_MONTH_LOADED_AT=0;
     if(!["stockin","stockout","stockreturn"].includes(CURRENT_VIEW)) renderAll();
   });
 
@@ -2162,7 +2161,7 @@ function txnCategoryTone(category){
   for(let i=0;i<value.length;i++) hash=(hash*31+value.charCodeAt(i))>>>0;
   return "txn-row-cat-"+String.fromCharCode(97+(hash%6));
 }
-const TXN_VIEW_EXTRA_LIMIT=3000;
+const TXN_VIEW_EXTRA_LIMIT=1000;
 let TXN_VIEW_EXTRA=new Map(), TXN_VIEW_LOAD_ID=0, TXN_VIEW_EXTRA_FROM="", TXN_VIEW_EXTRA_TO="";
 function rememberTxnViewExtra(t){
   if(!t || !t.id) return;
@@ -2456,6 +2455,7 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORM
 function applyCommittedMovement(result,message){
   DB.items=result.items; DB.seq=result.seq; DB.txns.push(result.txn); DB.audit.unshift(result.audit);
   SAVED_TXN.add(result.txn.id); SAVED_AUDIT.add(result.audit.id); sortTxns();
+  DASH_MONTH_LOADED_AT=0;
   if(DB.audit.length>1000) DB.audit.length=1000;
   renderAll();
   if(message) toast(message);
