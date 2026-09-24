@@ -1035,6 +1035,7 @@ body{position:relative}
 .category-overview-table th:nth-child(3),.category-overview-table td:nth-child(3){width:26%}
 .category-overview-table td,.category-overview-table th{padding-left:10px;padding-right:10px}
 </style>
+<style id="sml-operational-mode">.operational-hidden{display:none !important}</style>
 </head>
 <body>
 
@@ -1072,18 +1073,18 @@ body{position:relative}
     <div class="nav-label">Overview</div>
     <button class="nav-item" data-view="dashboard" style="display:none" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <div class="nav-label">Inventory</div>
-    <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
+    <button class="nav-item operational-hidden" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
-    <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
+    <button class="nav-item operational-hidden" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
     <div class="nav-label">Purchasing</div>
-    <button class="nav-item" data-view="stockreturn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h12a4 4 0 0 1 4 4v1"/><path d="M8 3 4 7l4 4"/><path d="M20 17H8a4 4 0 0 1-4-4v-1"/><path d="m16 21 4-4-4-4"/></svg>Returns</button>
+    <button class="nav-item operational-hidden" data-view="stockreturn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h12a4 4 0 0 1 4 4v1"/><path d="M8 3 4 7l4 4"/><path d="M20 17H8a4 4 0 0 1-4-4v-1"/><path d="m16 21 4-4-4-4"/></svg>Returns</button>
     <button class="nav-item" data-view="stockout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="M6 13l6-6 6 6"/><path d="M4 3h16"/></svg>Stock Out</button>
     <div class="nav-label">Insight</div>
     <button class="nav-item" data-view="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>Reports</button>
     <div class="nav-label admin-only">Administration</div>
-    <button class="nav-item admin-only superadmin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
-    <button class="nav-item admin-only" data-view="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Audit Trail</button>
-    <button class="nav-item admin-only superadmin-only" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+    <button class="nav-item admin-only superadmin-only operational-hidden" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 8h5M19.5 5.5v5"/></svg>Users</button>
+    <button class="nav-item admin-only operational-hidden" data-view="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Audit Trail</button>
+    <button class="nav-item admin-only superadmin-only operational-hidden" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
     <div class="side-dev"><span class="dev-ak">AK</span><div>Developed by<br><b>Ammar Khandoker</b></div></div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -1377,7 +1378,7 @@ function enterApp(u){
   document.querySelectorAll(".admin-only").forEach(el => el.style.display = isAdmin() ? "" : "none");
   document.querySelectorAll(".superadmin-only").forEach(el => el.style.display = isSuperAdmin() ? "" : "none");
   renderAll();
-  show(location.hash.slice(1) || "items");
+  show(location.hash.slice(1) || "stockin");
 }
 function logout(){
   const done = () => { location.hash = ""; location.reload(); };
@@ -1476,7 +1477,7 @@ function drawBarChart(c, labels, values, color){
 /* =====================================================
    Views, CRUD & router
    ===================================================== */
-let CURRENT_VIEW = "items";
+let CURRENT_VIEW = "stockin";
 const lowItems = () => DB.items.filter(it => it.stock <= it.alarm);
 const stockValue = () => DB.items.reduce((s,it) => s + it.stock*(it.price/(it.mult||1)), 0);
 function statusBadge(it){
@@ -3682,8 +3683,8 @@ const VIEWS = {
   reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings, stockreturn:renderStockReturn
 };
 function show(view){
-  if(view==="dashboard") view = "items";
-  if(!VIEWS[view]) view = "items";
+  const operationalViews=["stockin","stockout","reports"];
+  if(!operationalViews.includes(view)) view = "stockin";
   if(!isAdmin() && ["users","audit","settings"].includes(view)) view = "items";
   if(!isSuperAdmin() && ["users","settings"].includes(view)) view = "items";
   CURRENT_VIEW = view;
@@ -3699,7 +3700,7 @@ function renderAll(){
   if(currentUser && VIEWS[CURRENT_VIEW]) VIEWS[CURRENT_VIEW]();
 }
 document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => show(b.dataset.view)));
-window.addEventListener("hashchange", () => { if(currentUser) show(location.hash.slice(1) || "items"); });
+window.addEventListener("hashchange", () => { if(currentUser) show(location.hash.slice(1) || "stockin"); });
 $("#hamburger").addEventListener("click", () => { $("#sidebar").classList.toggle("open"); $("#scrim").classList.toggle("open"); });
 $("#scrim").addEventListener("click", () => { $("#sidebar").classList.remove("open"); $("#scrim").classList.remove("open"); });
 let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { /* dashboard intentionally disabled to avoid Firestore-heavy reads */ }, 200); });
