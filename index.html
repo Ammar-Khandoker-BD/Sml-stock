@@ -2950,7 +2950,7 @@ async function runReport(){
   const runId=++REPORT_RUN_ID;
   const from = REP.from, to = REP.to, q = (REP.q||"").toLowerCase();
   if(from>to){ toast("Report start date cannot be after end date"); return; }
-  if(!["stock","valuation","low"].includes(REP.type)){
+  if(!["valuation"].includes(REP.type)){
     try{
       REPORT_TXNS=await loadReportTransactions(from);
       rebuildReportOpeningStock(from);
@@ -2996,8 +2996,18 @@ async function runReport(){
     T.forEach(t => { const it = itemById(t.itemId); const k = it ? (it.type||"Other") : "Other"; const m = map[k]||(map[k]={i:0,o:0}); const a=reportMovementAmounts(t); m.i += a.in; m.o += a.out; });
     rows = Object.keys(map).sort().map(k => { const items=DB.items.filter(it=>(it.type||"Other")===k); const opening=items.reduce((s,it)=>s+reportStockBeforeDate(it.id,from),0); const closing=opening+map[k].i-map[k].o; const current=items.reduce((s,it)=>s+(Number(it.stock)||0),0); return [k,opening,map[k].i,map[k].o,map[k].i-map[k].o,closing,current]; });
   } else if(REP.type==="stock"){
-    head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit","Status"];
-    rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [it.sl, it.page||"", it.category||"Board", itemName(it), it.type||"", it.color||"", it.thickness||"", it.stock, it.uom||"Pcs", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")]);
+    head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit","Last Transaction Date","Status"];
+    const lastTxnByItem = new Map();
+    REPORT_TXNS.forEach(t=>{
+      if(!catOk(itemById(t.itemId))) return;
+      if(q && !ihay(itemById(t.itemId)).includes(q)) return;
+      const prev=lastTxnByItem.get(t.itemId)||"";
+      if(String(t.date||"")>prev) lastTxnByItem.set(t.itemId,String(t.date||""));
+    });
+    rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q))).map(it => [
+      it.sl, it.page||"", it.category||"Board", itemName(it), it.type||"", it.color||"", it.thickness||"",
+      it.stock, it.uom||"Pcs", lastTxnByItem.get(it.id)||"", it.stock<=0?"Stock Out":(it.stock<=it.alarm?"Low":"OK")
+    ]);
   } else if(REP.type==="valuation"){
     head = ["SL","Page","Category","Item","Type","Color","Thickness","Current Stock","Unit Price (Tk)","Value (Tk)","Status"];
     rows = DB.items.filter(it => catOk(it) && (!q || ihay(it).includes(q)))
@@ -3189,46 +3199,7 @@ async function exportReportXlsx(){
     ws.headerFooter.oddHeader = "&R&F";
     ws.views = [{state:"frozen", ySplit:6}];
 
-    const summaryWs = wb.addWorksheet("Executive Summary");
-    summaryWs.getColumn(1).width=28;
-    summaryWs.getColumn(2).width=28;
-    summaryWs.mergeCells(1,1,1,2);
-    summaryWs.getCell(1,1).value=company;
-    summaryWs.getCell(1,1).font={name:"Aptos Display",size:16,bold:true,color:{argb:"FFFFFFFF"}};
-    summaryWs.getCell(1,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF211E1C"}};
-    summaryWs.getRow(1).height=28;
-    summaryWs.mergeCells(2,1,2,2);
-    summaryWs.getCell(2,1).value=REP_OUT.title;
-    summaryWs.getCell(2,1).font={name:"Aptos",size:12,bold:true,color:{argb:"FF211E1C"}};
-    const summaryRows=[
-      ["Period", (REP.from||"") + " – " + (REP.to||"")],
-      ["Category", REP.cat || "All Categories"],
-      ["Search", REP.q || "All"],
-      ["Rows in Report", REP_OUT.rows.length],
-      ["Total Current Stock (Pcs)", DB.items.reduce((s,it)=>s+(Number(it.stock)||0),0)],
-      ["Current Stock Value (Tk)", DB.items.reduce((s,it)=>s+(Number(it.stock)||0)*(Number(it.price)||0),0)],
-      ["Low Stock Items", lowItems().length],
-      ["Out of Stock Items", DB.items.filter(it=>(Number(it.stock)||0)<=0).length],
-      ["Generated", new Date().toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})]
-    ];
-    summaryRows.forEach(row=>summaryWs.addRow(row));
-    summaryWs.getColumn(2).numFmt="#,##0.00";
-    summaryWs.getCell(6,2).numFmt="#,##0";
-    summaryWs.getCell(7,2).numFmt="#,##0";
-    summaryWs.eachRow((row,ri)=>{ row.height=20; if(ri>2){ row.getCell(1).font={name:"Aptos",size:10,bold:true,color:{argb:"FF6E6A63"}}; row.getCell(2).font={name:"Aptos",size:10,color:{argb:"FF161513"}}; }});
-    const lowWs=wb.addWorksheet("Low Stock");
-    const lowHead=["SL","Item","Category","Type","Current Stock","Alarm Qty","Shortage","Unit"];
-    const lowRows=DB.items.filter(it=>(Number(it.stock)||0)<=Number(it.alarm||0)).sort((a,b)=>(a.stock||0)-(b.stock||0)).map(it=>[it.sl,itemName(it),it.category||"Board",it.type||"",Number(it.stock)||0,Number(it.alarm)||0,Math.max(0,(Number(it.alarm)||0)-(Number(it.stock)||0)),it.uom||"Pcs"]);
-    lowWs.addRow(["Low Stock Items"]);
-    lowWs.mergeCells(1,1,1,lowHead.length);
-    lowWs.getCell(1,1).font={name:"Aptos Display",size:14,bold:true,color:{argb:"FF211E1C"}};
-    const lowHeader=lowWs.addRow(lowHead);
-    lowHeader.eachCell(cell=>{ cell.font={name:"Aptos",size:10,bold:true,color:{argb:"FFFFFFFF"}}; cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFB7770D"}}; cell.alignment={horizontal:"center",vertical:"middle"}; });
-    lowRows.forEach(row=>lowWs.addRow(row));
-    lowWs.views=[{state:"frozen",ySplit:2}];
-    lowWs.autoFilter={from:{row:2,column:1},to:{row:2,column:lowHead.length}};
-    [8,30,22,18,16,14,14,12].forEach((w,i)=>lowWs.getColumn(i+1).width=w);
-    const safeName = company.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"") || "SML";
+    // Management Report only: no Executive Summary or Low Stock worksheet.\n    const safeName = company.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"") || "SML";
     const reportSlug = REP_OUT.title.replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,70) || "Report";
     const dateSlug = todayISO();
     const filename = safeName + "_" + reportSlug + "_" + dateSlug + ".xlsx";
@@ -3243,7 +3214,7 @@ async function exportReportXlsx(){
     a.click();
     a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    toast("Professional Excel report downloaded");
+    toast("Management Report Excel downloaded");
   }catch(err){
     console.error(err);
     toast("Could not create the Excel report");
