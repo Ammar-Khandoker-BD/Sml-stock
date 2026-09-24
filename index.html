@@ -2749,7 +2749,7 @@ function openStockAdjustmentModal(id){
   openModal(`
     <h2>Stock Adjustment</h2>
     <div class="hint" style="margin-bottom:14px">Match the system balance with the physical count without deleting history.</div>
-    <form novalidate onsubmit="submitStockAdjustment(event,${JSON.stringify(id)})">
+    <form novalidate onsubmit="submitStockAdjustment(event,\'${esc(id)}\')">
       <div class="field"><label>Item</label><input class="input" value="${esc(itemName(it))}" disabled></div>
       <div class="row-2">
         <div class="field"><label>System Stock</label><input class="input" value="${formatQty(it.stock)} ${esc(it.uom||"Pcs")}" disabled></div>
