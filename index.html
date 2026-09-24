@@ -1239,27 +1239,27 @@ async function wipeColl(name){
 }
 let LISTENING = false;
 function attachListeners(){
-  if(LISTENING) return; LISTENING = true;
+  if(LISTENING) return;
+  LISTENING = true;
+
+  // Keep only the lightweight inventory-document listener.
+  // Transaction/audit histories are loaded on demand to conserve Firestore reads.
   fdb.collection("erp").doc("main").onSnapshot(snap => {
     if(!currentUser || !snap.exists || snap.metadata.hasPendingWrites) return;
     const d = snap.data();
     if(d.client === CLIENT_ID) return;
-    const txns = DB ? DB.txns : [], aud = DB ? DB.audit : [];
-    DB = d; DB.txns = txns; DB.audit = aud;
+
+    const txns = DB ? DB.txns : [];
+    const aud = DB ? DB.audit : [];
+    DB = d;
+    DB.txns = txns;
+    DB.audit = aud;
+
     const migrated = migrateDB();
     if(migrated) save();
+
     $("#tbCompany").textContent = "\u00b7 " + DB.settings.company;
     if(!["stockin","stockout","stockreturn"].includes(CURRENT_VIEW)) renderAll();
-  });
-
-
-    if(changed){
-      sortTxns();
-      DASH_MONTH_LOADED_AT=0;
-      TXN_VIEW_EXTRA_FROM="";
-      TXN_VIEW_EXTRA_TO="";
-      renderAll();
-    }
   });
 }
 
