@@ -1,5 +1,7 @@
 # SML Inventory ERP
 
+The Items screen includes **Replace Board Data** for Admin users. It replaces the active Board item master from an Excel/CSV file, records new opening balances, and keeps previous Board transaction records in Firestore history.
+
 **Step Media Ltd — Firebase-backed inventory management system**
 
 The active application is served from `index.html`. It uses Firebase Authentication and Firestore.
