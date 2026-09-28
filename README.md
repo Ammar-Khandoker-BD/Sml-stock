@@ -1,131 +1,55 @@
-# Step Media — Board Stock System (v2, with Admin & Staff panels)
+# SML Inventory ERP
 
-Login-protected board stock tracker. Two access levels:
-- **Admin** — full control: add/edit/delete items, grant/remove staff access, stock in/out, view history.
-- **Staff** — day-to-day use: stock in/out, view inventory and history. Cannot add/delete items or manage access.
+**Step Media Ltd — Firebase-backed inventory management system**
 
-Stock starts at **0 for all 154 items**. On **August 1**, sign in as Admin and use "Stock In" to
-enter real opening quantities.
+The active application is served from `index.html`. It uses Firebase Authentication and Firestore.
 
----
+## Firestore structure
 
-## Part 1 — GitHub account & repository
+- `erp/main` — inventory master, settings, suppliers, sequences and item metadata
+- `erp_txns/{id}` — stock movement records
+- `erp_audit/{id}` — audit records
+- `roles/{email}` — ERP access mapping
 
-1. Go to https://github.com → Sign up (skip if you already have an account).
-2. Click **+** (top right) → **New repository** → name it `board-stock` → set to **Public** → **Create repository**.
+## Access levels
 
-## Part 2 — Upload the files
+| Access | Stock operations | Item / Supplier management | Users / Settings |
+|---|---|---|---|
+| Super Admin | Full | Full | Full |
+| Admin | Stock In / Out / Return / Adjustment | Full | No |
+| Store | Stock In / Out / Return | View | No |
+| Viewer | View only | View | No |
 
-1. Extract the zip file on your computer.
-2. On your new repo's page, click **"uploading an existing file"**.
-3. Drag in every file from the extracted folder: `index.html`, `dashboard.html`, `style.css`,
-   `app.js`, `firebase-config.js`, `logo.png`, `items-seed.json`.
-4. Scroll down → **Commit changes**.
+## Main features
 
-## Part 3 — Turn on GitHub Pages
+- Item master with Category, Type, Color, Thickness, Page, Unit and Alarm Qty
+- Stock In / Stock Out with date and reference information
+- Stock Return register
+- Stock Adjustment without deleting history
+- Supplier master
+- Date-range transaction history
+- Reports: transactions, item-wise, category-wise, type-wise, ledger, supplier and low stock
+- Excel export and bulk Stock In import
+- Audit Trail
+- JSON backup and restore
+- Responsive layout and keyboard shortcuts
 
-1. Repo → **Settings** → **Pages** (left menu).
-2. Source: **Deploy from a branch** → Branch: `main`, folder `/ (root)` → **Save**.
-3. Wait ~1 minute, then your site is live at:
-   `https://YOUR-GITHUB-USERNAME.github.io/board-stock/`
+## Bulk Stock In
 
-(A custom domain can be connected later — not required to start using the system.)
+Use **Stock In → Import Template**. For an existing item, enter its **Item SL**. For a new item, leave Item SL blank and provide the item details; the ERP assigns the next available SL.
 
-## Part 4 — Create your Firebase project
+The importer validates quantities, dates, item references, duplicate new items and suppliers before committing the upload.
 
-1. Go to https://console.firebase.google.com → **Add project** → name it `stepmedia-stock` → **Create project**.
-2. Left menu → **Build → Authentication** → **Get started** → **Sign-in method** tab →
-   enable **Email/Password**.
-3. **Users** tab → **Add user** → create a login (email + password) for yourself first —
-   this will be your **Admin** account.
-4. Left menu → **Build → Firestore Database** → **Create database** → **Production mode** →
-   pick a nearby region → **Enable**.
+## Firebase setup
 
-## Part 5 — Set Firestore security rules
+Enable **Authentication → Email/Password** and create the first login. Create Firestore and publish the repository `firestore.rules`. The Super Admin email is defined by `SUPER_ADMIN_EMAIL` in the active app and protected again in Firestore rules.
 
-Firestore → **Rules** tab → replace everything with this, then click **Publish**:
+## Legacy files
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function isSignedIn() { return request.auth != null; }
-    function isAdmin() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/roles/$(request.auth.token.email)) &&
-        get(/databases/$(database)/documents/roles/$(request.auth.token.email)).data.role == 'admin';
-    }
-    match /roles/{email} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    match /items/{itemId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
-    }
-    match /transactions/{txId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-    }
-  }
-}
-```
+The repository also contains `app.js`, `style.css`, `dashboard.html`, `firebase-config.js` and `items-seed.json`. The current ERP page does not load the first, second, fourth or fifth legacy files; `dashboard.html` redirects to `index.html#stockin`. They are retained for reference/backward compatibility and are not the active data path.
 
-This means: only signed-in people can use the system at all, and only Admins can change
-who has Admin/Staff access.
+## Data integrity notes
 
-## Part 6 — Make yourself the first Admin (one-time, manual)
+Stock movements use Firestore transactions, so the server-side transaction re-reads current stock before committing. Historical reports load transactions through the current date when needed to calculate opening stock for older periods, while displayed report rows still respect the selected end date.
 
-The very first Admin has to be set by hand, directly in Firebase — after that, you can
-manage everyone else from inside the website itself.
-
-1. Firestore Database → **Data** tab → **Start collection**.
-2. Collection ID: `roles` → **Next**.
-3. Document ID: type your **own email exactly** (the one you created in Part 4, e.g. `you@example.com`).
-4. Add a field: name `role`, type `string`, value `admin` → **Save**.
-
-## Part 7 — Get your Firebase config keys
-
-1. ⚙️ (gear icon, top left) → **Project settings**.
-2. Scroll to "Your apps" → click **`</>`** (web icon) → give it a nickname → **Register app**.
-3. Copy the whole `firebaseConfig = { ... }` object shown.
-4. Open `firebase-config.js` (in your extracted folder) → paste your real values over the
-   `PASTE_...` placeholders → save.
-5. Back in your GitHub repo, open `firebase-config.js` → pencil (edit) icon → replace the
-   content with your updated version → **Commit changes**.
-
-## Part 8 — First login
-
-1. Visit your GitHub Pages link → sign in with the Admin email/password from Part 4.
-2. You'll see a badge reading **ADMIN**, plus two extra menu items: **Manage Items** and
-   **Manage Access**.
-3. Click **"Load item list"** on the Inventory page — loads all 154 items at 0 stock (one-time).
-
-## Part 9 — Add your staff
-
-For each staff member:
-1. Firebase Console → Authentication → Users → **Add user** → their email + a password.
-   Share these credentials with them directly.
-2. In the website, sign in as Admin → **Manage Access** → enter their email → role **Staff** →
-   **Save Access**.
-
-They can now sign in and use Stock In / Stock Out and view Inventory & History, but won't see
-Manage Items or Manage Access.
-
-## Part 10 — Daily use
-
-- **Stock In**: add received quantity for any item, with date.
-- **Stock Out**: record quantity used, with date.
-- Every entry is logged under **Usage History** with who did it and when.
-- **Manage Items** (Admin only): add a brand-new board type, edit details, or delete one.
-- Low stock (below 5, by default) is flagged in red. Change `LOW_STOCK_THRESHOLD` at the top
-  of `app.js` to adjust.
-
----
-
-## Custom domain (smlstore.online) — later
-
-Your `smlstore.online` domain is currently locked for DNS changes because it was claimed
-free through WordPress.com's Gravatar program (locked for the first year unless renewed).
-Once you renew it or transfer it elsewhere, come back and we'll connect it — the GitHub Pages
-link works exactly the same in the meantime.
+The Firestore rules do not allow ordinary users to delete the canonical `erp/main` document.
