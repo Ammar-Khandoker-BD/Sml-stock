@@ -1154,6 +1154,19 @@ const TXN_CACHE_LIMIT = 30;
 let REPORT_TXNS = [], REPORT_OPENING_STOCK = new Map(), REPORT_OPENING_FROM = "";
 let DASH_MONTH_TXNS=[], DASH_MONTH_KEY="", DASH_MONTH_LOADED_AT=0, DASH_RENDER_ID=0;
 
+// Short-lived in-memory query caches. These prevent repeated Firestore reads when
+// users change filters/search within the same date range.
+// Cache is invalidated whenever the live ERP document changes.
+const QUERY_CACHE_TTL_MS = 10 * 60 * 1000;
+let TXN_VIEW_CACHE = new Map();
+let REPORT_TXN_CACHE = new Map();
+function invalidateReadCaches(){
+  TXN_VIEW_CACHE.clear();
+  REPORT_TXN_CACHE.clear();
+  DASH_MONTH_KEY="";
+  DASH_MONTH_LOADED_AT=0;
+}
+
 
 const CLIENT_ID = "c" + Math.random().toString(36).slice(2, 10);
 let SAVED_TXN = new Set(), SAVED_AUDIT = new Set(), saveTimer = null, saveWaiters = [], pendingMainSave = false;
@@ -1250,6 +1263,7 @@ function attachListeners(){
 
     const txns = DB ? DB.txns : [];
     const aud = DB ? DB.audit : [];
+    invalidateReadCaches();
     DB = d;
     DB.txns = txns;
     DB.audit = aud;
@@ -1723,6 +1737,7 @@ async function submitItem(e,id){
     });
     DB.items=result.items; DB.seq=result.seq;
     if(result.txn){ DB.txns.push(result.txn); SAVED_TXN.add(result.txn.id); }
+    invalidateReadCaches();
     DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
     sortTxns(); closeModal(); renderItems(); toast(id?"Item updated":"Item added");
   }catch(err){ console.error(err); toast(err.message||"Could not save item"); }
@@ -1936,6 +1951,7 @@ async function importItemRows(rows){
   const importedCount=result.acceptedCount||0;
   DB.items=result.items; DB.seq=result.seq;
   result.txns.forEach(t=>{DB.txns.push(t); SAVED_TXN.add(t.id);});
+  invalidateReadCaches();
   DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id);
   sortTxns(); renderItems();
   const extraLive=result.liveDuplicateCount ? " · "+result.liveDuplicateCount+" concurrent duplicate(s) skipped" : "";
@@ -2110,6 +2126,7 @@ async function replaceBoardFromFile(inp){
       DB.txns.push(t);
       SAVED_TXN.add(t.id);
     });
+    invalidateReadCaches();
     DB.audit.unshift(result.audit);
     SAVED_AUDIT.add(result.audit.id);
     sortTxns();
@@ -2362,23 +2379,27 @@ async function loadTxnViewSource(f){
   const hasRange=!!(f.from||f.to);
   const from=f.from||"0000-01-01", to=f.to||todayISO();
   const sourceMap=new Map(DB.txns.map(t=>[t.id,t]));
-  TXN_VIEW_EXTRA.forEach((t,id)=>sourceMap.set(id,t));
 
-  // No date filter: use the already-loaded recent cache.
-  // This prevents an extra 100-read query every time Stock In/Out/Returns is opened.
+  // No date filter: use the small login cache only.
+  // Date-filtered views use an exact-range cache so search/category changes
+  // do not trigger the same Firestore query repeatedly.
   if(!hasRange) return [...sourceMap.values()];
 
-  const covered=TXN_VIEW_EXTRA_FROM && TXN_VIEW_EXTRA_TO && from>=TXN_VIEW_EXTRA_FROM && to<=TXN_VIEW_EXTRA_TO;
-  if(!covered){
-    const query=fdb.collection("erp_txns")
-      .where("date",">=",from)
-      .where("date","<=",to)
-      .orderBy("date","desc");
-    const snap=await query.get();
-    snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); rememberTxnViewExtra(t); });
-    if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
-    if(!TXN_VIEW_EXTRA_TO || to>TXN_VIEW_EXTRA_TO) TXN_VIEW_EXTRA_TO=to;
+  const key=from+"|"+to;
+  const cached=TXN_VIEW_CACHE.get(key);
+  if(cached && (Date.now()-cached.loadedAt)<QUERY_CACHE_TTL_MS){
+    cached.rows.forEach(t=>sourceMap.set(t.id,t));
+    return [...sourceMap.values()];
   }
+
+  const query=fdb.collection("erp_txns")
+    .where("date",">=",from)
+    .where("date","<=",to)
+    .orderBy("date","desc");
+  const snap=await query.get();
+  const rows=snap.docs.map(d=>d.data());
+  TXN_VIEW_CACHE.set(key,{rows,loadedAt:Date.now()});
+  rows.forEach(t=>sourceMap.set(t.id,t));
   return [...sourceMap.values()];
 }
 function txnRows(kind,f,source=DB.txns){
@@ -2640,6 +2661,7 @@ async function commitStockMovement({type,qtyDelta,date,itemId,note,subtype="NORM
 
 function applyCommittedMovement(result,message){
   DB.items=result.items; DB.seq=result.seq; DB.txns.push(result.txn); DB.audit.unshift(result.audit);
+  invalidateReadCaches();
   SAVED_TXN.add(result.txn.id); SAVED_AUDIT.add(result.audit.id); sortTxns();
   DASH_MONTH_LOADED_AT=0;
   if(DB.audit.length>1000) DB.audit.length=1000;
@@ -2807,6 +2829,7 @@ async function importStockInSmart(inp){
       transaction.update(mainRef,{items,seq,client:CLIENT_ID,rev:now}); transaction.set(auditRef,audit); result={items,seq,txns,audit,created};
     });
     DB.items=result.items; DB.seq=result.seq; (result.txns||[]).forEach(txn=>{DB.txns.push(txn);SAVED_TXN.add(txn.id);});
+    invalidateReadCaches();
     DB.audit.unshift(result.audit); SAVED_AUDIT.add(result.audit.id); if(DB.audit.length>1000)DB.audit.length=1000;
     sortTxns(); renderAll(); toast("Stock In imported successfully · "+entries.length+" entries · "+result.created+" new item(s)");
   }catch(err){console.error(err);toast(err.message||"Could not import Stock In file");}finally{inp.value="";}
@@ -3119,8 +3142,17 @@ async function loadReportTransactions(from,to){
   const selectedEnd=to||today;
   const end=selectedEnd>today?selectedEnd:today;
   if(from>end) return [];
+
+  const key=from+"|"+end;
+  const cached=REPORT_TXN_CACHE.get(key);
+  if(cached && (Date.now()-cached.loadedAt)<QUERY_CACHE_TTL_MS){
+    return cached.rows.slice();
+  }
+
   const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",end).get();
-  return snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.id||"").localeCompare(String(a.id||"")));
+  const rows=snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.id||"").localeCompare(String(a.id||"")));
+  REPORT_TXN_CACHE.set(key,{rows,loadedAt:Date.now()});
+  return rows.slice();
 }
 const REP_TYPES = [
   ["txns","All Transactions (date range)"],
@@ -3818,6 +3850,7 @@ function restoreData(inp){
       await wipeColl("erp_txns"); await wipeColl("erp_audit");
       DB = d; DB.txns = DB.txns || []; DB.audit = DB.audit || [];
       SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+      invalidateReadCaches();
       audit("Restored from backup");
       await doSave(); renderAll(); toast("Backup restored");
     }catch(e){ console.error(e); toast("Invalid backup file"); }
