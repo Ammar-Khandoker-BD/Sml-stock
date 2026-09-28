@@ -1632,7 +1632,9 @@ function renderItems(){
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
       ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Add Item Attach<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
-      <button class="btn" onclick="downloadItemTemplate()">\u2913 Add Item Sample File</button>
+      <button class="btn btn-danger-soft" onclick="document.getElementById('replaceBoardFile').click()">Replace Board Data</button>
+      <input id="replaceBoardFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="replaceBoardFromFile(this)">
+            <button class="btn" onclick="downloadItemTemplate()">\u2913 Add Item Sample File</button>
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
     </div></div>
   <div class="filter-bar">
@@ -1938,6 +1940,189 @@ async function importItemRows(rows){
   sortTxns(); renderItems();
   const extraLive=result.liveDuplicateCount ? " · "+result.liveDuplicateCount+" concurrent duplicate(s) skipped" : "";
   toast("Imported "+importedCount+" items"+(result.txns.length ? " · "+result.txns.length+" opening balance(s)" : "")+extraLive);
+}
+
+
+async function replaceBoardFromFile(inp){
+  const file=inp&&inp.files&&inp.files[0];
+  if(!file) return;
+  if(!isAdmin()){ toast("Only Admin can replace Board data"); inp.value=""; return; }
+
+  try{
+    const rows=/\.(csv)$/i.test(file.name||"") ? parseCSV(await file.text()) : await readXlsxRows(file);
+    if(!Array.isArray(rows) || rows.length<2) throw new Error("Board file is empty");
+
+    const head=(rows[0]||[]).map(v=>String(v??"").trim().toLowerCase());
+    const col=(...names)=>{
+      for(const n of names){
+        const ix=head.findIndex(h=>h===n || h.includes(n));
+        if(ix>=0) return ix;
+      }
+      return -1;
+    };
+    const cSl=col("sl","item sl"), cType=col("type"), cColor=col("color"),
+      cThick=col("thickness"), cStock=col("opening stock","stock","quantity","qty");
+    if(cType<0) throw new Error('Board file needs a "Type" column');
+    if(cStock<0) throw new Error('Board file needs a "Stock" or "Opening Stock" column');
+
+    const entries=[], seenKeys=new Set(), seenSl=new Set(), errors=[];
+    const keyPart=v=>String(v??"").trim().replace(/\s+/g," ").toLowerCase();
+    const itemKey=(type,color,thick)=>[type,color,thick].map(keyPart).join("|");
+
+    rows.slice(1).forEach((r,idx)=>{
+      const rowNo=idx+2, cells=r||[];
+      const type=String(cells[cType]??"").trim();
+      if(!type) return; // Ignore blank/total rows.
+      const color=String(cColor>=0?cells[cColor]??"":"").trim();
+      const thick=String(cThick>=0?cells[cThick]??"":"").trim();
+      const rawStock=String(cells[cStock]??"").replace(/,/g,"").trim();
+      const stock=rawStock==="" ? 0 : Number(rawStock);
+      if(!Number.isFinite(stock) || stock<0){
+        errors.push("Row "+rowNo+": invalid Stock \""+rawStock+"\"");
+        return;
+      }
+      const key=itemKey(type,color,thick);
+      if(seenKeys.has(key)){
+        errors.push("Row "+rowNo+": duplicate Type + Color + Thickness");
+        return;
+      }
+      seenKeys.add(key);
+
+      let sl=null;
+      const rawSl=String(cSl>=0?cells[cSl]??"":"").trim();
+      if(rawSl){
+        sl=Number(rawSl);
+        if(!Number.isInteger(sl) || sl<1){
+          errors.push("Row "+rowNo+": invalid SL \""+rawSl+"\"");
+          return;
+        }
+        if(seenSl.has(sl)){
+          errors.push("Row "+rowNo+": duplicate SL "+sl);
+          return;
+        }
+        seenSl.add(sl);
+      }
+      entries.push({row:rowNo,sl,type,color,thickness:thick,stock});
+    });
+
+    if(errors.length){
+      const more=errors.length>5 ? " | +"+(errors.length-5)+" more error(s)" : "";
+      throw new Error("Board file validation failed: "+errors.slice(0,5).join(" | ")+more);
+    }
+    if(!entries.length) throw new Error("No Board item rows found");
+
+    const oldBoardCount=DB.items.filter(it=>(it.category||"Board")==="Board").length;
+    const totalStock=entries.reduce((s,e)=>s+e.stock,0);
+
+    if(!confirm(
+      "Replace Board item master?\\n\\n"+
+      "Existing Board items: "+oldBoardCount+"\\n"+
+      "New Board items from file: "+entries.length+"\\n"+
+      "New opening stock total: "+totalStock+" Pcs\\n\\n"+
+      "Existing Board transactions will remain in history, but the old Board items will be removed from the active item master. Continue?"
+    )) return;
+
+    toast("Replacing Board data… please wait");
+
+    const mainRef=fdb.collection("erp").doc("main");
+    let result=null;
+
+    await fdb.runTransaction(async transaction=>{
+      const snap=await transaction.get(mainRef);
+      if(!snap.exists) throw new Error("Inventory database not found");
+
+      const data=snap.data()||{};
+      const oldItems=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
+      const remaining=oldItems.filter(it=>(it.category||"Board")!=="Board");
+      const usedSl=new Set(remaining.map(it=>Number(it.sl)).filter(Number.isInteger));
+      let nextSl=remaining.reduce((m,it)=>Math.max(m,Number(it.sl)||0),0);
+      const seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{});
+      const newItems=[];
+      const newTxns=[];
+      let slConflicts=0;
+
+      for(const e of entries){
+        let sl=e.sl;
+        if(sl===null || usedSl.has(sl)){
+          while(usedSl.has(nextSl)) nextSl++;
+          sl=nextSl++;
+          if(e.sl!==null) slConflicts++;
+        }
+        usedSl.add(sl);
+
+        const item={
+          id:"i"+Date.now().toString(36)+"_"+sl+"_"+Math.random().toString(36).slice(2,6),
+          sl,
+          page:"",
+          category:"Board",
+          type:e.type,
+          color:e.color,
+          thickness:e.thickness,
+          uom:"Pcs",
+          alarm:Number((data.settings&&data.settings.alarmDefault)||5),
+          stock:e.stock
+        };
+        newItems.push(item);
+
+        if(e.stock>0){
+          seq.si=(Number(seq.si)||0)+1;
+          const txId="SI-"+String(seq.si).padStart(4,"0");
+          newTxns.push({
+            id:txId,type:"IN",subtype:"OPENING",referenceId:"",supplierId:"",
+            referenceNo:"",department:"",issuedTo:"",purpose:"",
+            date:todayISO(),itemId:item.id,qty:e.stock,
+            note:"Board master replacement — opening balance",
+            by:currentUser?currentUser.username:"system",createdAt:Date.now()
+          });
+        }
+      }
+
+      const now=Date.now();
+      const auditRef=fdb.collection("erp_audit").doc();
+      const audit={
+        id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),
+        user:currentUser?currentUser.username:"system",
+        action:"Replaced Board item master · removed "+oldBoardCount+" old Board items · imported "+newItems.length+" new Board items"
+      };
+
+      transaction.update(mainRef,{
+        items:remaining.concat(newItems),
+        seq,
+        client:CLIENT_ID,
+        rev:now
+      });
+      newTxns.forEach(tx=>transaction.set(fdb.collection("erp_txns").doc(tx.id),tx));
+      transaction.set(auditRef,audit);
+
+      result={
+        items:remaining.concat(newItems),
+        seq,
+        txns:newTxns,
+        audit,
+        oldBoardCount,
+        slConflicts
+      };
+    });
+
+    DB.items=result.items;
+    DB.seq=result.seq;
+    (result.txns||[]).forEach(t=>{
+      DB.txns.push(t);
+      SAVED_TXN.add(t.id);
+    });
+    DB.audit.unshift(result.audit);
+    SAVED_AUDIT.add(result.audit.id);
+    sortTxns();
+    renderItems();
+
+    const conflictText=result.slConflicts ? " · "+result.slConflicts+" SL conflict(s) auto-assigned" : "";
+    toast("Board data replaced successfully · "+entries.length+" new items"+conflictText);
+  }catch(err){
+    console.error(err);
+    toast(err.message||"Could not replace Board data");
+  }finally{
+    inp.value="";
+  }
 }
 
 function downloadItemTemplate(){
