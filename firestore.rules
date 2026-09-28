@@ -99,7 +99,14 @@ service cloud.firestore {
     match /erp/{docId} {
       allow read: if isSignedIn();
 
-      allow create: if isSuperAdmin() || isAdmin();
+      allow create: if docId == 'main'
+        && isSuperAdmin()
+        && request.resource.data.keys().hasAll([
+          'items', 'seq', 'categories', 'groups', 'suppliers', 'settings', 'client', 'rev'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'items', 'seq', 'categories', 'groups', 'suppliers', 'settings', 'client', 'rev'
+        ]);
 
       allow update: if isSuperAdmin()
         || (
@@ -114,7 +121,8 @@ service cloud.firestore {
           && storeMainUpdateAllowed()
         );
 
-      allow delete: if isSuperAdmin() || isAdmin();
+      // Prevent destructive deletion of the canonical ERP document.
+      allow delete: if false;
     }
 
     match /erp_txns/{txId} {
