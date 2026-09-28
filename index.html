@@ -3864,6 +3864,7 @@ async function resetData(){
   await wipeColl("erp_txns"); await wipeColl("erp_audit");
   DB = seedData();
   SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+  invalidateReadCaches();
   await doSave(); renderAll(); toast("Demo data restored");
 }
 async function clearData(){
@@ -3874,6 +3875,7 @@ async function clearData(){
   const st = DB.settings;
   DB = { settings: st, seq:{si:0,so:0}, categories:[], groups:[], items:[], txns:[], audit:[] };
   SAVED_TXN = new Set(); SAVED_AUDIT = new Set();
+  invalidateReadCaches();
   audit("Cleared all data \u2014 fresh start");
   await doSave(); renderAll(); toast("All clear \u2014 fresh start!");
 }
