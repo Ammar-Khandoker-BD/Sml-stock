@@ -2188,8 +2188,7 @@ async function loadTxnViewSource(f){
     const query=fdb.collection("erp_txns")
       .where("date",">=",from)
       .where("date","<=",to)
-      .orderBy("date","desc")
-      .limit(300);
+      .orderBy("date","desc");
     const snap=await query.get();
     snap.docs.forEach(d=>{ const t=d.data(); sourceMap.set(t.id,t); rememberTxnViewExtra(t); });
     if(!TXN_VIEW_EXTRA_FROM || from<TXN_VIEW_EXTRA_FROM) TXN_VIEW_EXTRA_FROM=from;
@@ -2929,7 +2928,11 @@ function reportClosingStock(itemId,from,to){
 let REP = { type:"txns", from:daysAgo(29), to:todayISO(), q:"", cat:"", job:"", client:"" }, REP_OUT = null;
 let REPORT_RUN_ID = 0;
 async function loadReportTransactions(from,to){
-  const end=to||todayISO();
+  // Historical reports need transactions through today to derive the opening balance.
+  // The renderer still filters displayed rows to the selected end date.
+  const today=todayISO();
+  const selectedEnd=to||today;
+  const end=selectedEnd>today?selectedEnd:today;
   if(from>end) return [];
   const snap=await fdb.collection("erp_txns").where("date",">=",from).where("date","<=",end).get();
   return snap.docs.map(d=>d.data()).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || String(b.id||"").localeCompare(String(a.id||"")));
