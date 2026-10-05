@@ -1073,7 +1073,7 @@ body{position:relative}
     <div class="nav-label">Overview</div>
     <button class="nav-item" data-view="dashboard" style="display:none" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <div class="nav-label">Inventory</div>
-    <button class="nav-item operational-hidden" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Items</button>
+    <button class="nav-item" data-view="items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Item Master</button>
     <button class="nav-item" data-view="stockin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M6 11l6 6 6-6"/><path d="M4 21h16"/></svg>Stock In</button>
     <button class="nav-item" data-view="suppliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M6 17V7h12v10"/><path d="M9 7V4h6v3"/></svg>Suppliers</button>
     <div class="nav-label">Purchasing</div>
@@ -1645,10 +1645,10 @@ function renderItems(){
   $("#view-items").innerHTML = `
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
     <div class="page-actions">
-      ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Add Item Attach<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
+      ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
       <button class="btn btn-danger-soft" onclick="document.getElementById('replaceBoardFile').click()">Replace Board Data</button>
       <input id="replaceBoardFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="replaceBoardFromFile(this)">
-            <button class="btn" onclick="downloadItemTemplate()">\u2913 Add Item Sample File</button>
+            <button class="btn" onclick="downloadItemTemplate()">\u2913 Download Sample</button>
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
     </div></div>
   <div class="filter-bar">
@@ -3887,7 +3887,7 @@ const VIEWS = {
   reports:renderReports, users:renderUsers, audit:renderAudit, settings:renderSettings, stockreturn:renderStockReturn
 };
 function show(view){
-  const allowedViews=["stockin","stockout","reports","suppliers","stockreturn","settings"];
+  const allowedViews=["items","stockin","stockout","reports","suppliers","stockreturn","settings"];
   const internalSuperAdminViews=["users","audit"];
   if(!allowedViews.includes(view) && !(isSuperAdmin() && internalSuperAdminViews.includes(view))) view = "stockin";
   if(view==="settings" && !isSuperAdmin()) view = "stockin";
