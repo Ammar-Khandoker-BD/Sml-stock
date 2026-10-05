@@ -1646,8 +1646,6 @@ function renderItems(){
   <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Item Master</h1><p>Add items one-by-one or import multiple items from Excel/CSV</p></div>
     <div class="page-actions">
       ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
-      <button class="btn btn-danger-soft" onclick="document.getElementById('replaceBoardFile').click()">Replace Board Data</button>
-      <input id="replaceBoardFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="replaceBoardFromFile(this)">
             <button class="btn" onclick="downloadItemTemplate()">\u2913 Download Sample</button>
       ${isAdmin()?`<button class="btn btn-primary" onclick="itemModal()">+ Add Item</button>`:""}
     </div></div>
