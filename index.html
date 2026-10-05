@@ -1643,7 +1643,7 @@ function renderItems(){
     return true;
   }).slice().sort((a,b) => (a.category||"").localeCompare(b.category||"") || (a.type||"").localeCompare(b.type||"") || String(a.thickness||"").localeCompare(String(b.thickness||""), undefined, {numeric:true}) || ((a.sl||0)-(b.sl||0)));
   $("#view-items").innerHTML = `
-  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Items</h1><p>Item master \u2014 category, type, color &amp; thickness</p></div>
+  <div class="page-head"><div><div class="crumb">Inventory / <b>Items</b></div><h1>Item Master</h1><p>Add items one-by-one or import multiple items from Excel/CSV</p></div>
     <div class="page-actions">
       ${isAdmin()?`<label class="btn" style="cursor:pointer">\u2912 Import Excel/CSV<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importItemsSmart(this)"></label>`:""}
       <button class="btn btn-danger-soft" onclick="document.getElementById('replaceBoardFile').click()">Replace Board Data</button>
