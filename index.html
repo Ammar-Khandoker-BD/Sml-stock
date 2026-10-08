@@ -1667,17 +1667,17 @@ async function syncBoardStockFromExcel(inp){
       return -1;
     };
 
+    const norm=v=>String(v??"").trim().replace(/\s+/g," ").toLowerCase();
     const cCat=findCol("category","group");
     const cType=findCol("type"), cColor=findCol("color"), cThick=findCol("thickness"), cStock=findCol("stock","current stock");
     if(cType<0 || cThick<0 || cStock<0) throw new Error("Required Type / Thickness / Stock columns are missing");
 
     const isBoardCategory=v=>{
       const value=norm(v);
-      if(!value) return true; // some sheets omit category on data rows
+      if(!value) return true;
       return value==="board" || value.startsWith("board ");
     };
 
-    const norm=v=>String(v??"").trim().replace(/\s+/g," ").toLowerCase();
     const itemKey=(type,color,thick)=>[type,color,thick].map(norm).join("|");
     const parseQty=v=>{
       const raw=String(v??"").trim().replace(/,/g,"");
@@ -1689,8 +1689,31 @@ async function syncBoardStockFromExcel(inp){
     const boardItems=(DB.items||[]).filter(it=>(it.category||"Board")==="Board");
     const boardKeys=new Set(boardItems.map(it=>itemKey(it.type||"",it.color||"",it.thickness||"")));
     const fileMap=new Map(), duplicates=[];
-    const boardCategoryColumnMissing=(cCat<0);
     let activeCategory="";
+
+    // H (Stock) is formula-driven in this workbook. Browser-side XLSX readers
+    // can expose shared-formula cells without a recalculated value, so calculate
+    // the same formula used by the sheet when a formula is present:
+    // F(row) - SUM(JR(row):NI(row)) + G(row)
+    const dayStartCol=277; // JR, zero-based
+    const dayEndCol=372;   // NI, zero-based
+    const numericValue=v=>{
+      if(v===null || v===undefined || String(v).trim()==="") return 0;
+      const n=Number(String(v).replace(/,/g,"").trim());
+      return Number.isFinite(n) ? n : 0;
+    };
+    const stockFromWorkbookRow=(row,rowIndex)=>{
+      const cell=ws[XLSX.utils.encode_cell({r:rowIndex,c:cStock})];
+      if(cell && cell.f){
+        const opening=numericValue(row[5]); // F
+        const add=numericValue(row[6]);     // G
+        let used=0;
+        for(let c=dayStartCol;c<=dayEndCol;c++) used += numericValue(row[c]);
+        return Math.round((opening-used+add+Number.EPSILON)*100)/100;
+      }
+      const direct=parseQty(row[cStock]);
+      return direct===null ? 0 : direct;
+    };
 
     for(let i=headerIndex+1;i<rows.length;i++){
       const row=rows[i]||[];
@@ -1701,10 +1724,9 @@ async function syncBoardStockFromExcel(inp){
       const thickness=cThick>=0?String(row[cThick]??"").trim():"";
       const key=itemKey(type,color,thickness);
 
-      // The Main Sheet may contain Ink/PVC/ACP/etc. sections.
-      // Sync only Board rows. When Category cells are merged/blank, inherit
-      // the last visible category. Without a Category column, only rows that
-      // already match an ERP Board item are accepted.
+      // Only Board rows are considered. Other sections are ignored.
+      // If Category is absent, only rows already present in ERP's Board master
+      // are eligible, preventing Ink/PVC/ACP rows from being touched.
       if(cCat>=0){
         const rawCategory=String(row[cCat]??"").trim();
         if(rawCategory) activeCategory=rawCategory;
@@ -1713,8 +1735,10 @@ async function syncBoardStockFromExcel(inp){
         continue;
       }
 
-      const stock=parseQty(row[cStock]);
-      if(!Number.isFinite(stock) || stock<0) throw new Error("Invalid Board stock in Main Sheet row "+(i+1));
+      const stock=stockFromWorkbookRow(row,i);
+      if(!Number.isFinite(stock) || stock<0){
+        throw new Error("Invalid Board stock in Excel row "+(i+1));
+      }
 
       if(fileMap.has(key)) duplicates.push(i+1);
       else fileMap.set(key,{type,color,thickness,stock,row:i+1});
