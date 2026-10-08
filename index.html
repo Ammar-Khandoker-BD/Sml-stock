@@ -1667,8 +1667,15 @@ async function syncBoardStockFromExcel(inp){
       return -1;
     };
 
+    const cCat=findCol("category","group");
     const cType=findCol("type"), cColor=findCol("color"), cThick=findCol("thickness"), cStock=findCol("stock","current stock");
     if(cType<0 || cThick<0 || cStock<0) throw new Error("Required Type / Thickness / Stock columns are missing");
+
+    const isBoardCategory=v=>{
+      const value=norm(v);
+      if(!value) return true; // some sheets omit category on data rows
+      return value==="board" || value.startsWith("board ");
+    };
 
     const norm=v=>String(v??"").trim().replace(/\s+/g," ").toLowerCase();
     const itemKey=(type,color,thick)=>[type,color,thick].map(norm).join("|");
@@ -1680,10 +1687,16 @@ async function syncBoardStockFromExcel(inp){
     };
 
     const fileMap=new Map(), duplicates=[];
+    const boardCategoryColumnMissing=(cCat<0);
     for(let i=headerIndex+1;i<rows.length;i++){
       const row=rows[i]||[];
       const type=String(row[cType]??"").trim();
       if(!type) continue;
+
+      // This workbook can contain Ink/PVC/ACP/etc. on the same Main Sheet.
+      // Stock Sync must touch Board items only.
+      if(cCat>=0 && !isBoardCategory(row[cCat])) continue;
+
       const color=cColor>=0?String(row[cColor]??"").trim():"";
       const thickness=cThick>=0?String(row[cThick]??"").trim():"";
       const stock=parseQty(row[cStock]);
@@ -1693,7 +1706,13 @@ async function syncBoardStockFromExcel(inp){
       else fileMap.set(key,{type,color,thickness,stock,row:i+1});
     }
     if(duplicates.length) throw new Error("Duplicate item name found in Excel row(s): "+duplicates.join(", "));
-    if(!fileMap.size) throw new Error("No Board item rows found");
+    if(!fileMap.size) throw new Error(cCat>=0 ? "No Category = Board rows found in Main Sheet" : "No Board item rows found");
+    if(boardCategoryColumnMissing){
+      // Without a Category column we can only safely accept rows that match an existing ERP Board item.
+      const boardKeys=new Set((DB.items||[]).filter(it=>(it.category||"Board")==="Board").map(it=>itemKey(it.type||"",it.color||"",it.thickness||"")));
+      const nonBoardLikely=[...fileMap.entries()].filter(([key])=>!boardKeys.has(key));
+      if(nonBoardLikely.length) throw new Error("Main Sheet has no Category column and contains rows that do not match ERP Board items. Add a Category column or upload a Board-only file.");
+    }
     if(fileMap.size>240) throw new Error("Maximum 240 Board items per sync");
 
     const boardItems=(DB.items||[]).filter(it=>(it.category||"Board")==="Board");
@@ -1724,7 +1743,7 @@ async function syncBoardStockFromExcel(inp){
     const preview=[
       "BOARD EXCEL STOCK SYNC",
       "",
-      "Excel items: "+fileMap.size,
+      "Board rows in Excel: "+fileMap.size,
       "ERP Board items: "+boardItems.length,
       "Items with stock change: "+changes.length,
       "Excel total stock: "+totalNew+" Pcs",
