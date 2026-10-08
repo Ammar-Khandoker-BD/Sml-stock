@@ -1686,36 +1686,43 @@ async function syncBoardStockFromExcel(inp){
       return Number.isFinite(n) ? n : NaN;
     };
 
+    const boardItems=(DB.items||[]).filter(it=>(it.category||"Board")==="Board");
+    const boardKeys=new Set(boardItems.map(it=>itemKey(it.type||"",it.color||"",it.thickness||"")));
     const fileMap=new Map(), duplicates=[];
     const boardCategoryColumnMissing=(cCat<0);
+    let activeCategory="";
+
     for(let i=headerIndex+1;i<rows.length;i++){
       const row=rows[i]||[];
       const type=String(row[cType]??"").trim();
       if(!type) continue;
 
-      // This workbook can contain Ink/PVC/ACP/etc. on the same Main Sheet.
-      // Stock Sync must touch Board items only.
-      if(cCat>=0 && !isBoardCategory(row[cCat])) continue;
-
       const color=cColor>=0?String(row[cColor]??"").trim():"";
       const thickness=cThick>=0?String(row[cThick]??"").trim():"";
-      const stock=parseQty(row[cStock]);
-      if(!Number.isFinite(stock) || stock<0) throw new Error("Invalid stock in Main Sheet row "+(i+1));
       const key=itemKey(type,color,thickness);
+
+      // The Main Sheet may contain Ink/PVC/ACP/etc. sections.
+      // Sync only Board rows. When Category cells are merged/blank, inherit
+      // the last visible category. Without a Category column, only rows that
+      // already match an ERP Board item are accepted.
+      if(cCat>=0){
+        const rawCategory=String(row[cCat]??"").trim();
+        if(rawCategory) activeCategory=rawCategory;
+        if(activeCategory && !isBoardCategory(activeCategory)) continue;
+      }else if(!boardKeys.has(key)){
+        continue;
+      }
+
+      const stock=parseQty(row[cStock]);
+      if(!Number.isFinite(stock) || stock<0) throw new Error("Invalid Board stock in Main Sheet row "+(i+1));
+
       if(fileMap.has(key)) duplicates.push(i+1);
       else fileMap.set(key,{type,color,thickness,stock,row:i+1});
     }
     if(duplicates.length) throw new Error("Duplicate item name found in Excel row(s): "+duplicates.join(", "));
     if(!fileMap.size) throw new Error(cCat>=0 ? "No Category = Board rows found in Main Sheet" : "No Board item rows found");
-    if(boardCategoryColumnMissing){
-      // Without a Category column we can only safely accept rows that match an existing ERP Board item.
-      const boardKeys=new Set((DB.items||[]).filter(it=>(it.category||"Board")==="Board").map(it=>itemKey(it.type||"",it.color||"",it.thickness||"")));
-      const nonBoardLikely=[...fileMap.entries()].filter(([key])=>!boardKeys.has(key));
-      if(nonBoardLikely.length) throw new Error("Main Sheet has no Category column and contains rows that do not match ERP Board items. Add a Category column or upload a Board-only file.");
-    }
     if(fileMap.size>240) throw new Error("Maximum 240 Board items per sync");
 
-    const boardItems=(DB.items||[]).filter(it=>(it.category||"Board")==="Board");
     const liveMap=new Map(), liveDuplicates=[];
     boardItems.forEach(it=>{
       const key=itemKey(it.type||"",it.color||"",it.thickness||"");
