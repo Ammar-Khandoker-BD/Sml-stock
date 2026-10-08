@@ -1658,7 +1658,7 @@ async function syncBoardStockFromExcel(inp){
         headerIndex=i; break;
       }
     }
-    if(headerIndex<0) throw new Error('Could not find Main Sheet headers');
+    if(headerIndex<0) throw new Error("Could not find Main Sheet headers");
 
     const head=(rows[headerIndex]||[]).map(v=>String(v??"").trim().toLowerCase());
     const findCol=(...names)=>{
@@ -1670,11 +1670,11 @@ async function syncBoardStockFromExcel(inp){
     const norm=v=>String(v??"").trim().replace(/\s+/g," ").toLowerCase();
     const cCat=findCol("category","group");
     const cSl=findCol("sl","serial","item sl");
-    const itemKey=(type,color,thick)=>[type,color,thick].map(norm).join("|");
     const cType=findCol("type");
     const cColor=findCol("color");
     const cThick=findCol("thickness");
     const cStock=findCol("stock","current stock");
+    const cAdd=findCol("add stock");
 
     if(cType<0 || cThick<0 || cStock<0) throw new Error("Required Type / Thickness / Stock columns are missing");
 
@@ -1695,37 +1695,60 @@ async function syncBoardStockFromExcel(inp){
       const n=Number(raw);
       return Number.isInteger(n) ? n : null;
     };
-
-    // H (Stock) is formula-driven in this workbook. Calculate the same formula
-    // when the workbook reader exposes a formula instead of its cached result:
-    // F(row) - SUM(JR(row):NI(row)) + G(row)
-    const dayStartCol=277; // JR, zero-based
-    const dayEndCol=372;   // NI, zero-based
+    const toISODate=(y,m,d)=>{
+      const dt=new Date(y,m-1,d);
+      if(Number.isNaN(dt.getTime()) || dt.getFullYear()!==y || dt.getMonth()+1!==m || dt.getDate()!==d) return "";
+      return y+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    };
+    const parseDateHeader=value=>{
+      const s=String(value??"").trim();
+      if(!s) return "";
+      let m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+      if(m) return toISODate(Number(m[3]),Number(m[2]),Number(m[1])) || toISODate(Number(m[3]),Number(m[1]),Number(m[2]));
+      m=s.match(/^(\d{1,2})[-\s]([A-Za-z]{3,9})[-\s](\d{2,4})$/);
+      if(m){
+        const months={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+        const mon=months[String(m[2]).slice(0,3).toLowerCase()];
+        let year=Number(m[3]); if(year<100) year+=2000;
+        if(mon) return toISODate(year,mon,Number(m[1]));
+      }
+      if(/^\d{4}-\d{2}-\d{2}$/.test(s)){
+        const [y,mo,d]=s.split("-").map(Number);
+        return toISODate(y,mo,d);
+      }
+      return "";
+    };
     const numericValue=v=>{
       if(v===null || v===undefined || String(v).trim()==="") return 0;
       const n=Number(String(v).replace(/,/g,"").trim());
       return Number.isFinite(n) ? n : 0;
     };
+
+    // Detect date columns directly from the worksheet header row.
+    const dateColumns=[];
+    for(let c=0;c<head.length;c++){
+      const iso=parseDateHeader(rows[headerIndex][c]);
+      if(iso) dateColumns.push({col:c,date:iso});
+    }
+
     const stockFromWorkbookRow=(row,rowIndex)=>{
       const cell=ws[XLSX.utils.encode_cell({r:rowIndex,c:cStock})];
-      if(cell && cell.f){
-        const opening=numericValue(row[5]); // F
-        const add=numericValue(row[6]);     // G
+      if(cell && cell.f && dateColumns.length){
+        const opening=numericValue(row[5]); // hidden F: Opening Stock
+        const add=cAdd>=0 ? numericValue(row[cAdd]) : numericValue(row[6]); // G
         let used=0;
-        for(let c=dayStartCol;c<=dayEndCol;c++) used += numericValue(row[c]);
+        dateColumns.forEach(dc=>{ used += numericValue(row[dc.col]); });
         return Math.round((opening-used+add+Number.EPSILON)*100)/100;
       }
       const direct=parseQty(row[cStock]);
       return direct===null ? 0 : direct;
     };
 
-    const excelItems=[];
+    const boardRows=[];
     const seenSl=new Set();
     const seenName=new Set();
-
-    // This workbook is a dedicated "All Board Stock Maintain" sheet.
-    // When there is no Category column, every populated Type row is treated as Board.
     let activeCategory="";
+
     for(let i=headerIndex+1;i<rows.length;i++){
       const row=rows[i]||[];
       const type=String(row[cType]??"").trim();
@@ -1741,35 +1764,46 @@ async function syncBoardStockFromExcel(inp){
       const color=cColor>=0 ? String(row[cColor]??"").trim() : "";
       const thickness=cThick>=0 ? String(row[cThick]??"").trim() : "";
       const stock=stockFromWorkbookRow(row,i);
+      if(!Number.isFinite(stock) || stock<0) throw new Error("Invalid Board stock in Excel row "+(i+1));
 
-      if(!Number.isFinite(stock) || stock<0){
-        throw new Error("Invalid Board stock in Excel row "+(i+1));
-      }
       if(sl!==null){
         if(seenSl.has(sl)) throw new Error("Duplicate SL "+sl+" found in Excel row "+(i+1));
         seenSl.add(sl);
       }
 
       const nameKey=[type,color,thickness].map(norm).join("|");
-      const nameSlKey=(sl===null?"NAME":"SL:"+sl)+"|"+nameKey;
-      if(seenName.has(nameSlKey)) throw new Error("Duplicate Board entry found in Excel row "+(i+1));
-      seenName.add(nameSlKey);
+      const identity=(sl===null?"NAME":("SL:"+sl))+"|"+nameKey;
+      if(seenName.has(identity)) throw new Error("Duplicate Board entry found in Excel row "+(i+1));
+      seenName.add(identity);
 
-      excelItems.push({sl,type,color,thickness,stock,row:i+1,nameKey});
+      boardRows.push({
+        sl,type,color,thickness,stock,
+        opening:numericValue(row[5]),
+        add:cAdd>=0?numericValue(row[cAdd]):numericValue(row[6]),
+        rowIndex:i
+      });
     }
 
-    if(!excelItems.length) throw new Error("No Board item rows found in Main Sheet");
-    if(excelItems.length>240) throw new Error("Maximum 240 Board items per replacement");
+    if(!boardRows.length) throw new Error("No Board item rows found in Main Sheet");
+    if(boardRows.length>240) throw new Error("Maximum 240 Board items per replacement");
+
+    // First upload imports the full date history. Later uploads import only dates
+    // after the last successful Excel date sync, so repeated uploads do not duplicate
+    // historical transactions.
+    const storedThrough=String((DB.settings||{}).excelBoardThrough||"");
+    const importDateColumns=dateColumns.filter(dc=>!storedThrough || dc.date>storedThrough);
+    const activeDateColumns=importDateColumns.filter(dc=>{
+      return boardRows.some(br=>Math.abs(numericValue(rows[br.rowIndex][dc.col]))>0);
+    });
 
     const boardItems=(DB.items||[]).filter(it=>(it.category||"Board")==="Board");
     const nonBoardItems=(DB.items||[]).filter(it=>(it.category||"Board")!=="Board");
+    const erpBySl=new Map(), erpByName=new Map();
 
-    const erpBySl=new Map();
-    const erpByName=new Map();
     boardItems.forEach(it=>{
       const sl=parseSL(it.sl);
       if(sl!==null && !erpBySl.has(sl)) erpBySl.set(sl,it);
-      const key=itemKey(it.type||"",it.color||"",it.thickness||"");
+      const key=[it.type||"",it.color||"",it.thickness||""].map(norm).join("|");
       const arr=erpByName.get(key)||[];
       arr.push(it);
       erpByName.set(key,arr);
@@ -1777,64 +1811,65 @@ async function syncBoardStockFromExcel(inp){
 
     const matchedIds=new Set();
     const newEntries=[];
-    const changes=[];
-    const duplicateERPKeys=[];
+    const stockChanges=[];
 
-    for(const entry of excelItems){
-      let it=null;
-
-      // SL is the primary identity because the same item name can legitimately
-      // exist on multiple stock-book pages.
-      if(entry.sl!==null) it=erpBySl.get(entry.sl)||null;
-
-      // If SL does not match, use the item name only when it is unique in ERP.
-      if(!it){
-        const candidates=erpByName.get(entry.nameKey)||[];
-        if(candidates.length===1) it=candidates[0];
+    for(const entry of boardRows){
+      let item=null;
+      if(entry.sl!==null) item=erpBySl.get(entry.sl)||null;
+      if(!item){
+        const key=[entry.type,entry.color,entry.thickness].map(norm).join("|");
+        const candidates=erpByName.get(key)||[];
+        if(candidates.length===1) item=candidates[0];
       }
 
-      if(it){
-        if(matchedIds.has(it.id)) throw new Error("One ERP Board item matched more than once");
-        matchedIds.add(it.id);
+      if(item){
+        if(matchedIds.has(item.id)) throw new Error("One ERP Board item matched more than once");
+        matchedIds.add(item.id);
 
-        const oldStock=Number(it.stock)||0;
-        const newStock=Number(entry.stock);
-        const delta=Math.round((newStock-oldStock+Number.EPSILON)*100)/100;
-        if(delta!==0) changes.push({item:it,entry,newStock,delta});
+        const oldStock=Number(item.stock)||0;
+        const delta=Math.round((entry.stock-oldStock+Number.EPSILON)*100)/100;
+        if(delta!==0) stockChanges.push({item,entry,newStock:entry.stock,delta});
       }else{
         newEntries.push(entry);
       }
     }
 
-    // Any ERP Board item not represented by the Excel master will be removed
-    // from the active Board master. Its old transaction history remains intact.
     const removedItems=boardItems.filter(it=>!matchedIds.has(it.id));
 
-    const totalExcelStock=excelItems.reduce((sum,e)=>sum+(Number(e.stock)||0),0);
-    const totalCurrentBoardStock=boardItems.reduce((sum,it)=>sum+(Number(it.stock)||0),0);
+    const dateValueCount=boardRows.reduce((sum,br)=>{
+      return sum+activeDateColumns.reduce((n,dc)=>n+(Math.abs(numericValue(rows[br.rowIndex][dc.col]))>0?1:0),0);
+    },0);
+
+    const maxImportedDate=activeDateColumns.reduce((max,dc)=>dc.date>max?dc.date:max,storedThrough);
+    const totalExcelStock=boardRows.reduce((s,e)=>s+Number(e.stock||0),0);
+    const totalCurrentBoardStock=boardItems.reduce((s,it)=>s+Number(it.stock||0),0);
 
     const preview=[
       "REPLACE BOARD MASTER FROM EXCEL",
       "",
-      "Excel Board items: "+excelItems.length,
-      "ERP Board items now: "+boardItems.length,
-      "Stock updates: "+changes.length,
+      "Excel Board items: "+boardRows.length,
+      "ERP Board items: "+boardItems.length,
+      "Stock updates: "+stockChanges.length,
       "New Board items: "+newEntries.length,
       "Board items to remove: "+removedItems.length,
+      "Date columns to import: "+activeDateColumns.length,
+      "Date-wise entries to create: "+dateValueCount,
+      activeDateColumns.length ? "Date range: "+activeDateColumns[0].date+" → "+activeDateColumns[activeDateColumns.length-1].date : "No new date-wise entries found",
       "Excel total stock: "+totalExcelStock+" Pcs",
       "Current ERP Board stock: "+totalCurrentBoardStock+" Pcs",
       "",
-      "Excel will become the active Board master.",
+      "Excel will remain the active Board master.",
+      "Daily Excel values will be saved as dated Stock In/Out transactions.",
       "Board items not present in Excel will be removed from active Items.",
       "Other categories will NOT be changed.",
       "Previous transaction history will remain.",
       "",
       "Continue?"
-    ].join("\\n");
+    ].join("\n");
 
     if(!confirm(preview)) return;
 
-    toast("Replacing Board master… please wait");
+    toast("Replacing Board master + importing date-wise entries… please wait");
 
     const mainRef=fdb.collection("erp").doc("main");
     let result=null;
@@ -1847,7 +1882,6 @@ async function syncBoardStockFromExcel(inp){
       const liveItems=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
       const liveBoard=liveItems.filter(it=>(it.category||"Board")==="Board");
       const liveNonBoard=liveItems.filter(it=>(it.category||"Board")!=="Board");
-
       const liveById=new Map(liveItems.map(it=>[it.id,it]));
       const liveBySl=new Map();
       const liveByName=new Map();
@@ -1855,23 +1889,25 @@ async function syncBoardStockFromExcel(inp){
       liveBoard.forEach(it=>{
         const sl=parseSL(it.sl);
         if(sl!==null) liveBySl.set(sl,it);
-        const key=itemKey(it.type||"",it.color||"",it.thickness||"");
+        const key=[it.type||"",it.color||"",it.thickness||""].map(norm).join("|");
         const arr=liveByName.get(key)||[];
         arr.push(it);
         liveByName.set(key,arr);
       });
 
       const keepBoard=[];
-      const replacementTxns=[];
+      const txns=[];
       const seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{});
       const now=Date.now();
       const defaultAlarm=Math.max(0,Number(data.settings&&data.settings.alarmDefault)||5);
 
-      for(const entry of excelItems){
+      // Preserve Excel's current master exactly.
+      for(const entry of boardRows){
         let item=null;
         if(entry.sl!==null) item=liveBySl.get(entry.sl)||null;
         if(!item){
-          const candidates=liveByName.get(entry.nameKey)||[];
+          const key=[entry.type,entry.color,entry.thickness].map(norm).join("|");
+          const candidates=liveByName.get(key)||[];
           if(candidates.length===1) item=candidates[0];
         }
 
@@ -1882,94 +1918,111 @@ async function syncBoardStockFromExcel(inp){
           item.thickness=entry.thickness;
           if(entry.sl!==null) item.sl=entry.sl;
           item.uom=item.uom||"Pcs";
-
-          const current=Number(item.stock)||0;
-          const target=Number(entry.stock);
-          const delta=Math.round((target-current+Number.EPSILON)*100)/100;
-          item.stock=target;
+          item.stock=Number(entry.stock);
           keepBoard.push(item);
-
-          if(delta!==0){
-            seq.adj=(Number(seq.adj)||0)+1;
-            const txId="ADJ-"+String(seq.adj).padStart(4,"0");
-            replacementTxns.push({
-              id:txId,
-              type:delta>0?"IN":"OUT",
-              subtype:"ADJUSTMENT",
-              referenceId:"",
-              supplierId:"",
-              referenceNo:"",
-              department:"",
-              issuedTo:"",
-              purpose:"",
-              date:todayISO(),
-              itemId:item.id,
-              qty:delta,
-              note:"Board master replaced from Excel · "+file.name,
-              by:currentUser?currentUser.username:"system",
-              createdAt:now
-            });
-            transaction.set(fdb.collection("erp_txns").doc(txId),replacementTxns[replacementTxns.length-1]);
-          }
         }else{
+          let newSl=entry.sl;
+          if(newSl===null){
+            newSl=liveItems.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0)+1;
+            while(liveItems.some(x=>Number(x.sl)===newSl)||keepBoard.some(x=>Number(x.sl)===newSl)) newSl++;
+          }
           const item={
-            id:"i"+now.toString(36)+"_"+String(entry.sl===null?"x":entry.sl)+"_"+Math.random().toString(36).slice(2,6),
-            sl:entry.sl,
-            page:"",
-            category:"Board",
-            type:entry.type,
-            color:entry.color,
-            thickness:entry.thickness,
-            uom:"Pcs",
-            alarm:defaultAlarm,
-            stock:Number(entry.stock)
+            id:"i"+now.toString(36)+"_"+String(newSl)+"_"+Math.random().toString(36).slice(2,6),
+            sl:newSl,page:"",category:"Board",type:entry.type,color:entry.color,thickness:entry.thickness,
+            uom:"Pcs",alarm:defaultAlarm,stock:Number(entry.stock)
           };
-          // Keep Excel SL when present. If it is blank, assign a new Board SL.
-          if(item.sl===null){
-            let nextSl=liveItems.reduce((m,x)=>Math.max(m,Number(x.sl)||0),0)+1;
-            while(liveItems.some(x=>Number(x.sl)===nextSl) || keepBoard.some(x=>Number(x.sl)===nextSl)) nextSl++;
-            item.sl=nextSl;
-          }
           keepBoard.push(item);
-
-          if(item.stock>0){
-            seq.si=(Number(seq.si)||0)+1;
-            const txId="SI-"+String(seq.si).padStart(4,"0");
-            const txn={
-              id:txId,
-              type:"IN",
-              subtype:"OPENING",
-              referenceId:"",
-              supplierId:"",
-              referenceNo:"",
-              department:"",
-              issuedTo:"",
-              purpose:"",
-              date:todayISO(),
-              itemId:item.id,
-              qty:item.stock,
-              note:"Board master imported from Excel · "+file.name,
-              by:currentUser?currentUser.username:"system",
-              createdAt:now
-            };
-            replacementTxns.push(txn);
-            transaction.set(fdb.collection("erp_txns").doc(txId),txn);
-          }
         }
       }
 
+      // Save daily Excel columns as date-specific normal IN/OUT transactions.
+      for(const br of boardRows){
+        let item=null;
+        if(br.sl!==null) item=keepBoard.find(it=>Number(it.sl)===br.sl)||null;
+        if(!item){
+          const key=[br.type,br.color,br.thickness].map(norm).join("|");
+          const matches=keepBoard.filter(it=>[it.type,it.color,it.thickness].map(norm).join("|")===key);
+          if(matches.length===1) item=matches[0];
+        }
+        if(!item) continue;
+
+        for(const dc of activeDateColumns){
+          const daily=numericValue(rows[br.rowIndex][dc.col]);
+          if(daily===0) continue;
+
+          seq.adj=(Number(seq.adj)||0)+1;
+          const txId="ADJ-"+String(seq.adj).padStart(4,"0");
+          const delta=-daily;
+          const txn={
+            id:txId,
+            type:delta>0?"IN":"OUT",
+            subtype:"NORMAL",
+            referenceId:"",
+            supplierId:"",
+            referenceNo:"",
+            department:"",
+            issuedTo:"",
+            purpose:"",
+            date:dc.date,
+            itemId:item.id,
+            qty:delta,
+            note:"Excel daily stock entry · "+file.name,
+            by:currentUser?currentUser.username:"system",
+            createdAt:now
+          };
+          txns.push(txn);
+          transaction.set(fdb.collection("erp_txns").doc(txId),txn);
+        }
+      }
+
+      // Reconcile any difference between the Excel current balance and the
+      // ERP balance after the newly imported dated movements.
+      for(const change of stockChanges){
+        const item=liveById.get(change.item.id)||keepBoard.find(x=>x.id===change.item.id);
+        if(!item) continue;
+        const dailyDelta=activeDateColumns.reduce((sum,dc)=>{
+          const matchingRow=boardRows.find(br=>br.sl!==null ? br.sl===Number(item.sl) : [br.type,br.color,br.thickness].map(norm).join("|")===[item.type,item.color,item.thickness].map(norm).join("|"));
+          return sum+(matchingRow ? -numericValue(rows[matchingRow.rowIndex][dc.col]) : 0);
+        },0);
+        const reconciliation=change.newStock-(Number(change.item.stock)||0)-dailyDelta;
+        if(Math.abs(reconciliation)>0.000001){
+          seq.adj=(Number(seq.adj)||0)+1;
+          const txId="ADJ-"+String(seq.adj).padStart(4,"0");
+          const txn={
+            id:txId,
+            type:reconciliation>0?"IN":"OUT",
+            subtype:"ADJUSTMENT",
+            referenceId:"",
+            supplierId:"",
+            referenceNo:"",
+            department:"",
+            issuedTo:"",
+            purpose:"",
+            date:todayISO(),
+            itemId:item.id,
+            qty:reconciliation,
+            note:"Excel current-stock reconciliation",
+            by:currentUser?currentUser.username:"system",
+            createdAt:now
+          };
+          txns.push(txn);
+          transaction.set(fdb.collection("erp_txns").doc(txId),txn);
+        }
+      }
+
+      const newSettings=Object.assign({},data.settings||{});
+      if(maxImportedDate) newSettings.excelBoardThrough=maxImportedDate;
+
       const auditRef=fdb.collection("erp_audit").doc();
       const audit={
-        id:auditRef.id,
-        ts:now,
-        date:todayISO(),
-        time:nowTime(),
+        id:auditRef.id,ts:now,date:todayISO(),time:nowTime(),
         user:currentUser?currentUser.username:"system",
-        action:"Replaced Board master from Excel · kept "+keepBoard.length+" · added "+newEntries.length+" · removed "+removedItems.length+" · stock updates "+replacementTxns.length
+        action:"Replaced Board master from Excel · kept "+keepBoard.length+" · added "+newEntries.length+" · removed "+removedItems.length+" · date entries "+dateValueCount
       };
 
       transaction.update(mainRef,{
         items:liveNonBoard.concat(keepBoard),
+        settings:newSettings,
         seq,
         client:CLIENT_ID,
         rev:now
@@ -1979,16 +2032,18 @@ async function syncBoardStockFromExcel(inp){
       result={
         items:liveNonBoard.concat(keepBoard),
         seq,
-        txns:replacementTxns,
+        txns,
         audit,
         removedCount:removedItems.length,
         addedCount:newEntries.length,
-        updatedCount:changes.length
+        datedCount:dateValueCount,
+        maxImportedDate
       };
     });
 
     DB.items=result.items;
     DB.seq=result.seq;
+    DB.settings=Object.assign({},DB.settings||{},{excelBoardThrough:result.maxImportedDate||((DB.settings||{}).excelBoardThrough||"")});
     (result.txns||[]).forEach(txn=>{ DB.txns.push(txn); SAVED_TXN.add(txn.id); });
     DB.audit.unshift(result.audit);
     SAVED_AUDIT.add(result.audit.id);
@@ -1997,10 +2052,10 @@ async function syncBoardStockFromExcel(inp){
     invalidateReadCaches();
     renderItems();
 
-    toast("Board master replaced successfully · "+result.items.filter(it=>(it.category||"Board")==="Board").length+" Board items"+(result.removedCount?" · removed "+result.removedCount:"")+(result.addedCount?" · added "+result.addedCount:""));
+    toast("Board Excel sync complete · "+result.datedCount+" date-wise entries · "+(result.removedCount||0)+" removed");
   }catch(err){
-    console.error("Board Excel replacement failed:",err);
-    toast(err.message||"Could not replace Board master from Excel");
+    console.error("Board Excel date-wise sync failed:",err);
+    toast(err.message||"Could not sync Board Excel data");
   }finally{
     inp.value="";
   }
