@@ -1670,6 +1670,7 @@ async function syncBoardStockFromExcel(inp){
     const norm=v=>String(v??"").trim().replace(/\s+/g," ").toLowerCase();
     const cCat=findCol("category","group");
     const cSl=findCol("sl","serial","item sl");
+    const itemKey=(type,color,thick)=>[type,color,thick].map(norm).join("|");
     const cType=findCol("type");
     const cColor=findCol("color");
     const cThick=findCol("thickness");
