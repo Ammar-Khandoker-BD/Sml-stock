@@ -1685,7 +1685,14 @@ async function syncBoardStockFromExcel(inp){
       const n=Number(raw);
       return Number.isFinite(n) ? n : NaN;
     };
+    const parseSL=v=>{
+      const raw=String(v??"").trim().replace(/,/g,"");
+      if(raw==="") return null;
+      const n=Number(raw);
+      return Number.isInteger(n) ? n : null;
+    };
 
+    const cSl=findCol("sl","serial","item sl");
     const boardItems=(DB.items||[]).filter(it=>(it.category||"Board")==="Board");
     const boardKeys=new Set(boardItems.map(it=>itemKey(it.type||"",it.color||"",it.thickness||"")));
     const fileMap=new Map(), duplicates=[];
@@ -1720,13 +1727,11 @@ async function syncBoardStockFromExcel(inp){
       const type=String(row[cType]??"").trim();
       if(!type) continue;
 
+      const sl=cSl>=0 ? parseSL(row[cSl]) : null;
       const color=cColor>=0?String(row[cColor]??"").trim():"";
       const thickness=cThick>=0?String(row[cThick]??"").trim():"";
       const key=itemKey(type,color,thickness);
 
-      // Only Board rows are considered. Other sections are ignored.
-      // If Category is absent, only rows already present in ERP's Board master
-      // are eligible, preventing Ink/PVC/ACP rows from being touched.
       if(cCat>=0){
         const rawCategory=String(row[cCat]??"").trim();
         if(rawCategory) activeCategory=rawCategory;
@@ -1740,33 +1745,51 @@ async function syncBoardStockFromExcel(inp){
         throw new Error("Invalid Board stock in Excel row "+(i+1));
       }
 
-      if(fileMap.has(key)) duplicates.push(i+1);
-      else fileMap.set(key,{type,color,thickness,stock,row:i+1});
+      // SL is used to disambiguate genuine duplicate names such as
+      // Melamine + Red + 12 mm appearing on multiple stock-book pages.
+      const syncKey=(sl===null ? "NAME:" : "SL:"+sl+"|")+key;
+      if(fileMap.has(syncKey)) duplicates.push(i+1);
+      else fileMap.set(syncKey,{sl,type,color,thickness,stock,row:i+1,nameKey:key});
     }
-    if(duplicates.length) throw new Error("Duplicate item name found in Excel row(s): "+duplicates.join(", "));
+
+    if(duplicates.length){
+      throw new Error("Duplicate Board entry found in Excel row(s): "+duplicates.join(", ")+" (same SL + item name)");
+    }
     if(!fileMap.size) throw new Error(cCat>=0 ? "No Category = Board rows found in Main Sheet" : "No Board item rows found");
     if(fileMap.size>240) throw new Error("Maximum 240 Board items per sync");
 
-    const liveMap=new Map(), liveDuplicates=[];
+    const erpByIdentity=new Map(), erpByName=new Map();
     boardItems.forEach(it=>{
-      const key=itemKey(it.type||"",it.color||"",it.thickness||"");
-      if(liveMap.has(key)) liveDuplicates.push(itemName(it));
-      else liveMap.set(key,it);
+      const nameKey=itemKey(it.type||"",it.color||"",it.thickness||"");
+      const sl=parseSL(it.sl);
+      if(sl!==null) erpByIdentity.set("SL:"+sl+"|"+nameKey,it);
+      const arr=erpByName.get(nameKey)||[];
+      arr.push(it);
+      erpByName.set(nameKey,arr);
     });
-    if(liveDuplicates.length){
-      throw new Error("ERP has duplicate Board item names; sync stopped for safety");
-    }
 
     const changes=[], missingERP=[], missingExcel=[];
-    for(const [key,entry] of fileMap){
-      const it=liveMap.get(key);
+    for(const [syncKey,entry] of fileMap){
+      let it=null;
+      if(entry.sl!==null) it=erpByIdentity.get("SL:"+entry.sl+"|"+entry.nameKey)||null;
+      if(!it){
+        const candidates=erpByName.get(entry.nameKey)||[];
+        if(candidates.length===1) it=candidates[0];
+      }
       if(!it){ missingERP.push(entry); continue; }
+
       const oldStock=Number(it.stock)||0, newStock=Number(entry.stock);
       const delta=Math.round((newStock-oldStock+Number.EPSILON)*100)/100;
       if(delta!==0) changes.push({item:it,entry,newStock,delta});
     }
+
     boardItems.forEach(it=>{
-      if(!fileMap.has(itemKey(it.type||"",it.color||"",it.thickness||""))) missingExcel.push(it);
+      const nameKey=itemKey(it.type||"",it.color||"",it.thickness||"");
+      const matching=[...fileMap.values()].some(entry=>{
+        if(entry.nameKey!==nameKey) return false;
+        return entry.sl===null || parseSL(it.sl)===entry.sl || (erpByName.get(nameKey)||[]).length===1;
+      });
+      if(!matching) missingExcel.push(it);
     });
 
     const totalOld=boardItems.reduce((s,it)=>s+(Number(it.stock)||0),0);
@@ -1804,15 +1827,11 @@ async function syncBoardStockFromExcel(inp){
       const data=snap.data()||{};
       const items=Array.isArray(data.items)?data.items.map(it=>Object.assign({},it)):[];
       const seq=Object.assign({si:0,so:0,ret:0,adj:0,rv:0},data.seq||{});
-      const liveByKey=new Map();
-
-      items.filter(it=>(it.category||"Board")==="Board").forEach(it=>{
-        liveByKey.set(itemKey(it.type||"",it.color||"",it.thickness||""),it);
-      });
+      const liveById=new Map(items.map(it=>[it.id,it]));
 
       const txns=[], now=Date.now();
       for(const change of changes){
-        const item=liveByKey.get(itemKey(change.item.type||"",change.item.color||"",change.item.thickness||""));
+        const item=liveById.get(change.item.id);
         if(!item) throw new Error("Board item changed during sync: "+itemName(change.item));
 
         const latest=Number(item.stock)||0;
