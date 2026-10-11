@@ -1692,14 +1692,30 @@ async function syncBoardStockFromExcel(inp){
 
     const stockFromWorkbookRow=(row,rowIndex)=>{
       const cell=ws[XLSX.utils.encode_cell({r:rowIndex,c:cStock})];
-      if(cell && cell.f && dateColumns.length){
+      const direct=parseQty(row[cStock]);
+
+      // Excel may already contain the calculated result of a stock formula.
+      // Trust that value first: the formula can intentionally sum only a subset
+      // of date columns, not the entire year.
+      if(direct!==null && Number.isFinite(direct)) return direct;
+
+      if(cell && cell.f){
         const opening=numericValue(row[5]); // hidden F: Opening Stock
         const add=cAdd>=0 ? numericValue(row[cAdd]) : numericValue(row[6]); // G
+        const formulaSum=String(cell.f).match(/SUM\(\$?([A-Z]{1,3})\$?\d+\s*:\s*\$?([A-Z]{1,3})\$?\d+\)/i);
         let used=0;
-        dateColumns.forEach(dc=>{ used += numericValue(row[dc.col]); });
+
+        if(formulaSum && XLSX.utils.decode_col){
+          let startCol=XLSX.utils.decode_col(formulaSum[1].toUpperCase());
+          let endCol=XLSX.utils.decode_col(formulaSum[2].toUpperCase());
+          if(startCol>endCol){ const swap=startCol; startCol=endCol; endCol=swap; }
+          for(let c=startCol;c<=endCol;c++) used+=numericValue(row[c]);
+        }else{
+          // Fallback for formulas without a recognizable SUM range.
+          dateColumns.forEach(dc=>{ used += numericValue(row[dc.col]); });
+        }
         return Math.round((opening-used+add+Number.EPSILON)*100)/100;
       }
-      const direct=parseQty(row[cStock]);
       return direct===null ? 0 : direct;
     };
 
