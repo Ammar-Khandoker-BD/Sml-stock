@@ -1561,6 +1561,27 @@ function renderDashboard(){
       </tbody></table></div>
       <div style="padding:12px 16px"><button class="btn btn-sm" onclick="show('items')">Open Inventory →</button></div>
     </div>
+    <div class="table-card" id="boardLiveStockCard">
+      <div style="padding:14px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div><h3 style="font-size:14.5px">Board Live Stock</h3><div class="sub">All boards · serial-wise current stock</div></div>
+        <span class="badge ok" id="boardLiveStockStatus">LIVE</span>
+      </div>
+      <div class="filter-bar" style="padding:0 14px;margin:0 0 10px">
+        <div class="search-wrap" style="min-width:140px;max-width:none">
+          <input class="input" id="boardLiveStockSearch" placeholder="Search serial, board, color..." oninput="renderBoardLiveStock()" aria-label="Search board live stock">
+        </div>
+        <select class="select" id="boardLiveStockFilter" onchange="renderBoardLiveStock()" aria-label="Filter board stock">
+          <option value="all">All stock</option><option value="available">Available only</option><option value="low">Low stock</option><option value="zero">Zero stock</option>
+        </select>
+      </div>
+      <div class="table-scroll" style="max-height:360px;overflow:auto">
+        <table><thead><tr><th>SL / Serial</th><th>Board</th><th class="num">Live Stock</th><th>Status</th></tr></thead><tbody id="boardLiveStockBody"></tbody></table>
+      </div>
+      <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span class="sub" id="boardLiveStockCount" style="margin:0">Loading boards…</span>
+        <button class="btn btn-sm" onclick="show('items')">Full inventory →</button>
+      </div>
+    </div>
     <div class="table-card">
       <div style="padding:14px 16px 0"><h3 style="font-size:14.5px">Recent Transactions</h3><div class="sub">Latest movements already loaded by the ERP</div></div>
       <div class="table-scroll"><table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th class="num">Qty</th></tr></thead><tbody>
@@ -1570,7 +1591,35 @@ function renderDashboard(){
     </div>
   </div>
   <div class="sub" style="margin-top:12px">Summary uses inventory data and transactions already loaded by the ERP; opening this dashboard does not run an extra monthly transaction query.</div>`;
+  renderBoardLiveStock();
 }
+function renderBoardLiveStock(){
+  const body = document.getElementById("boardLiveStockBody");
+  if(!body || !DB || !Array.isArray(DB.items)) return;
+  const searchEl = document.getElementById("boardLiveStockSearch");
+  const filterEl = document.getElementById("boardLiveStockFilter");
+  const query = (searchEl ? searchEl.value : "").trim().toLocaleLowerCase();
+  const filter = filterEl ? filterEl.value : "all";
+  const all = DB.items.slice().sort((a,b)=>(Number(a.sl)||0)-(Number(b.sl)||0));
+  const filtered = all.filter(it=>{
+    const stock = Number(it.stock)||0;
+    const label = [it.sl, itemCode(it), itemName(it), it.category, it.page].filter(v=>v!==undefined && v!==null).join(" ").toLocaleLowerCase();
+    if(query && !label.includes(query)) return false;
+    if(filter==="available" && stock<=0) return false;
+    if(filter==="low" && !(stock>0 && stock<=Number(it.alarm||0))) return false;
+    if(filter==="zero" && stock>0) return false;
+    return true;
+  });
+  body.innerHTML = filtered.map(it=>{
+    const stock = Number(it.stock)||0;
+    const status = stock<=0 ? '<span class="badge out">OUT</span>' : (stock<=Number(it.alarm||0) ? '<span class="badge low">LOW</span>' : '<span class="badge ok">AVAILABLE</span>');
+    const serial = it.sl!==undefined && it.sl!==null ? String(it.sl).padStart(3,"0") : "—";
+    return `<tr><td><b>${esc(serial)}</b><div class="muted">${esc(itemCode(it))}</div></td><td><b>${esc(itemName(it))}</b><div class="muted">${esc(it.category||it.page ? (it.category||("Page "+it.page)) : "Board")}</div></td><td class="num ${stock<=0?'neg':'pos'}"><b>${fmtQty(stock)}</b> <span class="muted">${esc(it.uom||"Pcs")}</span></td><td>${status}</td></tr>`;
+  }).join("") || '<tr><td colspan="4" class="dash-empty">No boards match this search/filter.</td></tr>';
+  const count = document.getElementById("boardLiveStockCount");
+  if(count) count.textContent = `Showing ${filtered.length} of ${all.length} boards · total stock ${fmtQty(filtered.reduce((sum,it)=>sum+(Number(it.stock)||0),0))} pcs`;
+}
+
 /* ---------- items ---------- */
 let ITEM_F = { q:"", cat:"", type:"" };
 let ITEM_RENDER_TIMER = null;
