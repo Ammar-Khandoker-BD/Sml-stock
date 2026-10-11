@@ -1563,7 +1563,7 @@ function renderDashboard(){
     </div>
     <div class="table-card" id="boardLiveStockCard">
       <div style="padding:14px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-        <div><h3 style="font-size:14.5px">Board Live Stock</h3><div class="sub">All boards · serial-wise current stock</div></div>
+        <div><h3 style="font-size:14.5px">Board Live Stock</h3><div class="sub">In-stock boards · low stock listed last</div></div>
         <span class="badge ok" id="boardLiveStockStatus">LIVE</span>
       </div>
       <div class="filter-bar" style="padding:0 14px;margin:0 0 10px">
@@ -1571,11 +1571,11 @@ function renderDashboard(){
           <input class="input" id="boardLiveStockSearch" placeholder="Search serial, board, color..." oninput="renderBoardLiveStock()" aria-label="Search board live stock">
         </div>
         <select class="select" id="boardLiveStockFilter" onchange="renderBoardLiveStock()" aria-label="Filter board stock">
-          <option value="all">All stock</option><option value="available">Available only</option><option value="low">Low stock</option><option value="zero">Zero stock</option>
+          <option value="all">All in-stock</option><option value="available">Available</option><option value="low">Low stock</option>
         </select>
       </div>
-      <div class="table-scroll" style="max-height:360px;overflow:auto">
-        <table><thead><tr><th>SL / Serial</th><th>Board</th><th class="num">Live Stock</th><th>Status</th></tr></thead><tbody id="boardLiveStockBody"></tbody></table>
+      <div class="table-scroll" style="max-height:360px;overflow-y:auto;overflow-x:hidden">
+        <table class="board-live-stock-table" style="width:100%;min-width:0;table-layout:fixed"><thead><tr><th style="width:23%">SL / Serial</th><th style="width:49%">Board</th><th class="num" style="width:28%">Live Qty</th></tr></thead><tbody id="boardLiveStockBody"></tbody></table>
       </div>
       <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
         <span class="sub" id="boardLiveStockCount" style="margin:0">Loading boards…</span>
@@ -1600,24 +1600,44 @@ function renderBoardLiveStock(){
   const filterEl = document.getElementById("boardLiveStockFilter");
   const query = (searchEl ? searchEl.value : "").trim().toLocaleLowerCase();
   const filter = filterEl ? filterEl.value : "all";
-  const all = DB.items.slice().sort((a,b)=>(Number(a.sl)||0)-(Number(b.sl)||0));
+  const isLowStock = it => {
+    const stock = Number(it.stock)||0;
+    const alarm = Number(it.alarm ?? (DB.settings && DB.settings.alarmDefault) ?? 5);
+    return stock > 0 && stock <= alarm;
+  };
+
+  // Hide zero/negative stock from this dashboard panel; low-stock boards sort last.
+  const all = DB.items
+    .filter(it => (Number(it.stock)||0) > 0)
+    .slice()
+    .sort((a,b)=>{
+      const lowDifference = Number(isLowStock(a)) - Number(isLowStock(b));
+      return lowDifference || (Number(a.sl)||0) - (Number(b.sl)||0);
+    });
+
   const filtered = all.filter(it=>{
     const stock = Number(it.stock)||0;
     const label = [it.sl, itemCode(it), itemName(it), it.category, it.page].filter(v=>v!==undefined && v!==null).join(" ").toLocaleLowerCase();
     if(query && !label.includes(query)) return false;
-    if(filter==="available" && stock<=0) return false;
-    if(filter==="low" && !(stock>0 && stock<=Number(it.alarm||0))) return false;
-    if(filter==="zero" && stock>0) return false;
+    if(filter==="available" && isLowStock(it)) return false;
+    if(filter==="low" && !isLowStock(it)) return false;
     return true;
   });
+
   body.innerHTML = filtered.map(it=>{
     const stock = Number(it.stock)||0;
-    const status = stock<=0 ? '<span class="badge out">OUT</span>' : (stock<=Number(it.alarm||0) ? '<span class="badge low">LOW</span>' : '<span class="badge ok">AVAILABLE</span>');
+    const status = isLowStock(it) ? '<span class="badge low">LOW STOCK</span>' : '<span class="badge ok">AVAILABLE</span>';
     const serial = it.sl!==undefined && it.sl!==null ? String(it.sl).padStart(3,"0") : "—";
-    return `<tr><td><b>${esc(serial)}</b><div class="muted">${esc(itemCode(it))}</div></td><td><b>${esc(itemName(it))}</b><div class="muted">${esc(it.category||it.page ? (it.category||("Page "+it.page)) : "Board")}</div></td><td class="num ${stock<=0?'neg':'pos'}"><b>${fmtQty(stock)}</b> <span class="muted">${esc(it.uom||"Pcs")}</span></td><td>${status}</td></tr>`;
-  }).join("") || '<tr><td colspan="4" class="dash-empty">No boards match this search/filter.</td></tr>';
+    const secondary = it.category || (it.page ? ("Page "+it.page) : "Board");
+    return `<tr>
+      <td style="width:23%;overflow-wrap:anywhere"><b>${esc(serial)}</b><div class="muted">${esc(itemCode(it))}</div></td>
+      <td style="width:49%;overflow-wrap:anywhere"><b>${esc(itemName(it))}</b><div class="muted">${esc(secondary)}</div></td>
+      <td class="num ${stock<=0?'neg':'pos'}" style="width:28%;white-space:normal;overflow-wrap:anywhere"><b>${fmtQty(stock)} ${esc(it.uom||"Pcs")}</b><div style="margin-top:4px">${status}</div></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="3" class="dash-empty">No in-stock boards match this search/filter.</td></tr>';
+
   const count = document.getElementById("boardLiveStockCount");
-  if(count) count.textContent = `Showing ${filtered.length} of ${all.length} boards · total stock ${fmtQty(filtered.reduce((sum,it)=>sum+(Number(it.stock)||0),0))} pcs`;
+  if(count) count.textContent = `Showing ${filtered.length} of ${all.length} in-stock boards · visible qty ${fmtQty(filtered.reduce((sum,it)=>sum+(Number(it.stock)||0),0))} pcs`;
 }
 
 /* ---------- items ---------- */
